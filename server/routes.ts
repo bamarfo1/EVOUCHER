@@ -34,6 +34,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "gce": "GCE"
       };
 
+      const baseUrl = process.env.BASE_URL || `http://localhost:5000`;
+      
       const paystackResponse = await initializePayment(
         validatedData.email,
         20,
@@ -42,7 +44,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transactionId: transaction.id,
           examType: validatedData.examType,
           phone: validatedData.phone,
-        }
+        },
+        `${baseUrl}/payment-callback?reference=${reference}`
       );
 
       res.json({
@@ -79,30 +82,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      if (transaction.status === "processing") {
+        return res.status(409).json({ 
+          error: "Payment verification already in progress. Please wait.",
+          status: "processing"
+        });
+      }
+
+      await storage.updateTransactionStatus(transaction.id, "processing");
+
       const verification = await verifyPayment(reference);
       
-      if (verification.data.status === "success") {
-        const availableVoucher = await storage.getAvailableVoucher();
-        
-        if (!availableVoucher) {
-          await storage.updateTransactionStatus(transaction.id, "failed");
-          return res.status(400).json({ 
-            error: "No vouchers available" 
-          });
-        }
+      if (verification.data.status !== "success") {
+        await storage.updateTransactionStatus(transaction.id, "failed");
+        return res.json({
+          status: "failed",
+          message: "Payment verification failed",
+        });
+      }
 
-        const updatedVoucher = await storage.markVoucherAsUsed(
-          availableVoucher.id,
-          transaction.phone,
-          transaction.email,
-          transaction.examType
-        );
+      const expectedAmount = 20 * 100;
+      if (verification.data.amount !== expectedAmount) {
+        await storage.updateTransactionStatus(transaction.id, "failed");
+        return res.status(400).json({ 
+          error: "Payment amount mismatch" 
+        });
+      }
+      
+      const availableVoucher = await storage.getAvailableVoucher();
+      
+      if (!availableVoucher) {
+        await storage.updateTransactionStatus(transaction.id, "failed");
+        return res.status(400).json({ 
+          error: "No vouchers available" 
+        });
+      }
 
-        await storage.updateTransactionStatus(
-          transaction.id, 
-          "completed", 
-          availableVoucher.id
-        );
+      const updatedVoucher = await storage.markVoucherAsUsed(
+        availableVoucher.id,
+        transaction.phone,
+        transaction.email,
+        transaction.examType
+      );
+
+      await storage.updateTransactionStatus(
+        transaction.id, 
+        "completed", 
+        availableVoucher.id
+      );
 
         const examTypeNames: Record<string, string> = {
           "may-june": "May/June WASSCE",
@@ -137,15 +164,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             examType: examTypeNames[transaction.examType] || transaction.examType,
           },
         });
-      } else {
-        await storage.updateTransactionStatus(transaction.id, "failed");
-        res.json({
-          status: "failed",
-          message: "Payment verification failed",
-        });
-      }
     } catch (error: any) {
       console.error("Payment verification error:", error);
+      
+      if (transaction && transaction.status === "processing") {
+        await storage.updateTransactionStatus(transaction.id, "failed");
+      }
+      
       res.status(500).json({ 
         error: error.message || "Failed to verify payment" 
       });
@@ -154,54 +179,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/webhook/paystack", async (req: Request, res: Response) => {
     try {
+      const crypto = require('crypto');
+      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
+        .update(JSON.stringify(req.body))
+        .digest('hex');
+      
+      if (hash !== req.headers['x-paystack-signature']) {
+        console.error("Invalid webhook signature");
+        return res.status(401).send("Invalid signature");
+      }
+
       const event = req.body;
       
       if (event.event === "charge.success") {
         const reference = event.data.reference;
+        const amount = event.data.amount;
+        const expectedAmount = 20 * 100;
+
+        if (amount !== expectedAmount) {
+          console.error("Webhook: Amount mismatch", { expected: expectedAmount, received: amount });
+          return res.status(400).send("Amount mismatch");
+        }
+
         const transaction = await storage.getTransactionByReference(reference);
         
-        if (transaction && transaction.status === "pending") {
-          const availableVoucher = await storage.getAvailableVoucher();
-          
-          if (availableVoucher) {
-            const updatedVoucher = await storage.markVoucherAsUsed(
-              availableVoucher.id,
-              transaction.phone,
+        if (!transaction) {
+          console.error("Webhook: Transaction not found", reference);
+          return res.status(404).send("Transaction not found");
+        }
+
+        if (transaction.status === "completed") {
+          return res.status(200).send("Already processed");
+        }
+
+        if (transaction.status === "processing") {
+          return res.status(409).send("Already processing");
+        }
+
+        await storage.updateTransactionStatus(transaction.id, "processing");
+        
+        const availableVoucher = await storage.getAvailableVoucher();
+        
+        if (!availableVoucher) {
+          await storage.updateTransactionStatus(transaction.id, "failed");
+          console.error("Webhook: No vouchers available");
+          return res.status(400).send("No vouchers available");
+        }
+
+        const updatedVoucher = await storage.markVoucherAsUsed(
+          availableVoucher.id,
+          transaction.phone,
+          transaction.email,
+          transaction.examType
+        );
+
+        await storage.updateTransactionStatus(
+          transaction.id,
+          "completed",
+          availableVoucher.id
+        );
+
+        const examTypeNames: Record<string, string> = {
+          "may-june": "May/June WASSCE",
+          "nov-dec": "Nov/Dec WASSCE",
+          "private": "Private Candidate",
+          "gce": "GCE"
+        };
+
+        try {
+          await Promise.all([
+            sendVoucherEmail(
               transaction.email,
-              transaction.examType
-            );
-
-            await storage.updateTransactionStatus(
-              transaction.id,
-              "completed",
-              availableVoucher.id
-            );
-
-            const examTypeNames: Record<string, string> = {
-              "may-june": "May/June WASSCE",
-              "nov-dec": "Nov/Dec WASSCE",
-              "private": "Private Candidate",
-              "gce": "GCE"
-            };
-
-            try {
-              await Promise.all([
-                sendVoucherEmail(
-                  transaction.email,
-                  updatedVoucher.serial,
-                  updatedVoucher.pin,
-                  examTypeNames[transaction.examType] || transaction.examType
-                ),
-                sendVoucherSMS(
-                  transaction.phone,
-                  updatedVoucher.serial,
-                  updatedVoucher.pin
-                ),
-              ]);
-            } catch (notificationError) {
-              console.error("Webhook notification error:", notificationError);
-            }
-          }
+              updatedVoucher.serial,
+              updatedVoucher.pin,
+              examTypeNames[transaction.examType] || transaction.examType
+            ),
+            sendVoucherSMS(
+              transaction.phone,
+              updatedVoucher.serial,
+              updatedVoucher.pin
+            ),
+          ]);
+        } catch (notificationError) {
+          console.error("Webhook notification error:", notificationError);
         }
       }
       

@@ -30,7 +30,8 @@ export async function initializePayment(
   email: string,
   amount: number,
   reference: string,
-  metadata: any
+  metadata: any,
+  callbackUrl: string
 ): Promise<PaystackInitializeResponse> {
   const response = await axios.post(
     `${PAYSTACK_BASE_URL}/transaction/initialize`,
@@ -39,7 +40,7 @@ export async function initializePayment(
       amount: amount * 100, // Paystack expects amount in kobo (pesewas)
       reference,
       metadata,
-      callback_url: `${process.env.BASE_URL || 'http://localhost:5000'}/api/payment/callback`,
+      callback_url: callbackUrl,
     },
     {
       headers: {
