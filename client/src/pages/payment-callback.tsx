@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, XCircle, Mail, MessageCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import SuccessDisplay from "@/components/SuccessDisplay";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
+import alltekseLogo from "@assets/ATSEB LOGO png_1763209736565.png";
 
 export default function PaymentCallback() {
   const [, setLocation] = useLocation();
@@ -55,19 +56,29 @@ export default function PaymentCallback() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="py-6 px-4 border-b bg-card">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+      <header className="py-6 px-4 border-b bg-card shadow-sm">
         <div className="max-w-md mx-auto space-y-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-4">
+            <div className="bg-black rounded-lg p-2">
+              <img 
+                src={alltekseLogo} 
+                alt="AllTekSE Logo" 
+                className="h-12 w-auto object-contain"
+              />
+            </div>
             <img 
               src={waecLogo} 
               alt="WAEC Logo" 
               className="h-16 w-auto object-contain"
             />
           </div>
-          <h1 className="text-xl font-bold text-center">
-            ALLTEKSE RESULT VOUCHER
-          </h1>
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              AllTekSE e-Voucher
+            </h1>
+            <p className="text-sm text-muted-foreground">WAEC Result Checker Platform</p>
+          </div>
         </div>
       </header>
 

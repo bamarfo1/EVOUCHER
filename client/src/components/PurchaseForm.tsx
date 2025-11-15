@@ -4,9 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, FileText, Lock, MessageCircle } from "lucide-react";
+import { Shield, Mail, Phone, FileText, Lock, MessageCircle, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
+import alltekseLogo from "@assets/ATSEB LOGO png_1763209736565.png";
+import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
+import telecelLogo from "@assets/images (1)_1763209941547.png";
+import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
+import visaLogo from "@assets/images (2)_1763209941664.png";
 
 interface PurchaseFormProps {
   onSubmit: (data: { email: string; phone: string; examType: string }) => void;
@@ -24,10 +29,18 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="py-6 px-4 border-b bg-card">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+      <header className="py-6 px-4 border-b bg-card shadow-sm">
         <div className="max-w-md mx-auto space-y-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-4">
+            <div className="bg-black rounded-lg p-2">
+              <img 
+                src={alltekseLogo} 
+                alt="AllTekSE Logo" 
+                className="h-12 w-auto object-contain"
+                data-testid="img-alltekse-logo"
+              />
+            </div>
             <img 
               src={waecLogo} 
               alt="WAEC Logo" 
@@ -35,23 +48,28 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               data-testid="img-waec-logo"
             />
           </div>
-          <h1 className="text-xl font-bold text-center" data-testid="text-site-title">
-            ALLTEKSE RESULT VOUCHER
-          </h1>
-          <div className="flex items-center justify-center gap-2">
-            <Shield className="w-4 h-4 text-primary" />
-            <p className="text-sm text-muted-foreground">Secure Payment via Paystack</p>
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent" data-testid="text-site-title">
+              AllTekSE e-Voucher
+            </h1>
+            <p className="text-sm text-muted-foreground">WAEC Result Checker Platform</p>
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl" data-testid="text-card-title">Get Your WAEC Checker</CardTitle>
-            <CardDescription data-testid="text-card-description">
-              Fill in your details below to purchase a voucher instantly
-            </CardDescription>
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center space-y-4 pb-6">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Zap className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl mb-2" data-testid="text-card-title">Instant Delivery!</CardTitle>
+              <CardDescription className="text-base leading-relaxed" data-testid="text-card-description">
+                Once your payment is completed, your WAEC Result Checker Voucher will be sent to you automatically and immediately.
+                <span className="block mt-2 font-medium text-foreground">No delays — fast, secure, and convenient.</span>
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,53 +127,67 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               </div>
 
               <div className="pt-4 border-t space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Price:</span>
-                  <span className="text-3xl font-bold text-primary" data-testid="text-price">GHC 20</span>
+                <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 rounded-lg p-4 text-center border border-primary/20">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Price</p>
+                  <p className="text-4xl font-bold text-primary" data-testid="text-price">GHC 20</p>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-xs text-center text-muted-foreground">Accepted Payment Methods</p>
-                  <div className="flex items-center justify-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-mtn">
-                      MTN
-                    </Badge>
-                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-telecel">
-                      TELECEL
-                    </Badge>
-                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-airteltigo">
-                      AIRTEL TIGO
-                    </Badge>
-                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-visa">
-                      VISA CARD
-                    </Badge>
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-center">Available Payment Options</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-mtn">
+                      <img 
+                        src={mtnLogo} 
+                        alt="MTN Mobile Money" 
+                        className="w-full h-12 object-contain"
+                      />
+                    </div>
+                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-telecel">
+                      <img 
+                        src={telecelLogo} 
+                        alt="Telecel Cash" 
+                        className="w-full h-12 object-contain"
+                      />
+                    </div>
+                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-airteltigo">
+                      <img 
+                        src={airtelTigoLogo} 
+                        alt="AirtelTigo Money" 
+                        className="w-full h-12 object-contain"
+                      />
+                    </div>
+                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-visa">
+                      <img 
+                        src={visaLogo} 
+                        alt="Visa Card" 
+                        className="w-full h-12 object-contain"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base"
+                  className="w-full h-14 text-base font-semibold shadow-lg"
                   disabled={isLoading || !email || !phone || !examType}
                   data-testid="button-pay"
                 >
-                  {isLoading ? "Processing..." : "Pay GHC 20 - Get Voucher"}
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 animate-pulse" />
+                      Processing Payment...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Pay GHC 20 - Get Voucher Instantly
+                    </span>
+                  )}
                 </Button>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Lock className="w-4 h-4" />
-                  <span>Secured by Paystack</span>
-                </div>
-
-                <div className="bg-muted/50 rounded-md p-3 space-y-1">
-                  <div className="text-sm font-medium flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">Instant</Badge>
-                    <span>What happens next?</span>
-                  </div>
-                  <ul className="text-xs text-muted-foreground space-y-1 ml-1">
-                    <li>• Complete payment securely via Paystack</li>
-                    <li>• Receive voucher instantly via SMS & Email</li>
-                    <li>• Use the voucher to check your WAEC results</li>
-                  </ul>
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span className="font-medium">Secured by Paystack</span>
                 </div>
               </div>
             </form>
