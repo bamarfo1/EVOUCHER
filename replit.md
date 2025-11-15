@@ -5,8 +5,10 @@ A professional WAEC/WASSCE result checker voucher purchase system with instant d
 **Platform Branding:**
 - Name: AllTekSE e-Voucher
 - Tagline: WAEC Result Checker Platform
-- Contact Email: info@alltekse.com
+- Contact Email: support@alltekse.com (changed from info@)
 - WhatsApp Support: 0593260440
+- Shop Location: Tech Junction, Kumasi
+- Form Filling Services: Available - Contact 0593260440
 - Production URL: https://waec-checker-hub-bmarfo422.replit.app
 
 ## Features
@@ -15,6 +17,9 @@ A professional WAEC/WASSCE result checker voucher purchase system with instant d
 - **Dual Logo Branding**: AllTekSE logo (on black background) + WAEC logo
 - **Instant Delivery Messaging**: Clear communication about automatic voucher delivery
 - **Professional Payment Provider Logos**: MTN Mobile Money, Telecel Cash, AirtelTigo Money, Visa Card displayed in 2x2 grid
+- **University Portal Links**: Quick access to Ghana's top universities (UG, KNUST, UCC, UPSA, Central, Ashesi)
+- **Form Filling Services**: Contact info for university application assistance (0593260440)
+- **Shop Location**: Tech Junction, Kumasi with full contact details
 - Clean, mobile-responsive purchase form with icon-enhanced inputs
 - Paystack payment integration (MTN MoMo, Telecel Cash, AirtelTigo Money, Visa Card)
 - Automatic voucher assignment from database

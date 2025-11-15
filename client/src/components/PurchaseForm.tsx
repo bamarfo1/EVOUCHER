@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, FileText, Lock, MessageCircle, Zap } from "lucide-react";
+import { Shield, Mail, Phone, FileText, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
 import alltekseLogo from "@assets/101-800x600_1763210592506.jpg";
@@ -194,6 +194,157 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
           </CardContent>
         </Card>
       </main>
+
+      {/* University Links Section */}
+      <section className="py-8 px-4 bg-muted/30">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full mb-3">
+              <GraduationCap className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold text-primary">University Portals</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Quick access to Ghana's top universities</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <a 
+              href="https://admissions.ug.edu.gh/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              data-testid="link-university-ug"
+            >
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">University of Ghana</h3>
+              <p className="text-xs text-muted-foreground mt-1">UG-Legon</p>
+            </a>
+            
+            <a 
+              href="https://apps.knust.edu.gh/admissions/apply/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              data-testid="link-university-knust"
+            >
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">KNUST</h3>
+              <p className="text-xs text-muted-foreground mt-1">Kumasi</p>
+            </a>
+            
+            <a 
+              href="http://admissionlist.ucc.edu.gh/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              data-testid="link-university-ucc"
+            >
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">UCC</h3>
+              <p className="text-xs text-muted-foreground mt-1">Cape Coast</p>
+            </a>
+            
+            <a 
+              href="https://upsasip.com/adm-area" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              data-testid="link-university-upsa"
+            >
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">UPSA</h3>
+              <p className="text-xs text-muted-foreground mt-1">Accra</p>
+            </a>
+            
+            <a 
+              href="https://central.edu.gh/online" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              data-testid="link-university-central"
+            >
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Central University</h3>
+              <p className="text-xs text-muted-foreground mt-1">Accra</p>
+            </a>
+            
+            <a 
+              href="https://expresspaygh.com/ashesi" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              data-testid="link-university-ashesi"
+            >
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Ashesi University</h3>
+              <p className="text-xs text-muted-foreground mt-1">Berekuso</p>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Services & Location Section */}
+      <section className="py-8 px-4 bg-gradient-to-b from-muted/10 to-background border-t">
+        <div className="max-w-2xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Form Filling Services */}
+            <Card className="shadow-md">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <FileEdit className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Form Filling Services</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Need help with university applications? We've got you covered!
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="w-4 h-4 text-primary" />
+                  <a 
+                    href="tel:+233593260440" 
+                    className="font-semibold hover:text-primary transition-colors"
+                    data-testid="link-form-services"
+                  >
+                    Call: 0593260440
+                  </a>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <MessageCircle className="w-4 h-4 text-primary" />
+                  <a 
+                    href="https://wa.me/233593260440" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="font-semibold hover:text-primary transition-colors"
+                  >
+                    WhatsApp Us
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Shop Location */}
+            <Card className="shadow-md">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Visit Our Shop</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">Tech Junction</p>
+                  <p className="text-sm text-muted-foreground">Kumasi, Ghana</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Get instant vouchers, form filling assistance, and all tech services
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="w-4 h-4 text-primary" />
+                  <span className="font-semibold">0593260440</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
 
       <footer className="py-6 px-4 border-t bg-card">
         <div className="max-w-md mx-auto space-y-3">

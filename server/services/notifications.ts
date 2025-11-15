@@ -54,7 +54,7 @@ export async function sendVoucherEmail(
         </p>
         
         <p style="color: #6b7280; font-size: 14px;">
-          Need help? Contact info@alltekse.com
+          Need help? Contact support@alltekse.com
         </p>
       </div>
     `,
