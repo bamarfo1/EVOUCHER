@@ -29,11 +29,11 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
-      <header className="py-6 px-4 border-b bg-card shadow-sm">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 dark:from-slate-900 dark:via-purple-900/20 dark:to-blue-900/20 flex flex-col">
+      <header className="py-6 px-4 border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg">
         <div className="max-w-md mx-auto space-y-4">
           <div className="flex items-center justify-center gap-4">
-            <div className="bg-black rounded-lg p-2">
+            <div className="bg-black rounded-xl p-3 shadow-xl">
               <img 
                 src={alltekseLogo} 
                 alt="AllTekSE Logo" 
@@ -44,30 +44,32 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             <img 
               src={waecLogo} 
               alt="WAEC Logo" 
-              className="h-16 w-auto object-contain"
+              className="h-16 w-auto object-contain drop-shadow-lg"
               data-testid="img-waec-logo"
             />
           </div>
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent" data-testid="text-site-title">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent" data-testid="text-site-title">
               AllTekSE e-Voucher
             </h1>
-            <p className="text-sm text-muted-foreground">WAEC Result Checker Platform</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">WAEC Result Checker Platform</p>
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center space-y-4 pb-6">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <Zap className="w-8 h-8 text-primary" />
+        <Card className="w-full max-w-md shadow-2xl border-2 border-purple-100 dark:border-purple-900/50">
+          <CardHeader className="text-center space-y-4 pb-6 bg-gradient-to-br from-purple-50/50 via-blue-50/50 to-teal-50/50 dark:from-purple-900/20 dark:via-blue-900/20 dark:to-teal-900/20 rounded-t-lg">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500 via-blue-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl">
+              <Zap className="w-10 h-10 text-white" />
             </div>
             <div>
-              <CardTitle className="text-2xl mb-2" data-testid="text-card-title">Instant Delivery!</CardTitle>
-              <CardDescription className="text-base leading-relaxed" data-testid="text-card-description">
+              <CardTitle className="text-3xl mb-2 bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent font-bold" data-testid="text-card-title">
+                Instant Delivery!
+              </CardTitle>
+              <CardDescription className="text-base leading-relaxed text-slate-600 dark:text-slate-400" data-testid="text-card-description">
                 Once your payment is completed, your WAEC Result Checker Voucher will be sent to you automatically and immediately.
-                <span className="block mt-2 font-medium text-foreground">No delays — fast, secure, and convenient.</span>
+                <span className="block mt-2 font-semibold text-purple-600 dark:text-purple-400">No delays — fast, secure, and convenient.</span>
               </CardDescription>
             </div>
           </CardHeader>
@@ -127,36 +129,38 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               </div>
 
               <div className="pt-4 border-t space-y-4">
-                <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 rounded-lg p-4 text-center border border-primary/20">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Price</p>
-                  <p className="text-4xl font-bold text-primary" data-testid="text-price">GHC 20</p>
+                <div className="relative bg-gradient-to-br from-purple-600 via-blue-600 to-teal-600 rounded-xl p-6 text-center shadow-xl overflow-hidden">
+                  <div className="absolute inset-0 bg-grid-white/10"></div>
+                  <p className="text-sm font-semibold text-white/90 mb-1 relative z-10">Price</p>
+                  <p className="text-5xl font-extrabold text-white relative z-10" data-testid="text-price">GHC 20</p>
+                  <p className="text-xs text-white/80 mt-1 relative z-10">Per Voucher</p>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-center">Available Payment Options</p>
+                  <p className="text-sm font-bold text-center bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">Available Payment Options</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-mtn">
+                    <div className="bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-800 rounded-xl p-3 hover-elevate transition-all shadow-md" data-testid="payment-mtn">
                       <img 
                         src={mtnLogo} 
                         alt="MTN Mobile Money" 
                         className="w-full h-12 object-contain"
                       />
                     </div>
-                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-telecel">
+                    <div className="bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-3 hover-elevate transition-all shadow-md" data-testid="payment-telecel">
                       <img 
                         src={telecelLogo} 
                         alt="Telecel Cash" 
                         className="w-full h-12 object-contain"
                       />
                     </div>
-                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-airteltigo">
+                    <div className="bg-white dark:bg-slate-800 border-2 border-teal-200 dark:border-teal-800 rounded-xl p-3 hover-elevate transition-all shadow-md" data-testid="payment-airteltigo">
                       <img 
                         src={airtelTigoLogo} 
                         alt="AirtelTigo Money" 
                         className="w-full h-12 object-contain"
                       />
                     </div>
-                    <div className="bg-card border rounded-lg p-3 hover-elevate transition-all" data-testid="payment-visa">
+                    <div className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl p-3 hover-elevate transition-all shadow-md" data-testid="payment-visa">
                       <img 
                         src={visaLogo} 
                         alt="Visa Card" 
@@ -168,26 +172,26 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
                 <Button
                   type="submit"
-                  className="w-full h-14 text-base font-semibold shadow-lg"
+                  className="w-full h-16 text-lg font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
                   disabled={isLoading || !email || !phone || !examType}
                   data-testid="button-pay"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 animate-pulse" />
+                      <Zap className="w-5 h-5 animate-pulse" />
                       Processing...
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      <Lock className="w-4 h-4" />
+                      <Lock className="w-5 h-5" />
                       Pay GHC 20 Now
                     </span>
                   )}
                 </Button>
 
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4 text-green-600" />
-                  <span className="font-medium">Secured by Paystack</span>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <Shield className="w-5 h-5 text-emerald-500" />
+                  <span className="font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Secured by Paystack</span>
                 </div>
               </div>
             </form>
@@ -196,98 +200,98 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       </main>
 
       {/* University Links Section */}
-      <section className="py-8 px-4 bg-muted/30">
+      <section className="py-12 px-4 bg-gradient-to-b from-white via-purple-50/30 to-blue-50/30 dark:from-slate-900 dark:via-purple-900/10 dark:to-blue-900/10">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full mb-3">
-              <GraduationCap className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-bold text-primary">University Portals</h2>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 via-blue-500 to-teal-500 px-6 py-3 rounded-full mb-3 shadow-lg">
+              <GraduationCap className="w-6 h-6 text-white" />
+              <h2 className="text-xl font-bold text-white">University Portals</h2>
             </div>
-            <p className="text-sm text-muted-foreground">Quick access to Ghana's top universities</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Quick access to Ghana's top universities</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <a 
               href="https://admissions.ug.edu.gh/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              className="bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-800 rounded-xl p-5 hover-elevate transition-all text-center group shadow-lg hover:shadow-2xl"
               data-testid="link-university-ug"
             >
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">University of Ghana</h3>
-              <p className="text-xs text-muted-foreground mt-1">UG-Legon</p>
+              <h3 className="font-bold text-base group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">University of Ghana</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">UG-Legon</p>
             </a>
             
             <a 
               href="https://apps.knust.edu.gh/admissions/apply/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              className="bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-5 hover-elevate transition-all text-center group shadow-lg hover:shadow-2xl"
               data-testid="link-university-knust"
             >
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">KNUST</h3>
-              <p className="text-xs text-muted-foreground mt-1">Kumasi</p>
+              <h3 className="font-bold text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">KNUST</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Kumasi</p>
             </a>
             
             <a 
               href="http://admissionlist.ucc.edu.gh/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              className="bg-white dark:bg-slate-800 border-2 border-teal-200 dark:border-teal-800 rounded-xl p-5 hover-elevate transition-all text-center group shadow-lg hover:shadow-2xl"
               data-testid="link-university-ucc"
             >
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">UCC</h3>
-              <p className="text-xs text-muted-foreground mt-1">Cape Coast</p>
+              <h3 className="font-bold text-base group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">UCC</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Cape Coast</p>
             </a>
             
             <a 
               href="https://upsasip.com/adm-area" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl p-5 hover-elevate transition-all text-center group shadow-lg hover:shadow-2xl"
               data-testid="link-university-upsa"
             >
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">UPSA</h3>
-              <p className="text-xs text-muted-foreground mt-1">Accra</p>
+              <h3 className="font-bold text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">UPSA</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Accra</p>
             </a>
             
             <a 
               href="https://central.edu.gh/online" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              className="bg-white dark:bg-slate-800 border-2 border-pink-200 dark:border-pink-800 rounded-xl p-5 hover-elevate transition-all text-center group shadow-lg hover:shadow-2xl"
               data-testid="link-university-central"
             >
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Central University</h3>
-              <p className="text-xs text-muted-foreground mt-1">Accra</p>
+              <h3 className="font-bold text-base group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Central University</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Accra</p>
             </a>
             
             <a 
               href="https://expresspaygh.com/ashesi" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-card border rounded-lg p-4 hover-elevate transition-all text-center group"
+              className="bg-white dark:bg-slate-800 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 hover-elevate transition-all text-center group shadow-lg hover:shadow-2xl"
               data-testid="link-university-ashesi"
             >
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Ashesi University</h3>
-              <p className="text-xs text-muted-foreground mt-1">Berekuso</p>
+              <h3 className="font-bold text-base group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Ashesi University</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Berekuso</p>
             </a>
           </div>
         </div>
       </section>
 
       {/* Services & Location Section */}
-      <section className="py-8 px-4 bg-gradient-to-b from-muted/10 to-background border-t">
+      <section className="py-12 px-4 bg-gradient-to-b from-blue-50/30 via-teal-50/30 to-white dark:from-blue-900/10 dark:via-teal-900/10 dark:to-slate-900 border-t-2 border-purple-200 dark:border-purple-800">
         <div className="max-w-2xl mx-auto">
           <div className="grid md:grid-cols-2 gap-6">
             {/* Form Filling Services */}
-            <Card className="shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <FileEdit className="w-5 h-5 text-primary" />
+            <Card className="shadow-2xl border-2 border-purple-200 dark:border-purple-800">
+              <CardHeader className="pb-3 bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-900/20 dark:to-blue-900/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <FileEdit className="w-6 h-6 text-white" />
                   </div>
-                  <CardTitle className="text-lg">Form Filling Services</CardTitle>
+                  <CardTitle className="text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">Form Filling Services</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -319,13 +323,13 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             </Card>
 
             {/* Shop Location */}
-            <Card className="shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-primary" />
+            <Card className="shadow-2xl border-2 border-teal-200 dark:border-teal-800">
+              <CardHeader className="pb-3 bg-gradient-to-br from-teal-50/50 to-blue-50/50 dark:from-teal-900/20 dark:to-blue-900/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <MapPin className="w-6 h-6 text-white" />
                   </div>
-                  <CardTitle className="text-lg">Visit Our Shop</CardTitle>
+                  <CardTitle className="text-xl bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent font-bold">Visit Our Shop</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -346,24 +350,24 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
         </div>
       </section>
 
-      <footer className="py-6 px-4 border-t bg-card">
-        <div className="max-w-md mx-auto space-y-3">
-          <div className="text-center space-y-2">
-            <p className="text-sm font-medium">Need Help?</p>
-            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                <a href="mailto:support@alltekse.com" className="hover:text-foreground transition-colors" data-testid="link-email">
+      <footer className="py-8 px-4 border-t-2 border-purple-200 dark:border-purple-800 bg-gradient-to-b from-white to-purple-50 dark:from-slate-900 dark:to-purple-900/20">
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="text-center space-y-3">
+            <p className="text-base font-bold bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">Need Help?</p>
+            <div className="flex flex-col items-center gap-3 text-sm">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-md border border-purple-200 dark:border-purple-800">
+                <Mail className="w-4 h-4 text-purple-600" />
+                <a href="mailto:support@alltekse.com" className="font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors" data-testid="link-email">
                   support@alltekse.com
                 </a>
               </div>
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-md border border-teal-200 dark:border-teal-800">
+                <MessageCircle className="w-4 h-4 text-teal-600" />
                 <a 
                   href="https://wa.me/233593260440" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="hover:text-foreground transition-colors"
+                  className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
                   data-testid="link-whatsapp"
                 >
                   WhatsApp: 0593260440
