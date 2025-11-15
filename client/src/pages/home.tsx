@@ -31,8 +31,24 @@ export default function Home() {
       }
     } catch (error: any) {
       console.error("Purchase error:", error);
-      const message = error.message || "Failed to process purchase. Please try again.";
-      setErrorMessage(message);
+      
+      let cleanMessage = "Failed to process purchase. Please try again.";
+      
+      if (error.message) {
+        try {
+          const jsonMatch = error.message.match(/\{.*\}/);
+          if (jsonMatch) {
+            const errorData = JSON.parse(jsonMatch[0]);
+            cleanMessage = errorData.error || cleanMessage;
+          } else {
+            cleanMessage = error.message;
+          }
+        } catch {
+          cleanMessage = error.message;
+        }
+      }
+      
+      setErrorMessage(cleanMessage);
     } finally {
       setIsLoading(false);
     }
@@ -52,21 +68,22 @@ export default function Home() {
     <>
       {errorMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
-          <Alert variant="destructive" className="shadow-lg" data-testid="alert-error">
+          <Alert variant="destructive" className="shadow-lg bg-destructive border-destructive" data-testid="alert-error">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Oops! Something went wrong</AlertTitle>
-            <AlertDescription className="mt-2 space-y-2">
-              <p>{errorMessage}</p>
-              {errorMessage.includes("No vouchers available") && (
-                <p className="text-sm">
+            <AlertTitle className="text-destructive-foreground">Oops! Something went wrong</AlertTitle>
+            <AlertDescription className="mt-2 space-y-3 text-destructive-foreground">
+              {errorMessage.includes("No vouchers available") ? (
+                <p className="font-medium">
                   We're currently out of stock. Please check back later or contact support for assistance.
                 </p>
+              ) : (
+                <p className="font-medium">{errorMessage}</p>
               )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setErrorMessage(null)}
-                className="mt-2 w-full"
+                className="w-full bg-white text-destructive hover:bg-white/90 border-white"
                 data-testid="button-dismiss-error"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
