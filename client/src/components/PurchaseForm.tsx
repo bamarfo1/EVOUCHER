@@ -136,10 +136,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 </div>
 
                 <div className="bg-muted/50 rounded-md p-3 space-y-1">
-                  <p className="text-sm font-medium flex items-center gap-2">
+                  <div className="text-sm font-medium flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">Instant</Badge>
-                    What happens next?
-                  </p>
+                    <span>What happens next?</span>
+                  </div>
                   <ul className="text-xs text-muted-foreground space-y-1 ml-1">
                     <li>• Complete payment securely via Paystack</li>
                     <li>• Receive voucher instantly via SMS & Email</li>
