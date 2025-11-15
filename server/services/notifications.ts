@@ -5,9 +5,9 @@ const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
 const EMAIL_PORT = process.env.EMAIL_PORT || "587";
-const SMS_API_KEY = process.env.SMS_API_KEY;
+const SMS_API_KEY = process.env.SMSAPI || process.env.SMS_API_KEY;
 const SMS_API_URL = process.env.SMS_API_URL || "https://sms.arkesel.com/api/v2/sms/send";
-const SMS_SENDER_ID = process.env.SMS_SENDER_ID || "WAEC";
+const SMS_SENDER_ID = process.env.SMS_SENDER_ID || "ALLTEK";
 
 const WAEC_URL = "https://waecdirect.org";
 

@@ -202,7 +202,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send("Invalid request: no raw body");
       }
       
-      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
+      const secretKey = process.env.PAYSTACKSECRETKEYbright || process.env.PAYSTACK_SECRET_KEY || '';
+      const hash = crypto.createHmac('sha512', secretKey)
         .update(req.rawBody as Buffer)
         .digest('hex');
       
