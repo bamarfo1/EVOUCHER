@@ -22,9 +22,9 @@ A simple web application for selling WAEC result checker vouchers with instant d
 **Backend:**
 - Express.js
 - PostgreSQL with Drizzle ORM
-- Nodemailer for email (Gmail SMTP)
+- Nodemailer for email (Namecheap/PrivateEmail SMTP)
 - Paystack API for payments
-- SMS API integration (configurable)
+- BulkSMS Ghana for SMS delivery
 
 ## Database Schema
 
@@ -47,16 +47,24 @@ A simple web application for selling WAEC result checker vouchers with instant d
 
 ## Environment Variables Required
 
-The following secrets need to be configured:
+The following secrets are configured with custom names:
 
-- `PAYSTACK_SECRET_KEY` - Your Paystack secret key (provided: sk_live_...)
-- `SMS_API_KEY` - API key for Arkesel SMS (provided: ff6353ab...)
-- `EMAIL_USER` - Email address for sending vouchers (e.g., info@alltekse.com)
-- `EMAIL_PASSWORD` - Email password for Namecheap/PrivateEmail
+**Payment Integration:**
+- `PAYSTACKSECRETKEYbright` - Paystack secret key (configured)
+- `PAYSTACKPUBLICKEYbright` - Paystack public key (configured)
+
+**Email Configuration:**
+- `EMAILUSER` - Email address for sending vouchers (info@alltekse.com)
+- `EMAILPASSWORD` - Email password for Namecheap/PrivateEmail SMTP
 - `EMAIL_HOST` - SMTP host (default: mail.privateemail.com)
 - `EMAIL_PORT` - SMTP port (default: 587)
-- `SMS_API_URL` - SMS API endpoint (default: https://sms.arkesel.com/api/v2/sms/send)
-- `SMS_SENDER_ID` - Sender ID for SMS (default: "WAEC")
+
+**SMS Configuration:**
+- `SMSAPI` - BulkSMS Ghana API key (configured)
+- `SMS_API_URL` - SMS API endpoint (default: http://clientlogin.bulksmsgh.com/smsapi)
+- `SMS_SENDER_ID` - Sender ID for SMS (default: "ALLTEK")
+
+**Application:**
 - `BASE_URL` - Base URL of your application (for Paystack callbacks)
 
 ## Setup Instructions
@@ -103,11 +111,11 @@ The following secrets need to be configured:
 
 ## SMS Provider Configuration
 
-The application is configured to work with any SMS API that accepts:
-- Bearer token authentication
-- JSON payload with sender, recipient, message fields
-
-Adjust `server/services/notifications.ts` if your SMS provider uses different parameters.
+The application uses **BulkSMS Ghana** (bulksmsghana.com) for SMS delivery:
+- Endpoint: `http://clientlogin.bulksmsgh.com/smsapi`
+- Authentication: API key passed as URL parameter
+- Response format: JSON with code 1000 for success
+- Sender ID: "ALLTEK" (configurable via SMS_SENDER_ID)
 
 ## Admin Tasks
 
@@ -156,18 +164,23 @@ The application is fully functional with enterprise-grade security and ready for
 2. ✅ Error recovery and rollback handling
 3. ✅ Concurrency-safe voucher assignment
 4. ✅ Test voucher cards added to database (5 cards)
+5. ✅ Email notifications working (Namecheap SMTP)
+6. ✅ SMS notifications working (BulkSMS Ghana)
+
+**Current Configuration:**
+- Email: info@alltekse.com (EMAILUSER, EMAILPASSWORD configured)
+- SMS: BulkSMS Ghana with sender ID "ALLTEK" (SMSAPI configured)
+- Payment: Paystack test mode (PAYSTACKSECRETKEYbright, PAYSTACKPUBLICKEYbright)
 
 **Deployment Steps:**
-1. Configure environment variables:
-   - `EMAIL_USER` - Email address for sending vouchers
-   - `EMAIL_PASSWORD` - Email password for SMTP
-   - `PAYSTACK_SECRET_KEY` - Paystack secret key
-   - `SMS_API_KEY` - SMS API key
-   - `BASE_URL` - Your production URL
-2. Add production voucher cards to database using SQL INSERT
+1. Switch Paystack to live mode:
+   - Update `PAYSTACKSECRETKEYbright` with live secret key
+   - Update `PAYSTACKPUBLICKEYbright` with live public key
+2. Set `BASE_URL` to your production Replit domain (e.g., https://your-app.repl.co)
 3. Configure Paystack webhook URL: `https://your-domain/api/webhook/paystack`
-4. Test complete payment flow in test mode
-5. Publish the application
+4. Add production voucher cards to database using SQL INSERT
+5. Test complete payment flow
+6. Publish the application
 
 **Note on Webhook Signature:**
 The raw request body is captured via Express middleware (`verify` callback in `express.json()`) and stored as `req.rawBody`. This ensures accurate HMAC-SHA512 signature validation for Paystack webhooks. If signature validation issues occur in production, verify that the webhook secret key matches your Paystack dashboard settings.

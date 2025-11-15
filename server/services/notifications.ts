@@ -6,7 +6,7 @@ const EMAIL_PASSWORD = process.env.EMAILPASSWORD || process.env.EMAIL_PASSWORD;
 const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
 const EMAIL_PORT = process.env.EMAIL_PORT || "587";
 const SMS_API_KEY = process.env.SMSAPI || process.env.SMS_API_KEY;
-const SMS_API_URL = process.env.SMS_API_URL || "https://sms.arkesel.com/api/v2/sms/send";
+const SMS_API_URL = process.env.SMS_API_URL || "http://clientlogin.bulksmsgh.com/smsapi";
 const SMS_SENDER_ID = process.env.SMS_SENDER_ID || "ALLTEK";
 
 const WAEC_URL = "https://waecdirect.org";
@@ -76,20 +76,33 @@ export async function sendVoucherSMS(
   }
 
   try {
-    await axios.post(
-      SMS_API_URL,
-      {
-        sender: SMS_SENDER_ID,
-        recipients: [phone],
-        message: message,
+    const response = await axios.get(SMS_API_URL, {
+      params: {
+        key: SMS_API_KEY,
+        to: phone,
+        msg: message,
+        sender_id: SMS_SENDER_ID,
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": SMS_API_KEY,
-        },
-      }
-    );
+    });
+
+    const responseData = response.data;
+    const responseCode = responseData?.code || responseData;
+    
+    if (responseCode === 1000 || responseCode === "1000") {
+      console.log("SMS sent successfully to", phone);
+    } else if (responseCode === 1004 || responseCode === "1004") {
+      throw new Error("Invalid SMS API Key");
+    } else if (responseCode === 1005 || responseCode === "1005") {
+      throw new Error(`Invalid phone number: ${phone}`);
+    } else if (responseCode === 1006 || responseCode === "1006") {
+      throw new Error(`Invalid Sender ID: ${SMS_SENDER_ID}`);
+    } else if (responseCode === 1003 || responseCode === "1003") {
+      throw new Error("Insufficient SMS balance");
+    } else if (responseCode === 1002 || responseCode === "1002") {
+      throw new Error("Message not sent");
+    } else {
+      console.log(`SMS API response:`, responseData);
+    }
   } catch (error) {
     console.error("Failed to send SMS:", error);
     throw error;
