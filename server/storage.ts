@@ -16,6 +16,8 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getTransactionByReference(reference: string): Promise<Transaction | undefined>;
   updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction>;
+  updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
+  assignVoucherToTransaction(transactionId: string, phone: string, email: string, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
   getTransactionById(id: string): Promise<Transaction | undefined>;
 }
 
@@ -96,6 +98,73 @@ export class DbStorage implements IStorage {
       .where(eq(transactions.id, id))
       .returning();
     return transaction;
+  }
+
+  async updateTransactionStatusConditional(
+    id: string,
+    fromStatus: string,
+    toStatus: string
+  ): Promise<Transaction | null> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ status: toStatus })
+      .where(and(
+        eq(transactions.id, id),
+        eq(transactions.status, fromStatus)
+      ))
+      .returning();
+    return transaction || null;
+  }
+
+  async assignVoucherToTransaction(
+    transactionId: string,
+    phone: string,
+    email: string,
+    examType: string
+  ): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
+    return await db.transaction(async (tx) => {
+      const [availableVoucher] = await tx
+        .select()
+        .from(voucherCards)
+        .where(eq(voucherCards.used, false))
+        .limit(1)
+        .for('update');
+
+      if (!availableVoucher) {
+        await tx
+          .update(transactions)
+          .set({ status: "failed" })
+          .where(eq(transactions.id, transactionId));
+        return null;
+      }
+
+      const [updatedVoucher] = await tx
+        .update(voucherCards)
+        .set({
+          used: true,
+          purchaserPhone: phone,
+          purchaserEmail: email,
+          examType: examType,
+          usedAt: sql`now()`,
+        })
+        .where(eq(voucherCards.id, availableVoucher.id))
+        .returning();
+
+      const [updatedTransaction] = await tx
+        .update(transactions)
+        .set({
+          status: "completed",
+          voucherCardId: updatedVoucher.id,
+          completedAt: sql`now()`,
+        })
+        .where(eq(transactions.id, transactionId))
+        .returning();
+
+      return {
+        transaction: updatedTransaction,
+        voucher: updatedVoucher,
+      };
+    });
   }
 
   async getTransactionById(id: string): Promise<Transaction | undefined> {

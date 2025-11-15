@@ -62,10 +62,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
+    let transaction: any = null;
+    let isProcessing = false;
     try {
       const { reference } = req.params;
       
-      const transaction = await storage.getTransactionByReference(reference);
+      transaction = await storage.getTransactionByReference(reference);
       if (!transaction) {
         return res.status(404).json({ error: "Transaction not found" });
       }
@@ -89,7 +91,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      await storage.updateTransactionStatus(transaction.id, "processing");
+      const processingUpdate = await storage.updateTransactionStatusConditional(
+        transaction.id,
+        "pending",
+        "processing"
+      );
+      
+      if (!processingUpdate) {
+        return res.status(409).json({ 
+          error: "Transaction already being processed by another request",
+          status: "conflict"
+        });
+      }
+      
+      isProcessing = true;
 
       const verification = await verifyPayment(reference);
       
@@ -109,66 +124,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const availableVoucher = await storage.getAvailableVoucher();
+      const result = await storage.assignVoucherToTransaction(
+        transaction.id,
+        transaction.phone,
+        transaction.email,
+        transaction.examType
+      );
       
-      if (!availableVoucher) {
-        await storage.updateTransactionStatus(transaction.id, "failed");
+      if (!result) {
         return res.status(400).json({ 
           error: "No vouchers available" 
         });
       }
 
-      const updatedVoucher = await storage.markVoucherAsUsed(
-        availableVoucher.id,
-        transaction.phone,
-        transaction.email,
-        transaction.examType
-      );
+      const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
+      isProcessing = false;
 
-      await storage.updateTransactionStatus(
-        transaction.id, 
-        "completed", 
-        availableVoucher.id
-      );
+      const examTypeNames: Record<string, string> = {
+        "may-june": "May/June WASSCE",
+        "nov-dec": "Nov/Dec WASSCE",
+        "private": "Private Candidate",
+        "gce": "GCE"
+      };
 
-        const examTypeNames: Record<string, string> = {
-          "may-june": "May/June WASSCE",
-          "nov-dec": "Nov/Dec WASSCE",
-          "private": "Private Candidate",
-          "gce": "GCE"
-        };
+      try {
+        await Promise.all([
+          sendVoucherEmail(
+            updatedTransaction.email,
+            updatedVoucher.serial,
+            updatedVoucher.pin,
+            examTypeNames[updatedTransaction.examType] || updatedTransaction.examType
+          ),
+          sendVoucherSMS(
+            updatedTransaction.phone,
+            updatedVoucher.serial,
+            updatedVoucher.pin
+          ),
+        ]);
+      } catch (notificationError) {
+        console.error("Notification error (voucher already assigned):", notificationError);
+      }
 
-        try {
-          await Promise.all([
-            sendVoucherEmail(
-              transaction.email,
-              updatedVoucher.serial,
-              updatedVoucher.pin,
-              examTypeNames[transaction.examType] || transaction.examType
-            ),
-            sendVoucherSMS(
-              transaction.phone,
-              updatedVoucher.serial,
-              updatedVoucher.pin
-            ),
-          ]);
-        } catch (notificationError) {
-          console.error("Notification error:", notificationError);
-        }
-
-        res.json({
-          status: "success",
-          voucher: {
-            serial: updatedVoucher.serial,
-            pin: updatedVoucher.pin,
-            examType: examTypeNames[transaction.examType] || transaction.examType,
-          },
-        });
+      res.json({
+        status: "success",
+        voucher: {
+          serial: updatedVoucher.serial,
+          pin: updatedVoucher.pin,
+          examType: examTypeNames[updatedTransaction.examType] || updatedTransaction.examType,
+        },
+      });
     } catch (error: any) {
       console.error("Payment verification error:", error);
       
-      if (transaction && transaction.status === "processing") {
-        await storage.updateTransactionStatus(transaction.id, "failed");
+      if (transaction && isProcessing) {
+        try {
+          await storage.updateTransactionStatus(transaction.id, "failed");
+        } catch (rollbackError) {
+          console.error("Failed to rollback transaction status:", rollbackError);
+        }
       }
       
       res.status(500).json({ 
@@ -178,14 +191,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/webhook/paystack", async (req: Request, res: Response) => {
+    let transaction: any = null;
+    let isProcessing = false;
+    
     try {
       const crypto = require('crypto');
+      
+      if (!req.rawBody) {
+        console.error("Webhook: rawBody is undefined");
+        return res.status(400).send("Invalid request: no raw body");
+      }
+      
       const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
-        .update(JSON.stringify(req.body))
+        .update(req.rawBody as Buffer)
         .digest('hex');
       
       if (hash !== req.headers['x-paystack-signature']) {
-        console.error("Invalid webhook signature");
+        console.error("Invalid webhook signature", {
+          computed: hash,
+          received: req.headers['x-paystack-signature']
+        });
         return res.status(401).send("Invalid signature");
       }
 
@@ -201,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).send("Amount mismatch");
         }
 
-        const transaction = await storage.getTransactionByReference(reference);
+        transaction = await storage.getTransactionByReference(reference);
         
         if (!transaction) {
           console.error("Webhook: Transaction not found", reference);
@@ -216,28 +241,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(409).send("Already processing");
         }
 
-        await storage.updateTransactionStatus(transaction.id, "processing");
+        const processingUpdate = await storage.updateTransactionStatusConditional(
+          transaction.id,
+          "pending",
+          "processing"
+        );
         
-        const availableVoucher = await storage.getAvailableVoucher();
-        
-        if (!availableVoucher) {
-          await storage.updateTransactionStatus(transaction.id, "failed");
-          console.error("Webhook: No vouchers available");
-          return res.status(400).send("No vouchers available");
+        if (!processingUpdate) {
+          return res.status(409).send("Transaction already being processed by another request");
         }
-
-        const updatedVoucher = await storage.markVoucherAsUsed(
-          availableVoucher.id,
+        
+        isProcessing = true;
+        
+        const result = await storage.assignVoucherToTransaction(
+          transaction.id,
           transaction.phone,
           transaction.email,
           transaction.examType
         );
+        
+        if (!result) {
+          console.error("Webhook: No vouchers available");
+          return res.status(400).send("No vouchers available");
+        }
 
-        await storage.updateTransactionStatus(
-          transaction.id,
-          "completed",
-          availableVoucher.id
-        );
+        const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
+        isProcessing = false;
 
         const examTypeNames: Record<string, string> = {
           "may-june": "May/June WASSCE",
@@ -249,25 +278,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           await Promise.all([
             sendVoucherEmail(
-              transaction.email,
+              updatedTransaction.email,
               updatedVoucher.serial,
               updatedVoucher.pin,
-              examTypeNames[transaction.examType] || transaction.examType
+              examTypeNames[updatedTransaction.examType] || updatedTransaction.examType
             ),
             sendVoucherSMS(
-              transaction.phone,
+              updatedTransaction.phone,
               updatedVoucher.serial,
               updatedVoucher.pin
             ),
           ]);
         } catch (notificationError) {
-          console.error("Webhook notification error:", notificationError);
+          console.error("Webhook notification error (voucher already assigned):", notificationError);
         }
       }
       
       res.status(200).send("OK");
     } catch (error) {
       console.error("Webhook error:", error);
+      
+      if (transaction && isProcessing) {
+        try {
+          await storage.updateTransactionStatus(transaction.id, "failed");
+        } catch (rollbackError) {
+          console.error("Failed to rollback transaction status in webhook:", rollbackError);
+        }
+      }
+      
       res.status(500).send("Webhook processing failed");
     }
   });
