@@ -12,6 +12,7 @@ import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
 import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
 import visaLogo from "@assets/images (2)_1763209941664.png";
+import studentsBanner from "@assets/generated_images/Successful_African_students_celebrating_101e4f92.png";
 
 interface PurchaseFormProps {
   onSubmit: (data: { email: string; phone: string; examType: string }) => void;
@@ -56,6 +57,41 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
           </div>
         </div>
       </header>
+
+      {/* Hero Banner Section */}
+      <section className="relative w-full h-64 md:h-80 overflow-hidden" data-testid="section-hero-banner">
+        <img 
+          src={studentsBanner} 
+          alt="Successful Students" 
+          className="w-full h-full object-cover"
+          data-testid="img-students-banner"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 via-blue-900/70 to-teal-900/80"></div>
+        <div className="absolute inset-0 flex items-center justify-center text-center px-4">
+          <div className="max-w-3xl space-y-4">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-2xl" data-testid="text-hero-title">
+              Your Success Starts Here
+            </h2>
+            <p className="text-lg md:text-xl text-white/95 font-medium drop-shadow-lg">
+              Get your WAEC Result Checker Voucher instantly and unlock your future!
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2 text-sm font-semibold shadow-lg">
+                <Zap className="w-4 h-4 mr-2" />
+                Instant Delivery
+              </Badge>
+              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2 text-sm font-semibold shadow-lg">
+                <Shield className="w-4 h-4 mr-2" />
+                100% Secure
+              </Badge>
+              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2 text-sm font-semibold shadow-lg">
+                <GraduationCap className="w-4 h-4 mr-2" />
+                Trusted by Thousands
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <main className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-2xl border-2 border-purple-100 dark:border-purple-900/50">
