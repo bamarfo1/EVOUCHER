@@ -13,7 +13,7 @@ export interface IStorage {
   getAvailableVoucher(): Promise<VoucherCard | undefined>;
   getVoucherById(id: string): Promise<VoucherCard | undefined>;
   markVoucherAsUsed(id: string, phone: string, email: string, examType: string): Promise<VoucherCard>;
-  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  createTransaction(transaction: Partial<InsertTransaction> & { email: string; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction>;
   getTransactionByReference(reference: string): Promise<Transaction | undefined>;
   updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction>;
   updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
@@ -59,10 +59,10 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
-  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+  async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction> {
     const [transaction] = await db
       .insert(transactions)
-      .values(insertTransaction)
+      .values(insertTransaction as any)
       .returning();
     return transaction;
   }

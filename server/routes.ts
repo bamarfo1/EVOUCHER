@@ -22,7 +22,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reference = `TXN-${Date.now()}-${randomBytes(4).toString('hex')}`;
       
       const transaction = await storage.createTransaction({
-        ...validatedData,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        examType: validatedData.examType,
         amount: "20",
         paystackReference: reference,
       });
