@@ -11,7 +11,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/api/payment/callback" component={PaymentCallback} />
+      <Route path="/payment-callback" component={PaymentCallback} />
       <Route component={NotFound} />
     </Switch>
   );
