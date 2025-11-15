@@ -1,38 +1,110 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "../db";
+import { 
+  type VoucherCard, 
+  type InsertVoucherCard,
+  type Transaction,
+  type InsertTransaction,
+  voucherCards,
+  transactions
+} from "@shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getAvailableVoucher(): Promise<VoucherCard | undefined>;
+  getVoucherById(id: string): Promise<VoucherCard | undefined>;
+  markVoucherAsUsed(id: string, phone: string, email: string, examType: string): Promise<VoucherCard>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransactionByReference(reference: string): Promise<Transaction | undefined>;
+  updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction>;
+  getTransactionById(id: string): Promise<Transaction | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DbStorage implements IStorage {
+  async getAvailableVoucher(): Promise<VoucherCard | undefined> {
+    const [voucher] = await db
+      .select()
+      .from(voucherCards)
+      .where(eq(voucherCards.used, false))
+      .limit(1);
+    return voucher;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getVoucherById(id: string): Promise<VoucherCard | undefined> {
+    const [voucher] = await db
+      .select()
+      .from(voucherCards)
+      .where(eq(voucherCards.id, id));
+    return voucher;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async markVoucherAsUsed(
+    id: string, 
+    phone: string, 
+    email: string, 
+    examType: string
+  ): Promise<VoucherCard> {
+    const [voucher] = await db
+      .update(voucherCards)
+      .set({
+        used: true,
+        purchaserPhone: phone,
+        purchaserEmail: email,
+        examType: examType,
+        usedAt: sql`now()`,
+      })
+      .where(eq(voucherCards.id, id))
+      .returning();
+    return voucher;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const [transaction] = await db
+      .insert(transactions)
+      .values(insertTransaction)
+      .returning();
+    return transaction;
+  }
+
+  async getTransactionByReference(reference: string): Promise<Transaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.paystackReference, reference));
+    return transaction;
+  }
+
+  async updateTransactionStatus(
+    id: string, 
+    status: string, 
+    voucherCardId?: string
+  ): Promise<Transaction> {
+    const updateData: any = {
+      status,
+    };
+    
+    if (status === "completed") {
+      updateData.completedAt = sql`now()`;
+    }
+    
+    if (voucherCardId) {
+      updateData.voucherCardId = voucherCardId;
+    }
+
+    const [transaction] = await db
+      .update(transactions)
+      .set(updateData)
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
+  }
+
+  async getTransactionById(id: string): Promise<Transaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, id));
+    return transaction;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DbStorage();
