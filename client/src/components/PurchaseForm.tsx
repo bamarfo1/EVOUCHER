@@ -117,10 +117,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                       <SelectValue placeholder="Select exam type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="may-june" data-testid="option-may-june">May/June WASSCE</SelectItem>
-                      <SelectItem value="nov-dec" data-testid="option-nov-dec">Nov/Dec WASSCE</SelectItem>
-                      <SelectItem value="private" data-testid="option-private">Private Candidate</SelectItem>
-                      <SelectItem value="gce" data-testid="option-gce">GCE</SelectItem>
+                      <SelectItem value="wassce" data-testid="option-wassce">WASSCE</SelectItem>
+                      <SelectItem value="bece" data-testid="option-bece">BECE</SelectItem>
+                      <SelectItem value="private-wassce" data-testid="option-private-wassce">PRIVATE WASSCE</SelectItem>
+                      <SelectItem value="private-bece" data-testid="option-private-bece">PRIVATE BECE</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -202,8 +202,8 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                <a href="mailto:info@alltekse.com" className="hover:text-foreground transition-colors" data-testid="link-email">
-                  info@alltekse.com
+                <a href="mailto:support@alltekse.com" className="hover:text-foreground transition-colors" data-testid="link-email">
+                  support@alltekse.com
                 </a>
               </div>
               <div className="flex items-center gap-2">

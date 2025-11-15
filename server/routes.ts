@@ -30,10 +30,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const examTypeNames: Record<string, string> = {
-        "may-june": "May/June WASSCE",
-        "nov-dec": "Nov/Dec WASSCE",
-        "private": "Private Candidate",
-        "gce": "GCE"
+        "wassce": "WASSCE",
+        "bece": "BECE",
+        "private-wassce": "PRIVATE WASSCE",
+        "private-bece": "PRIVATE BECE"
       };
 
       const baseUrl = process.env.BASE_URL || `http://localhost:5000`;
@@ -143,10 +143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isProcessing = false;
 
       const examTypeNames: Record<string, string> = {
-        "may-june": "May/June WASSCE",
-        "nov-dec": "Nov/Dec WASSCE",
-        "private": "Private Candidate",
-        "gce": "GCE"
+        "wassce": "WASSCE",
+        "bece": "BECE",
+        "private-wassce": "PRIVATE WASSCE",
+        "private-bece": "PRIVATE BECE"
       };
 
       try {

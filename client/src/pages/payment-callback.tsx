@@ -126,8 +126,8 @@ export default function PaymentCallback() {
             <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                <a href="mailto:info@alltekse.com" className="hover:text-foreground transition-colors">
-                  info@alltekse.com
+                <a href="mailto:support@alltekse.com" className="hover:text-foreground transition-colors">
+                  support@alltekse.com
                 </a>
               </div>
               <div className="flex items-center gap-2">
