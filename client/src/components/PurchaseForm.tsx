@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, FileText, Lock } from "lucide-react";
+import { Shield, Mail, Phone, FileText, Lock, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
 
 interface PurchaseFormProps {
   onSubmit: (data: { email: string; phone: string; examType: string }) => void;
@@ -24,10 +25,20 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="py-4 px-4 border-b">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-xl font-bold text-center" data-testid="text-site-title">WAEC Voucher Purchase</h1>
-          <div className="flex items-center justify-center gap-2 mt-2">
+      <header className="py-6 px-4 border-b bg-card">
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="flex items-center justify-center">
+            <img 
+              src={waecLogo} 
+              alt="WAEC Logo" 
+              className="h-16 w-auto object-contain"
+              data-testid="img-waec-logo"
+            />
+          </div>
+          <h1 className="text-xl font-bold text-center" data-testid="text-site-title">
+            ALLTEKSE RESULT VOUCHER
+          </h1>
+          <div className="flex items-center justify-center gap-2">
             <Shield className="w-4 h-4 text-primary" />
             <p className="text-sm text-muted-foreground">Secure Payment via Paystack</p>
           </div>
@@ -152,9 +163,31 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
         </Card>
       </main>
 
-      <footer className="py-4 px-4 border-t bg-card">
-        <div className="max-w-md mx-auto text-center text-sm text-muted-foreground">
-          <p>Need help? Contact support@waecvoucher.com</p>
+      <footer className="py-6 px-4 border-t bg-card">
+        <div className="max-w-md mx-auto space-y-3">
+          <div className="text-center space-y-2">
+            <p className="text-sm font-medium">Need Help?</p>
+            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                <a href="mailto:info@alltekse.com" className="hover:text-foreground transition-colors" data-testid="link-email">
+                  info@alltekse.com
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                <a 
+                  href="https://wa.me/233593260440" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-foreground transition-colors"
+                  data-testid="link-whatsapp"
+                >
+                  WhatsApp: 0593260440
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

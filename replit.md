@@ -1,15 +1,23 @@
-# WAEC Voucher Purchase System
+# ALLTEKSE RESULT VOUCHER
 
-A simple web application for selling WAEC result checker vouchers with instant delivery via SMS and email after successful Paystack payment.
+A professional WAEC/WASSCE result checker voucher purchase system with instant delivery via SMS and email after successful Paystack payment.
+
+**Platform Branding:**
+- Name: ALLTEKSE RESULT VOUCHER
+- Contact Email: info@alltekse.com
+- WhatsApp Support: 0593260440
+- Production URL: https://waec-checker-hub-bmarfo422.replit.app
 
 ## Features
 
+- Professional branding with WAEC logo
 - Clean, mobile-friendly purchase form
 - Paystack payment integration (Mobile Money: MTN, TELECEL, AIRTEL TIGO, VISA Card)
 - Automatic voucher assignment from database
-- Instant delivery via SMS and Email
+- Instant delivery via SMS (BulkSMS Ghana) and Email (Namecheap SMTP)
 - PostgreSQL database for voucher cards and transactions
 - Payment webhook handling for reliable voucher delivery
+- Contact information displayed on all pages (email & WhatsApp)
 
 ## Tech Stack
 
