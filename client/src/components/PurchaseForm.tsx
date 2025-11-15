@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Shield, Mail, Phone, FileText, Lock, MessageCircle, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
-import alltekseLogo from "@assets/ATSEB LOGO png_1763209736565.png";
+import alltekseLogo from "@assets/101-800x600_1763210592506.jpg";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
 import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
@@ -175,12 +175,12 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <Zap className="w-4 h-4 animate-pulse" />
-                      Processing Payment...
+                      Processing...
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
                       <Lock className="w-4 h-4" />
-                      Pay GHC 20 - Get Voucher Instantly
+                      Pay GHC 20 Now
                     </span>
                   )}
                 </Button>

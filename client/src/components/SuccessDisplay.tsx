@@ -4,7 +4,7 @@ import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle } 
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
-import alltekseLogo from "@assets/ATSEB LOGO png_1763209736565.png";
+import alltekseLogo from "@assets/101-800x600_1763210592506.jpg";
 
 interface SuccessDisplayProps {
   voucherData: {

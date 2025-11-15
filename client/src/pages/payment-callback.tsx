@@ -5,7 +5,7 @@ import { Loader2, CheckCircle2, XCircle, Mail, MessageCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import SuccessDisplay from "@/components/SuccessDisplay";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
-import alltekseLogo from "@assets/ATSEB LOGO png_1763209736565.png";
+import alltekseLogo from "@assets/101-800x600_1763210592506.jpg";
 
 export default function PaymentCallback() {
   const [, setLocation] = useLocation();
