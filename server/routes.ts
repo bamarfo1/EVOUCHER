@@ -313,6 +313,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/test/notifications", async (req: Request, res: Response) => {
+    try {
+      const { email, phone } = req.body;
+      
+      if (!email || !phone) {
+        return res.status(400).json({ error: "Email and phone required" });
+      }
+
+      const testSerial = "TEST-2024-WAEC-9999";
+      const testPin = "9999-9999-9999";
+      const testExamType = "May/June WASSCE";
+
+      await Promise.all([
+        sendVoucherEmail(email, testSerial, testPin, testExamType),
+        sendVoucherSMS(phone, testSerial, testPin),
+      ]);
+
+      res.json({ 
+        success: true, 
+        message: "Test notifications sent successfully" 
+      });
+    } catch (error: any) {
+      console.error("Test notification error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to send test notifications" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
