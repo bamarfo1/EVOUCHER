@@ -103,6 +103,24 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   <span className="text-3xl font-bold text-primary" data-testid="text-price">GHC 20</span>
                 </div>
 
+                <div className="space-y-2">
+                  <p className="text-xs text-center text-muted-foreground">Accepted Payment Methods</p>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-mtn">
+                      MTN
+                    </Badge>
+                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-telecel">
+                      TELECEL
+                    </Badge>
+                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-airteltigo">
+                      AIRTEL TIGO
+                    </Badge>
+                    <Badge variant="outline" className="text-xs font-medium" data-testid="badge-visa">
+                      VISA CARD
+                    </Badge>
+                  </div>
+                </div>
+
                 <Button
                   type="submit"
                   className="w-full h-12 text-base"
