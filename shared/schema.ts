@@ -38,6 +38,9 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
   createdAt: true,
   completedAt: true,
   status: true,
+  amount: true,
+  paystackReference: true,
+  voucherCardId: true,
 }).extend({
   email: z.string().email(),
   phone: z.string().min(10),
