@@ -1,19 +1,23 @@
 import nodemailer from "nodemailer";
 import axios from "axios";
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
+const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
+const EMAIL_PORT = process.env.EMAIL_PORT || "587";
 const SMS_API_KEY = process.env.SMS_API_KEY;
-const SMS_API_URL = process.env.SMS_API_URL;
+const SMS_API_URL = process.env.SMS_API_URL || "https://sms.arkesel.com/api/v2/sms/send";
 const SMS_SENDER_ID = process.env.SMS_SENDER_ID || "WAEC";
 
-const WAEC_URL = "https://bit.ly/waec-results";
+const WAEC_URL = "https://waecdirect.org";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: EMAIL_HOST,
+  port: parseInt(EMAIL_PORT),
+  secure: false,
   auth: {
-    user: GMAIL_USER,
-    pass: GMAIL_APP_PASSWORD,
+    user: EMAIL_USER,
+    pass: EMAIL_PASSWORD,
   },
 });
 
@@ -23,8 +27,13 @@ export async function sendVoucherEmail(
   pin: string,
   examType: string
 ): Promise<void> {
+  if (!EMAIL_USER || !EMAIL_PASSWORD) {
+    console.log("Email not configured. Would send:", { email, serial, pin, examType });
+    return;
+  }
+
   const mailOptions = {
-    from: `WAEC Voucher <${GMAIL_USER}>`,
+    from: `WAEC Voucher <${EMAIL_USER}>`,
     to: email,
     subject: "Your WAEC Voucher - Check Results Now",
     html: `
@@ -45,7 +54,7 @@ export async function sendVoucherEmail(
         </p>
         
         <p style="color: #6b7280; font-size: 14px;">
-          Need help? Contact support@waecvoucher.com
+          Need help? Contact info@alltekse.com
         </p>
       </div>
     `,
@@ -61,7 +70,7 @@ export async function sendVoucherSMS(
 ): Promise<void> {
   const message = `WAEC Voucher - Serial: ${serial}, PIN: ${pin}. Check results: ${WAEC_URL}`;
 
-  if (!SMS_API_KEY || !SMS_API_URL) {
+  if (!SMS_API_KEY) {
     console.log("SMS API not configured. Would send:", { phone, message });
     return;
   }
@@ -71,13 +80,13 @@ export async function sendVoucherSMS(
       SMS_API_URL,
       {
         sender: SMS_SENDER_ID,
-        recipient: phone,
+        recipients: [phone],
         message: message,
       },
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${SMS_API_KEY}`,
+          "api-key": SMS_API_KEY,
         },
       }
     );

@@ -49,11 +49,13 @@ A simple web application for selling WAEC result checker vouchers with instant d
 
 The following secrets need to be configured:
 
-- `PAYSTACK_SECRET_KEY` - Your Paystack secret key
-- `GMAIL_USER` - Gmail address for sending emails
-- `GMAIL_APP_PASSWORD` - Gmail app password (not regular password)
-- `SMS_API_KEY` - API key for SMS provider
-- `SMS_API_URL` - SMS API endpoint URL
+- `PAYSTACK_SECRET_KEY` - Your Paystack secret key (provided: sk_live_...)
+- `SMS_API_KEY` - API key for Arkesel SMS (provided: ff6353ab...)
+- `EMAIL_USER` - Email address for sending vouchers (e.g., info@alltekse.com)
+- `EMAIL_PASSWORD` - Email password for Namecheap/PrivateEmail
+- `EMAIL_HOST` - SMTP host (default: mail.privateemail.com)
+- `EMAIL_PORT` - SMTP port (default: 587)
+- `SMS_API_URL` - SMS API endpoint (default: https://sms.arkesel.com/api/v2/sms/send)
 - `SMS_SENDER_ID` - Sender ID for SMS (default: "WAEC")
 - `BASE_URL` - Base URL of your application (for Paystack callbacks)
 
