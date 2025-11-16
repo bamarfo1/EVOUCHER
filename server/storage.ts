@@ -10,7 +10,7 @@ import {
 import { eq, and, sql } from "drizzle-orm";
 
 export interface IStorage {
-  getAvailableVoucher(): Promise<VoucherCard | undefined>;
+  getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined>;
   getVoucherById(id: string): Promise<VoucherCard | undefined>;
   markVoucherAsUsed(id: string, phone: string, email: string, examType: string): Promise<VoucherCard>;
   createTransaction(transaction: Partial<InsertTransaction> & { email: string; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction>;
@@ -23,11 +23,17 @@ export interface IStorage {
 }
 
 export class DbStorage implements IStorage {
-  async getAvailableVoucher(): Promise<VoucherCard | undefined> {
+  async getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined> {
+    const conditions = [eq(voucherCards.used, false)];
+    
+    if (examType) {
+      conditions.push(eq(voucherCards.examType, examType));
+    }
+    
     const [voucher] = await db
       .select()
       .from(voucherCards)
-      .where(eq(voucherCards.used, false))
+      .where(and(...conditions))
       .limit(1);
     return voucher;
   }
@@ -124,10 +130,16 @@ export class DbStorage implements IStorage {
     examType: string
   ): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
     return await db.transaction(async (tx) => {
+      // Find available voucher card matching the exam type
       const [availableVoucher] = await tx
         .select()
         .from(voucherCards)
-        .where(eq(voucherCards.used, false))
+        .where(
+          and(
+            eq(voucherCards.used, false),
+            eq(voucherCards.examType, examType)
+          )
+        )
         .limit(1)
         .for('update');
 
@@ -145,7 +157,6 @@ export class DbStorage implements IStorage {
           used: true,
           purchaserPhone: phone,
           purchaserEmail: email,
-          examType: examType,
           usedAt: sql`now()`,
         })
         .where(eq(voucherCards.id, availableVoucher.id))

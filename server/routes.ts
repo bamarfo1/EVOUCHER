@@ -12,10 +12,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertTransactionSchema.parse(req.body);
       
-      const availableVoucher = await storage.getAvailableVoucher();
+      const availableVoucher = await storage.getAvailableVoucher(validatedData.examType);
       if (!availableVoucher) {
         return res.status(400).json({ 
-          error: "No vouchers available at the moment. Please try again later." 
+          error: `No ${validatedData.examType} vouchers available at the moment. Please try again later or select a different exam type.` 
         });
       }
 
