@@ -103,12 +103,19 @@ The following secrets are configured with custom names:
 
 1. **Add voucher cards to database manually:**
    
+   **IMPORTANT**: Each voucher card MUST be pre-assigned an exam type (BECE or WASSCE) before it can be sold.
+   
    Use the database tool to insert voucher cards:
    ```sql
-   INSERT INTO voucher_cards (serial, pin) VALUES
-   ('2024-WAEC-1001', '1234-5678-9012'),
-   ('2024-WAEC-1002', '2345-6789-0123'),
-   ('2024-WAEC-1003', '3456-7890-1234');
+   -- Add BECE voucher cards
+   INSERT INTO voucher_cards (serial, pin, exam_type) VALUES
+   ('BECE-2024-001', '1234-5678-9012', 'BECE'),
+   ('BECE-2024-002', '2345-6789-0123', 'BECE');
+   
+   -- Add WASSCE voucher cards
+   INSERT INTO voucher_cards (serial, pin, exam_type) VALUES
+   ('WASSCE-2024-001', '3456-7890-1234', 'WASSCE'),
+   ('WASSCE-2024-002', '4567-8901-2345', 'WASSCE');
    ```
 
 2. **Configure Paystack webhook:**
@@ -132,15 +139,21 @@ The following secrets are configured with custom names:
 ## Payment Flow
 
 1. User fills form (email, phone, exam type)
-2. Backend checks voucher availability
+2. Backend checks voucher availability **for the selected exam type**
 3. Creates transaction record
 4. Initializes Paystack payment
 5. User completes payment via Paystack
 6. Paystack redirects to callback or triggers webhook
 7. Backend verifies payment
-8. Assigns available voucher to user
-9. Sends voucher via SMS and Email
+8. **Assigns voucher card matching the exam type** (BECE → BECE card, WASSCE → WASSCE card)
+9. Sends voucher via SMS and Email with exam-type-specific portal URL
 10. Updates transaction and voucher status
+
+**Exam-Type Filtering:**
+- BECE purchases only receive BECE voucher cards
+- WASSCE purchases only receive WASSCE voucher cards
+- Each exam type has independent stock tracking
+- Out-of-stock errors are exam-type specific: "No BECE vouchers available" or "No WASSCE vouchers available"
 
 ## SMS Provider Configuration
 
@@ -154,9 +167,17 @@ The application uses **BulkSMS Ghana** (bulksmsghana.com) for SMS delivery:
 
 Since there's no admin interface, voucher management is done via database:
 
-**Check available vouchers:**
+**Check available vouchers by exam type:**
 ```sql
-SELECT COUNT(*) FROM voucher_cards WHERE used = false;
+-- Total available by exam type
+SELECT exam_type, COUNT(*) as available 
+FROM voucher_cards 
+WHERE used = false 
+GROUP BY exam_type;
+
+-- Check specific exam type
+SELECT COUNT(*) FROM voucher_cards WHERE used = false AND exam_type = 'BECE';
+SELECT COUNT(*) FROM voucher_cards WHERE used = false AND exam_type = 'WASSCE';
 ```
 
 **View recent transactions:**
@@ -164,9 +185,23 @@ SELECT COUNT(*) FROM voucher_cards WHERE used = false;
 SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;
 ```
 
-**Add new vouchers:**
+**Add new vouchers (MUST include exam_type):**
 ```sql
-INSERT INTO voucher_cards (serial, pin) VALUES ('SERIAL', 'PIN');
+-- Add BECE vouchers
+INSERT INTO voucher_cards (serial, pin, exam_type) VALUES ('SERIAL', 'PIN', 'BECE');
+
+-- Add WASSCE vouchers
+INSERT INTO voucher_cards (serial, pin, exam_type) VALUES ('SERIAL', 'PIN', 'WASSCE');
+```
+
+**Fix vouchers with NULL exam type:**
+```sql
+-- List vouchers missing exam type
+SELECT * FROM voucher_cards WHERE exam_type IS NULL;
+
+-- Assign exam type to legacy vouchers
+UPDATE voucher_cards SET exam_type = 'WASSCE' WHERE serial LIKE 'WASSCE%' AND exam_type IS NULL;
+UPDATE voucher_cards SET exam_type = 'BECE' WHERE serial LIKE 'BECE%' AND exam_type IS NULL;
 ```
 
 ## Security Features

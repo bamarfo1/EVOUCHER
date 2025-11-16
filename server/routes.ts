@@ -128,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!result) {
         return res.status(400).json({ 
-          error: "No vouchers available" 
+          error: `No ${transaction.examType} vouchers available. Please contact support for a refund.` 
         });
       }
 
@@ -251,8 +251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         if (!result) {
-          console.error("Webhook: No vouchers available");
-          return res.status(400).send("No vouchers available");
+          console.error(`Webhook: No ${transaction.examType} vouchers available`);
+          return res.status(400).send(`No ${transaction.examType} vouchers available`);
         }
 
         const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
