@@ -181,46 +181,50 @@ export class DbStorage implements IStorage {
     console.log('[Voucher Retrieval] Normalized search phone:', normalizedPhone);
     console.log('[Voucher Retrieval] Search date:', date);
     
+    // Use SQL to normalize phone numbers for comparison
+    // This SQL normalizes the phone by:
+    // 1. Removing spaces, +, -, (, )
+    // 2. Replacing leading '0' with '233'
+    // 3. Adding '233' prefix if missing
     const results = await db
       .select({
         serial: voucherCards.serial,
         pin: voucherCards.pin,
         examType: transactions.examType,
-        phone: transactions.phone,
-        createdAt: transactions.createdAt,
       })
       .from(transactions)
       .innerJoin(voucherCards, eq(transactions.voucherCardId, voucherCards.id))
       .where(
         and(
           eq(transactions.status, "completed"),
-          sql`DATE(${transactions.createdAt}) = ${date}`
+          sql`DATE(${transactions.createdAt}) = ${date}`,
+          sql`
+            CASE 
+              WHEN REGEXP_REPLACE(${transactions.phone}, '[\\s\\+\\-\\(\\)]', '', 'g') ~ '^0'
+              THEN '233' || SUBSTRING(REGEXP_REPLACE(${transactions.phone}, '[\\s\\+\\-\\(\\)]', '', 'g') FROM 2)
+              WHEN REGEXP_REPLACE(${transactions.phone}, '[\\s\\+\\-\\(\\)]', '', 'g') ~ '^233'
+              THEN REGEXP_REPLACE(${transactions.phone}, '[\\s\\+\\-\\(\\)]', '', 'g')
+              ELSE '233' || REGEXP_REPLACE(${transactions.phone}, '[\\s\\+\\-\\(\\)]', '', 'g')
+            END = ${normalizedPhone}
+          `
         )
       )
-      .orderBy(sql`${transactions.createdAt} DESC`);
+      .orderBy(sql`${transactions.createdAt} DESC`)
+      .limit(1);
     
     console.log('[Voucher Retrieval] Found results:', results.length);
     
     if (results.length === 0) {
+      console.log('[Voucher Retrieval] No matching voucher found');
       return null;
     }
     
-    for (const result of results) {
-      const resultNormalizedPhone = this.normalizePhone(result.phone);
-      console.log('[Voucher Retrieval] Comparing phones - DB:', resultNormalizedPhone, 'Search:', normalizedPhone);
-      
-      if (resultNormalizedPhone === normalizedPhone) {
-        console.log('[Voucher Retrieval] Match found!');
-        return {
-          serial: result.serial,
-          pin: result.pin,
-          examType: result.examType,
-        };
-      }
-    }
-    
-    console.log('[Voucher Retrieval] No matching phone found');
-    return null;
+    console.log('[Voucher Retrieval] Match found!');
+    return {
+      serial: results[0].serial,
+      pin: results[0].pin,
+      examType: results[0].examType,
+    };
   }
 
   private normalizePhone(phone: string): string {
