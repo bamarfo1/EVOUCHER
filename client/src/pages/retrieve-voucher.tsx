@@ -214,6 +214,14 @@ export default function RetrieveVoucher() {
           </a>
         </div>
       </div>
+
+      <footer className="py-6 px-4 border-t border-purple-200/50 dark:border-purple-800/50">
+        <div className="text-center">
+          <p className="text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-400" data-testid="text-powered-by">
+            Powered by ALLTEKSE SOLUTIONS & ENGINEERING
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
