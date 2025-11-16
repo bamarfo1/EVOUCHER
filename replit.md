@@ -24,10 +24,12 @@ A professional WAEC/WASSCE result checker voucher purchase system with instant d
 - **Mobile-Optimized**: Fully responsive with tailored sizing for mobile devices (reduced banner height, smaller text, optimized spacing)
 
 ### Functionality
+- **Progressive Disclosure UX**: "Click Here to Buy" button reveals form on click to reduce visual clutter
 - **Instant Delivery Messaging**: Clear communication about automatic voucher delivery
 - **Form Filling Services**: Contact info for university application assistance (0593260440)
 - **Shop Location**: Tech Junction, Kumasi with full contact details and gradient icons
 - Clean, mobile-responsive purchase form with icon-enhanced inputs
+- **Strategic Button Placement**: "Pay Now" button appears after form fields for better user flow
 - Paystack payment integration (MTN MoMo, Telecel Cash, AirtelTigo Money, Visa Card)
 - Automatic voucher assignment from database
 - Instant delivery via SMS (BulkSMS Ghana) and Email (Namecheap SMTP)
@@ -197,6 +199,11 @@ All elements have mobile-optimized sizing with Tailwind breakpoint (md:):
 - Enhanced shadows (shadow-lg, shadow-2xl) for depth
 - Hover elevations using custom Tailwind utilities
 - Consistent spacing system (small/medium/large)
+
+**UX Patterns:**
+- **Progressive Disclosure**: Initial view shows price + CTA button, form reveals on click
+- **Logical Flow**: Pay button positioned after all input fields (not at top)
+- **Clear Hierarchy**: Price visible upfront, form fields grouped, payment options shown before submit
 
 ## Current State
 

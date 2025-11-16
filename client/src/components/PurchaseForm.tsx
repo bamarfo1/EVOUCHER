@@ -23,6 +23,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [examType, setExamType] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,9 +111,38 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+            {!showForm ? (
+              <div className="text-center py-8">
+                <div className="space-y-6">
+                  <div className="relative bg-gradient-to-br from-purple-600 via-blue-600 to-teal-600 rounded-xl p-4 md:p-6 text-center shadow-xl overflow-hidden">
+                    <div className="absolute inset-0 bg-grid-white/10"></div>
+                    <p className="text-xs md:text-sm font-semibold text-white/90 mb-1 relative z-10">Price</p>
+                    <p className="text-3xl md:text-5xl font-extrabold text-white relative z-10" data-testid="text-price">GHC 20</p>
+                    <p className="text-xs text-white/80 mt-1 relative z-10">Per Voucher</p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="w-full h-14 md:h-16 text-lg md:text-xl font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
+                    data-testid="button-show-form"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Zap className="w-5 h-5 md:w-6 md:h-6" />
+                      Click Here to Buy
+                    </span>
+                  </Button>
+
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <Shield className="w-5 h-5 text-emerald-500" />
+                    <span className="font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Secured by Paystack</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -231,6 +261,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 </div>
               </div>
             </form>
+            )}
           </CardContent>
         </Card>
       </main>
