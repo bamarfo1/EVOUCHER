@@ -20,7 +20,9 @@ export default function RetrieveVoucher() {
   const { toast } = useToast();
 
   const { data: voucher, isLoading, error } = useQuery<VoucherResponse>({
-    queryKey: ['/api/voucher/retrieve', searchQuery?.phone, searchQuery?.date],
+    queryKey: searchQuery 
+      ? [`/api/voucher/retrieve?phone=${encodeURIComponent(searchQuery.phone)}&date=${searchQuery.date}`]
+      : ['/api/voucher/retrieve'],
     enabled: !!searchQuery,
   });
 

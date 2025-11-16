@@ -178,44 +178,49 @@ export class DbStorage implements IStorage {
 
   async getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null> {
     const normalizedPhone = this.normalizePhone(phone);
+    console.log('[Voucher Retrieval] Normalized search phone:', normalizedPhone);
+    console.log('[Voucher Retrieval] Search date:', date);
     
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    const [result] = await db
+    const results = await db
       .select({
         serial: voucherCards.serial,
         pin: voucherCards.pin,
         examType: transactions.examType,
         phone: transactions.phone,
+        createdAt: transactions.createdAt,
       })
       .from(transactions)
       .innerJoin(voucherCards, eq(transactions.voucherCardId, voucherCards.id))
       .where(
         and(
           eq(transactions.status, "completed"),
-          sql`${transactions.createdAt} >= ${startOfDay}`,
-          sql`${transactions.createdAt} <= ${endOfDay}`
+          sql`DATE(${transactions.createdAt}) = ${date}`
         )
-      );
+      )
+      .orderBy(sql`${transactions.createdAt} DESC`);
     
-    if (!result) {
+    console.log('[Voucher Retrieval] Found results:', results.length);
+    
+    if (results.length === 0) {
       return null;
     }
     
-    const resultNormalizedPhone = this.normalizePhone(result.phone);
-    if (resultNormalizedPhone !== normalizedPhone) {
-      return null;
+    for (const result of results) {
+      const resultNormalizedPhone = this.normalizePhone(result.phone);
+      console.log('[Voucher Retrieval] Comparing phones - DB:', resultNormalizedPhone, 'Search:', normalizedPhone);
+      
+      if (resultNormalizedPhone === normalizedPhone) {
+        console.log('[Voucher Retrieval] Match found!');
+        return {
+          serial: result.serial,
+          pin: result.pin,
+          examType: result.examType,
+        };
+      }
     }
     
-    return {
-      serial: result.serial,
-      pin: result.pin,
-      examType: result.examType,
-    };
+    console.log('[Voucher Retrieval] No matching phone found');
+    return null;
   }
 
   private normalizePhone(phone: string): string {

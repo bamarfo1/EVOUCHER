@@ -56,14 +56,13 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               AllTekSE e-Voucher
             </h1>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">WAEC Result Checker Platform</p>
-            <Link href="/retrieve-voucher">
-              <a 
-                className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors hover-elevate px-3 py-1.5 rounded-lg"
-                data-testid="link-retrieve-voucher"
-              >
-                <Search className="w-4 h-4" />
-                Lost Your Voucher? Retrieve It Here
-              </a>
+            <Link 
+              href="/retrieve-voucher"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors hover-elevate px-3 py-1.5 rounded-lg"
+              data-testid="link-retrieve-voucher"
+            >
+              <Search className="w-4 h-4" />
+              Lost Your Voucher? Retrieve It Here
             </Link>
           </div>
         </div>
