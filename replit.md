@@ -202,8 +202,8 @@ All elements have mobile-optimized sizing with Tailwind breakpoint (md:):
 
 **UX Patterns:**
 - **Progressive Disclosure**: Initial view shows price + CTA button, form reveals on click
-- **Logical Flow**: Pay button positioned after all input fields (not at top)
-- **Clear Hierarchy**: Price visible upfront, form fields grouped, payment options shown before submit
+- **Logical Flow**: Price at top → Form fields → Pay button → Payment options (informs user before commitment)
+- **Clear Hierarchy**: Price visible first, form fields grouped, payment button before payment logos
 
 ## Current State
 

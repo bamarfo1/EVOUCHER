@@ -141,125 +141,125 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12"
-                    required
-                    data-testid="input-email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+233 XX XXX XXXX"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="pl-10 h-12"
-                    required
-                    data-testid="input-phone"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Voucher will be sent via SMS to this number</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="examType">Exam Type</Label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
-                  <Select value={examType} onValueChange={setExamType} required>
-                    <SelectTrigger id="examType" className="pl-10 h-12" data-testid="select-exam-type">
-                      <SelectValue placeholder="Select exam type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="wassce" data-testid="option-wassce">WASSCE</SelectItem>
-                      <SelectItem value="bece" data-testid="option-bece">BECE</SelectItem>
-                      <SelectItem value="private-wassce" data-testid="option-private-wassce">PRIVATE WASSCE</SelectItem>
-                      <SelectItem value="private-bece" data-testid="option-private-bece">PRIVATE BECE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t space-y-4">
                 <div className="relative bg-gradient-to-br from-purple-600 via-blue-600 to-teal-600 rounded-xl p-4 md:p-6 text-center shadow-xl overflow-hidden">
                   <div className="absolute inset-0 bg-grid-white/10"></div>
                   <p className="text-xs md:text-sm font-semibold text-white/90 mb-1 relative z-10">Price</p>
-                  <p className="text-3xl md:text-5xl font-extrabold text-white relative z-10" data-testid="text-price">GHC 20</p>
+                  <p className="text-3xl md:text-5xl font-extrabold text-white relative z-10" data-testid="text-price-form">GHC 20</p>
                   <p className="text-xs text-white/80 mt-1 relative z-10">Per Voucher</p>
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-sm font-bold text-center bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">Available Payment Options</p>
-                  <div className="grid grid-cols-2 gap-2 md:gap-3">
-                    <div className="bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-mtn">
-                      <img 
-                        src={mtnLogo} 
-                        alt="MTN Mobile Money" 
-                        className="w-full h-8 md:h-10 object-contain"
-                      />
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-telecel">
-                      <img 
-                        src={telecelLogo} 
-                        alt="Telecel Cash" 
-                        className="w-full h-8 md:h-10 object-contain"
-                      />
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 border-2 border-teal-200 dark:border-teal-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-airteltigo">
-                      <img 
-                        src={airtelTigoLogo} 
-                        alt="AirtelTigo Money" 
-                        className="w-full h-8 md:h-10 object-contain"
-                      />
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-visa">
-                      <img 
-                        src={visaLogo} 
-                        alt="Visa Card" 
-                        className="w-full h-8 md:h-10 object-contain"
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-12"
+                      required
+                      data-testid="input-email"
+                    />
                   </div>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
-                  disabled={isLoading || !email || !phone || !examType}
-                  data-testid="button-pay"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
-                      Processing...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 md:w-5 md:h-5" />
-                      Pay GHC 20 Now
-                    </span>
-                  )}
-                </Button>
-
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <Shield className="w-5 h-5 text-emerald-500" />
-                  <span className="font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Secured by Paystack</span>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+233 XX XXX XXXX"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="pl-10 h-12"
+                      required
+                      data-testid="input-phone"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Voucher will be sent via SMS to this number</p>
                 </div>
-              </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="examType">Exam Type</Label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
+                    <Select value={examType} onValueChange={setExamType} required>
+                      <SelectTrigger id="examType" className="pl-10 h-12" data-testid="select-exam-type">
+                        <SelectValue placeholder="Select exam type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="wassce" data-testid="option-wassce">WASSCE</SelectItem>
+                        <SelectItem value="bece" data-testid="option-bece">BECE</SelectItem>
+                        <SelectItem value="private-wassce" data-testid="option-private-wassce">PRIVATE WASSCE</SelectItem>
+                        <SelectItem value="private-bece" data-testid="option-private-bece">PRIVATE BECE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Button
+                    type="submit"
+                    className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
+                    disabled={isLoading || !email || !phone || !examType}
+                    data-testid="button-pay"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 md:w-5 md:h-5" />
+                        Pay GHC 20 Now
+                      </span>
+                    )}
+                  </Button>
+
+                  <div className="flex items-center justify-center gap-2 text-sm mt-3">
+                    <Shield className="w-5 h-5 text-emerald-500" />
+                    <span className="font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Secured by Paystack</span>
+                  </div>
+
+                  <div className="space-y-3 mt-4">
+                    <p className="text-sm font-bold text-center bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">Available Payment Options</p>
+                    <div className="grid grid-cols-2 gap-2 md:gap-3">
+                      <div className="bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-mtn">
+                        <img 
+                          src={mtnLogo} 
+                          alt="MTN Mobile Money" 
+                          className="w-full h-8 md:h-10 object-contain"
+                        />
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-telecel">
+                        <img 
+                          src={telecelLogo} 
+                          alt="Telecel Cash" 
+                          className="w-full h-8 md:h-10 object-contain"
+                        />
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 border-2 border-teal-200 dark:border-teal-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-airteltigo">
+                        <img 
+                          src={airtelTigoLogo} 
+                          alt="AirtelTigo Money" 
+                          className="w-full h-8 md:h-10 object-contain"
+                        />
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-visa">
+                        <img 
+                          src={visaLogo} 
+                          alt="Visa Card" 
+                          className="w-full h-8 md:h-10 object-contain"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
             </form>
             )}
           </CardContent>
