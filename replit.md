@@ -212,6 +212,26 @@ All elements have mobile-optimized sizing with Tailwind breakpoint (md:):
 - **Logical Flow**: Price at top → Form fields → Pay button → Payment options (informs user before commitment)
 - **Clear Hierarchy**: Price visible first, form fields grouped, payment button before payment logos
 
+## Exam Types
+
+The system supports **two exam types** with dedicated result checker portals:
+
+**1. BECE (School & Private)**
+- Includes: Basic Education Certificate Examination
+- Portal: https://eresults.waecgh.org/
+- Voucher cards specifically for BECE results checking
+
+**2. WASSCE (School & Private, SSCE, ABCE, GBCE)**
+- Includes: West African Senior School Certificate Examination
+- Also covers: SSCE, ABCE, GBCE
+- Portal: https://ghana.waecdirect.org/
+- Voucher cards for all WASSCE-related examinations
+
+**Portal Information:**
+- Each voucher purchase includes the correct portal URL in SMS and email notifications
+- Portal hint text displayed in purchase form dropdown for user guidance
+- Voucher cards are exam-type specific - BECE cards work only on BECE portal, WASSCE cards only on WASSCE portal
+
 ## Current State
 
 - ✅ Frontend design completed with vibrant gradient theme and student banner
@@ -221,6 +241,8 @@ All elements have mobile-optimized sizing with Tailwind breakpoint (md:):
 - ✅ Paystack payment integration with proper callback URL
 - ✅ SMS (BulkSMS Ghana) and Email (Namecheap SMTP) notification services configured
 - ✅ Payment webhook with signature verification
+- ✅ Voucher retrieval system with phone normalization and security
+- ✅ Two exam type system (BECE and WASSCE) with portal URLs
 - ✅ Test voucher cards added to database (5 cards)
 
 **Production Ready:**
