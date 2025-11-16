@@ -26,6 +26,12 @@ A professional WAEC/WASSCE result checker voucher purchase system with instant d
 ### Functionality
 - **Progressive Disclosure UX**: "Click Here to Buy" button reveals form on click to reduce visual clutter
 - **Instant Delivery Messaging**: Clear communication about automatic voucher delivery
+- **Voucher Retrieval System**: Lost voucher recovery using phone number + purchase date
+  - Accessible via "Lost Your Voucher? Retrieve It Here" link on homepage
+  - Phone normalization handles all formats (0599188713, 233599188713, +233599188713)
+  - Secure SQL-level filtering prevents data leaks between customers
+  - Web display only (no SMS/email notifications for retrievals)
+  - Copy buttons for easy voucher code copying
 - **Form Filling Services**: Contact info for university application assistance (0593260440)
 - **Shop Location**: Tech Junction, Kumasi with full contact details and gradient icons
 - Clean, mobile-responsive purchase form with icon-enhanced inputs
@@ -121,6 +127,7 @@ The following secrets are configured with custom names:
 - `POST /api/purchase/initialize` - Initialize payment and create transaction
 - `GET /api/payment/verify/:reference` - Verify payment and assign voucher
 - `POST /api/webhook/paystack` - Paystack webhook for payment notifications
+- `GET /api/voucher/retrieve?phone={phone}&date={date}` - Retrieve lost voucher by phone and purchase date
 
 ## Payment Flow
 
