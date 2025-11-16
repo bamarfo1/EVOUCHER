@@ -29,13 +29,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paystackReference: reference,
       });
 
-      const examTypeNames: Record<string, string> = {
-        "wassce": "WASSCE",
-        "bece": "BECE",
-        "private-wassce": "PRIVATE WASSCE",
-        "private-bece": "PRIVATE BECE"
-      };
-
       const baseUrl = process.env.BASE_URL || `http://localhost:5000`;
       
       const paystackResponse = await initializePayment(
