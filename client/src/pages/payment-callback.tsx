@@ -143,6 +143,11 @@ export default function PaymentCallback() {
               </div>
             </div>
           </div>
+          <div className="text-center pt-2 border-t border-border/50">
+            <p className="text-xs font-semibold text-muted-foreground" data-testid="text-powered-by">
+              Powered by ALLTEK SOLUTIONS & ENGINEERING
+            </p>
+          </div>
         </div>
       </footer>
     </div>

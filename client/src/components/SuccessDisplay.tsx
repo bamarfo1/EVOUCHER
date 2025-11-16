@@ -26,7 +26,14 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const waecUrl = "https://bit.ly/waec-results";
+  const getPortalUrl = (examType: string) => {
+    if (examType === 'BECE') {
+      return 'https://eresults.waecgh.org/';
+    }
+    return 'https://ghana.waecdirect.org/';
+  };
+
+  const waecUrl = getPortalUrl(voucherData.examType);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
@@ -138,7 +145,7 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
                 data-testid="button-check-results"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Check Your Results Now
+                Check Your {voucherData.examType} Results Now
               </Button>
 
               {onStartNew && (
@@ -153,8 +160,22 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
               )}
             </div>
 
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
+            <div className="space-y-2">
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                  {voucherData.examType} Result Checker Portal:
+                </p>
+                <a 
+                  href={waecUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all"
+                  data-testid="link-portal-url"
+                >
+                  {waecUrl}
+                </a>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
                 Keep your voucher details safe. You'll need them to check your results.
               </p>
             </div>
@@ -186,6 +207,11 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
                 </a>
               </div>
             </div>
+          </div>
+          <div className="text-center pt-2 border-t border-border/50">
+            <p className="text-xs font-semibold text-muted-foreground" data-testid="text-powered-by">
+              Powered by ALLTEK SOLUTIONS & ENGINEERING
+            </p>
           </div>
         </div>
       </footer>
