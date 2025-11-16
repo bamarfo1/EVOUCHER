@@ -313,6 +313,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/voucher/retrieve", async (req: Request, res: Response) => {
+    try {
+      const { phone, date } = req.query;
+      
+      if (!phone || !date) {
+        return res.status(400).json({ 
+          error: "Phone number and date are required" 
+        });
+      }
+
+      const voucher = await storage.getVoucherByPhoneAndDate(
+        phone as string, 
+        date as string
+      );
+
+      if (!voucher) {
+        return res.status(404).json({ 
+          error: "No voucher found for this phone number and date" 
+        });
+      }
+
+      res.json(voucher);
+    } catch (error: any) {
+      console.error("Voucher retrieval error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to retrieve voucher" 
+      });
+    }
+  });
+
   app.post("/api/test/notifications", async (req: Request, res: Response) => {
     try {
       const { email, phone } = req.body;

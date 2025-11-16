@@ -19,6 +19,7 @@ export interface IStorage {
   updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
   assignVoucherToTransaction(transactionId: string, phone: string, email: string, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
   getTransactionById(id: string): Promise<Transaction | undefined>;
+  getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null>;
 }
 
 export class DbStorage implements IStorage {
@@ -173,6 +174,60 @@ export class DbStorage implements IStorage {
       .from(transactions)
       .where(eq(transactions.id, id));
     return transaction;
+  }
+
+  async getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null> {
+    const normalizedPhone = this.normalizePhone(phone);
+    
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const [result] = await db
+      .select({
+        serial: voucherCards.serial,
+        pin: voucherCards.pin,
+        examType: transactions.examType,
+        phone: transactions.phone,
+      })
+      .from(transactions)
+      .innerJoin(voucherCards, eq(transactions.voucherCardId, voucherCards.id))
+      .where(
+        and(
+          eq(transactions.status, "completed"),
+          sql`${transactions.createdAt} >= ${startOfDay}`,
+          sql`${transactions.createdAt} <= ${endOfDay}`
+        )
+      );
+    
+    if (!result) {
+      return null;
+    }
+    
+    const resultNormalizedPhone = this.normalizePhone(result.phone);
+    if (resultNormalizedPhone !== normalizedPhone) {
+      return null;
+    }
+    
+    return {
+      serial: result.serial,
+      pin: result.pin,
+      examType: result.examType,
+    };
+  }
+
+  private normalizePhone(phone: string): string {
+    let cleaned = phone.replace(/[\s\+\-\(\)]/g, '');
+    
+    if (cleaned.startsWith('0')) {
+      cleaned = '233' + cleaned.substring(1);
+    } else if (!cleaned.startsWith('233')) {
+      cleaned = '233' + cleaned;
+    }
+    
+    return cleaned;
   }
 }
 
