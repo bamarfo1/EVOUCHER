@@ -44,7 +44,9 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 }).extend({
   email: z.string().email(),
   phone: z.string().min(10),
-  examType: z.string().min(1),
+  examType: z.enum(["BECE", "WASSCE"], {
+    errorMap: () => ({ message: "Please select either BECE or WASSCE" }),
+  }),
 });
 
 export type InsertVoucherCard = z.infer<typeof insertVoucherCardSchema>;

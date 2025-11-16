@@ -142,25 +142,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
       isProcessing = false;
 
-      const examTypeNames: Record<string, string> = {
-        "wassce": "WASSCE",
-        "bece": "BECE",
-        "private-wassce": "PRIVATE WASSCE",
-        "private-bece": "PRIVATE BECE"
-      };
-
       try {
         await Promise.all([
           sendVoucherEmail(
             updatedTransaction.email,
             updatedVoucher.serial,
             updatedVoucher.pin,
-            examTypeNames[updatedTransaction.examType] || updatedTransaction.examType
+            updatedTransaction.examType
           ),
           sendVoucherSMS(
             updatedTransaction.phone,
             updatedVoucher.serial,
-            updatedVoucher.pin
+            updatedVoucher.pin,
+            updatedTransaction.examType
           ),
         ]);
       } catch (notificationError) {
@@ -172,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         voucher: {
           serial: updatedVoucher.serial,
           pin: updatedVoucher.pin,
-          examType: examTypeNames[updatedTransaction.examType] || updatedTransaction.examType,
+          examType: updatedTransaction.examType,
         },
       });
     } catch (error: any) {
@@ -271,25 +265,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
         isProcessing = false;
 
-        const examTypeNames: Record<string, string> = {
-          "may-june": "May/June WASSCE",
-          "nov-dec": "Nov/Dec WASSCE",
-          "private": "Private Candidate",
-          "gce": "GCE"
-        };
-
         try {
           await Promise.all([
             sendVoucherEmail(
               updatedTransaction.email,
               updatedVoucher.serial,
               updatedVoucher.pin,
-              examTypeNames[updatedTransaction.examType] || updatedTransaction.examType
+              updatedTransaction.examType
             ),
             sendVoucherSMS(
               updatedTransaction.phone,
               updatedVoucher.serial,
-              updatedVoucher.pin
+              updatedVoucher.pin,
+              updatedTransaction.examType
             ),
           ]);
         } catch (notificationError) {
@@ -353,11 +341,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const testSerial = "TEST-2024-WAEC-9999";
       const testPin = "9999-9999-9999";
-      const testExamType = "May/June WASSCE";
+      const testExamType = "WASSCE";
 
       await Promise.all([
         sendVoucherEmail(email, testSerial, testPin, testExamType),
-        sendVoucherSMS(phone, testSerial, testPin),
+        sendVoucherSMS(phone, testSerial, testPin, testExamType),
       ]);
 
       res.json({ 

@@ -201,13 +201,15 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                         <SelectValue placeholder="Select exam type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="wassce" data-testid="option-wassce">WASSCE</SelectItem>
-                        <SelectItem value="bece" data-testid="option-bece">BECE</SelectItem>
-                        <SelectItem value="private-wassce" data-testid="option-private-wassce">PRIVATE WASSCE</SelectItem>
-                        <SelectItem value="private-bece" data-testid="option-private-bece">PRIVATE BECE</SelectItem>
+                        <SelectItem value="BECE" data-testid="option-bece">BECE (School & Private)</SelectItem>
+                        <SelectItem value="WASSCE" data-testid="option-wassce">WASSCE (School & Private, SSCE, ABCE, GBCE)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {examType === "BECE" && "Portal: eresults.waecgh.org"}
+                    {examType === "WASSCE" && "Portal: ghana.waecdirect.org"}
+                  </p>
                 </div>
 
                 <div className="pt-4 border-t">
