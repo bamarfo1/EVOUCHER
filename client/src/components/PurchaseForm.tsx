@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, FileText, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit } from "lucide-react";
+import { Shield, Mail, Phone, FileText, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
 import alltekseLogo from "@assets/101-800x600_1763210592506.jpg";
@@ -50,11 +51,20 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               data-testid="img-waec-logo"
             />
           </div>
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-2">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent" data-testid="text-site-title">
               AllTekSE e-Voucher
             </h1>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">WAEC Result Checker Platform</p>
+            <Link href="/retrieve-voucher">
+              <a 
+                className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors hover-elevate px-3 py-1.5 rounded-lg"
+                data-testid="link-retrieve-voucher"
+              >
+                <Search className="w-4 h-4" />
+                Lost Your Voucher? Retrieve It Here
+              </a>
+            </Link>
           </div>
         </div>
       </header>
