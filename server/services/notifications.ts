@@ -25,11 +25,16 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendVoucherEmail(
-  email: string,
+  email: string | null | undefined,
   serial: string,
   pin: string,
   examType: string
 ): Promise<void> {
+  if (!email || email.trim() === '') {
+    console.log("No email provided, skipping email notification");
+    return;
+  }
+  
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
     console.log("Email not configured. Would send:", { email, serial, pin, examType });
     return;

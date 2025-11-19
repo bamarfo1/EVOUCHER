@@ -158,20 +158,20 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">Email Address <span className="text-muted-foreground text-xs">(Optional)</span></Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="your.email@example.com"
+                      placeholder="your.email@example.com (optional)"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 h-12"
-                      required
                       data-testid="input-email"
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">Leave blank if you prefer SMS delivery only</p>
                 </div>
 
                 <div className="space-y-2">
@@ -216,7 +216,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   <Button
                     type="submit"
                     className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
-                    disabled={isLoading || !email || !phone || !examType}
+                    disabled={isLoading || !phone || !examType}
                     data-testid="button-pay"
                   >
                     {isLoading ? (

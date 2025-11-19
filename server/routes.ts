@@ -21,8 +21,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reference = `TXN-${Date.now()}-${randomBytes(4).toString('hex')}`;
       
+      const emailToStore = validatedData.email && validatedData.email.trim() !== '' 
+        ? validatedData.email 
+        : null;
+      
       const transaction = await storage.createTransaction({
-        email: validatedData.email,
+        email: emailToStore,
         phone: validatedData.phone,
         examType: validatedData.examType,
         amount: "20",
@@ -31,8 +35,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const baseUrl = process.env.BASE_URL || `http://localhost:5000`;
       
+      const emailForPaystack = validatedData.email && validatedData.email.trim() !== '' 
+        ? validatedData.email 
+        : `${validatedData.phone.replace(/[^0-9]/g, '')}@noemail.alltekse.com`;
+      
       const paystackResponse = await initializePayment(
-        validatedData.email,
+        emailForPaystack,
         20,
         reference,
         {

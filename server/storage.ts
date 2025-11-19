@@ -12,12 +12,12 @@ import { eq, and, sql } from "drizzle-orm";
 export interface IStorage {
   getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined>;
   getVoucherById(id: string): Promise<VoucherCard | undefined>;
-  markVoucherAsUsed(id: string, phone: string, email: string, examType: string): Promise<VoucherCard>;
-  createTransaction(transaction: Partial<InsertTransaction> & { email: string; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction>;
+  markVoucherAsUsed(id: string, phone: string, email: string | null, examType: string): Promise<VoucherCard>;
+  createTransaction(transaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction>;
   getTransactionByReference(reference: string): Promise<Transaction | undefined>;
   updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction>;
   updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
-  assignVoucherToTransaction(transactionId: string, phone: string, email: string, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
+  assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
   getTransactionById(id: string): Promise<Transaction | undefined>;
   getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null>;
 }
@@ -49,7 +49,7 @@ export class DbStorage implements IStorage {
   async markVoucherAsUsed(
     id: string, 
     phone: string, 
-    email: string, 
+    email: string | null, 
     examType: string
   ): Promise<VoucherCard> {
     const [voucher] = await db
@@ -66,7 +66,7 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
-  async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction> {
+  async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction> {
     const [transaction] = await db
       .insert(transactions)
       .values(insertTransaction as any)
@@ -126,7 +126,7 @@ export class DbStorage implements IStorage {
   async assignVoucherToTransaction(
     transactionId: string,
     phone: string,
-    email: string,
+    email: string | null,
     examType: string
   ): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
     return await db.transaction(async (tx) => {

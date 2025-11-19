@@ -1,309 +1,46 @@
 # AllTekSE e-Voucher
 
-A professional WAEC/WASSCE result checker voucher purchase system with instant delivery via SMS and email after successful Paystack payment.
+## Overview
 
-**Platform Branding:**
-- Name: AllTekSE e-Voucher
-- Tagline: WAEC Result Checker Platform
-- Contact Email: support@alltekse.com (changed from info@)
-- WhatsApp Support: 0593260440
-- Shop Location: Tech Junction, Kumasi
-- Form Filling Services: Available - Contact 0593260440
-- Production URL: https://waec-checker-hub-bmarfo422.replit.app
+AllTekSE e-Voucher is a professional platform designed for purchasing WAEC/WASSCE result checker vouchers. It offers instant delivery of vouchers via SMS and email upon successful payment through Paystack. The project aims to provide a seamless, secure, and user-friendly experience for students and individuals needing WAEC result checking services, with a vision to be a leading provider in the Ghanaian market. Key capabilities include support for both BECE and WASSCE exam types, a robust voucher retrieval system, and comprehensive mobile optimization.
 
-## Features
+## User Preferences
 
-### Visual Design
-- **Vibrant Modern UI** with purple/blue/teal gradient theme throughout
-- **Hero Banner**: Inspiring student celebration image with gradient overlay, motivational messaging, and glassmorphism trust badges (Instant Delivery, 100% Secure, Trusted by Thousands)
-- **Dual Logo Branding**: AllTekSE logo (on black background) + WAEC logo in glassmorphism header
-- **Gradient Design System**: Consistent purple → blue → teal gradients across all elements (headers, cards, buttons, icons)
-- **Glassmorphism Effects**: Backdrop blur effects on header and hero badges for modern premium feel
-- **Colorful Payment Cards**: Each payment provider has unique accent color (MTN purple, Telecel blue, AirtelTigo teal, Visa indigo)
-- **University Portal Links**: Colorful cards with unique accents for 6 Ghana universities (UG purple, KNUST blue, UCC teal, UPSA indigo, Central pink, Ashesi amber)
-- **Mobile-Optimized**: Fully responsive with tailored sizing for mobile devices (reduced banner height, smaller text, optimized spacing)
+I prefer iterative development, with a focus on clear, concise code. Please ask before making major architectural changes or introducing new dependencies. I value detailed explanations for complex implementations but prefer simple language for routine updates.
 
-### Functionality
-- **Progressive Disclosure UX**: "Click Here to Buy" button reveals form on click to reduce visual clutter
-- **Instant Delivery Messaging**: Clear communication about automatic voucher delivery
-- **Voucher Retrieval System**: Lost voucher recovery using phone number + purchase date
-  - Accessible via "Lost Your Voucher? Retrieve It Here" link on homepage
-  - Phone normalization handles all formats (0599188713, 233599188713, +233599188713)
-  - Secure SQL-level filtering prevents data leaks between customers
-  - Web display only (no SMS/email notifications for retrievals)
-  - Copy buttons for easy voucher code copying
-- **Form Filling Services**: Contact info for university application assistance (0593260440)
-- **Shop Location**: Tech Junction, Kumasi with full contact details and gradient icons
-- Clean, mobile-responsive purchase form with icon-enhanced inputs
-- **Strategic Button Placement**: "Pay Now" button appears after form fields for better user flow
-- Paystack payment integration (MTN MoMo, Telecel Cash, AirtelTigo Money, Visa Card)
-- Automatic voucher assignment from database
-- Instant delivery via SMS (BulkSMS Ghana) and Email (Namecheap SMTP)
-- PostgreSQL database for voucher cards and transactions
-- Payment webhook handling for reliable voucher delivery
-- Contact information displayed on all pages (email & WhatsApp)
+## System Architecture
 
-## Tech Stack
+### UI/UX Decisions
+The platform features a vibrant, modern UI with a purple/blue/teal gradient theme. A hero banner with student celebration imagery, motivational messaging, and glassmorphism trust badges (`Instant Delivery`, `100% Secure`, `Trusted by Thousands`) forms the central visual. It incorporates dual logo branding (AllTekSE and WAEC) in a glassmorphism header. A consistent gradient design system is applied across all elements, complemented by glassmorphism effects for a premium feel. Payment provider and university portal cards utilize unique accent colors. The design is fully responsive and mobile-optimized, adjusting banner heights, text sizes, and spacing for optimal viewing on smaller devices. Progressive disclosure is used for the purchase form, revealing it only after a "Click Here to Buy" button is activated.
 
-**Frontend:**
-- React with TypeScript
-- Tailwind CSS + Shadcn UI components
-- Wouter for routing
-- TanStack Query for data fetching
+### Technical Implementations
+- **Purchase Options**: Supports purchases with only a phone number (SMS delivery) or both email and phone. The system handles cases without email by generating a placeholder email (`{phone}@noemail.alltekse.com`) for Paystack and skipping email notifications.
+- **Voucher Retrieval**: Allows users to recover lost vouchers using their phone number and purchase date, with robust phone number normalization and secure SQL-level filtering. Retrieval details are displayed on the web interface only.
+- **Exam Type Support**: Differentiates between BECE and WASSCE exam types, ensuring users receive the correct voucher type with specific portal URLs in notifications. Each exam type has independent stock tracking.
+- **Payment Flow**: Users fill a form, the system checks voucher availability for the selected exam type, creates a transaction, initializes Paystack payment, verifies payment, assigns an exam-type-matching voucher, and sends it via SMS and email.
+- **Security Features**: Includes Paystack webhook signature verification (HMAC-SHA512), payment amount validation (GHC 20), atomic status transitions, atomic voucher assignment with row-level locking, error recovery with rollback handling, and concurrency protection to prevent double voucher distribution.
 
-**Backend:**
-- Express.js
-- PostgreSQL with Drizzle ORM
-- Nodemailer for email (Namecheap/PrivateEmail SMTP)
-- Paystack API for payments
-- BulkSMS Ghana for SMS delivery
+### Feature Specifications
+- **Instant Delivery Messaging**: Clear communication regarding automatic voucher delivery.
+- **Form Filling Services**: Contact information for university application assistance.
+- **Shop Location**: Details provided for physical shop location in Kumasi.
+- **Strategic Button Placement**: "Pay Now" button appears after form fields for improved user flow.
 
-## Database Schema
+### System Design Choices
+- **Frontend**: React with TypeScript, Tailwind CSS with Shadcn UI components, Wouter for routing, and TanStack Query for data fetching.
+- **Backend**: Express.js, PostgreSQL with Drizzle ORM, Nodemailer for email, Paystack API for payments, and BulkSMS Ghana for SMS delivery.
+- **Database Schema**:
+    - `voucher_cards`: `id` (UUID), `serial` (unique text), `pin` (text), `used` (boolean), `purchaser_phone`, `purchaser_email`, `exam_type`, `used_at` (timestamp). Exam type is crucial for voucher assignment.
+    - `transactions`: `id` (UUID), `email` (nullable), `phone`, `exam_type`, `amount`, `paystack_reference` (unique), `status` (pending/completed/failed), `voucher_card_id`, `created_at`, `completed_at` (timestamps).
+- **API Endpoints**:
+    - `POST /api/purchase/initialize`
+    - `GET /api/payment/verify/:reference`
+    - `POST /api/webhook/paystack`
+    - `GET /api/voucher/retrieve?phone={phone}&date={date}`
 
-### voucher_cards
-- id (UUID)
-- serial (unique text)
-- pin (text)
-- used (boolean, default false)
-- purchaser_phone, purchaser_email, exam_type
-- used_at (timestamp)
+## External Dependencies
 
-### transactions
-- id (UUID)
-- email, phone, exam_type
-- amount
-- paystack_reference (unique)
-- status (pending/completed/failed)
-- voucher_card_id (reference to voucher_cards)
-- created_at, completed_at (timestamps)
-
-## Environment Variables Required
-
-The following secrets are configured with custom names:
-
-**Payment Integration:**
-- `PAYSTACKSECRETKEYbright` - Paystack secret key (configured)
-- `PAYSTACKPUBLICKEYbright` - Paystack public key (configured)
-
-**Email Configuration:**
-- `EMAILUSER` - Email address for sending vouchers (info@alltekse.com)
-- `EMAILPASSWORD` - Email password for Namecheap/PrivateEmail SMTP
-- `EMAIL_HOST` - SMTP host (default: mail.privateemail.com)
-- `EMAIL_PORT` - SMTP port (default: 587)
-
-**SMS Configuration:**
-- `SMSAPI` - BulkSMS Ghana API key (configured)
-- `SMS_API_URL` - SMS API endpoint (default: http://clientlogin.bulksmsgh.com/smsapi)
-- `SMS_SENDER_ID` - Sender ID for SMS (default: "ALLTEK")
-
-**Application:**
-- `BASE_URL` - Base URL of your application (for Paystack callbacks)
-
-## Setup Instructions
-
-1. **Add voucher cards to database manually:**
-   
-   **IMPORTANT**: Each voucher card MUST be pre-assigned an exam type (BECE or WASSCE) before it can be sold.
-   
-   Use the database tool to insert voucher cards:
-   ```sql
-   -- Add BECE voucher cards
-   INSERT INTO voucher_cards (serial, pin, exam_type) VALUES
-   ('BECE-2024-001', '1234-5678-9012', 'BECE'),
-   ('BECE-2024-002', '2345-6789-0123', 'BECE');
-   
-   -- Add WASSCE voucher cards
-   INSERT INTO voucher_cards (serial, pin, exam_type) VALUES
-   ('WASSCE-2024-001', '3456-7890-1234', 'WASSCE'),
-   ('WASSCE-2024-002', '4567-8901-2345', 'WASSCE');
-   ```
-
-2. **Configure Paystack webhook:**
-   
-   In your Paystack dashboard, set webhook URL to:
-   `https://your-domain.repl.co/api/webhook/paystack`
-
-3. **Test the flow:**
-   - Fill purchase form
-   - Complete Paystack payment (test mode)
-   - Check SMS and Email delivery
-   - Verify voucher status in database
-
-## API Endpoints
-
-- `POST /api/purchase/initialize` - Initialize payment and create transaction
-- `GET /api/payment/verify/:reference` - Verify payment and assign voucher
-- `POST /api/webhook/paystack` - Paystack webhook for payment notifications
-- `GET /api/voucher/retrieve?phone={phone}&date={date}` - Retrieve lost voucher by phone and purchase date
-
-## Payment Flow
-
-1. User fills form (email, phone, exam type)
-2. Backend checks voucher availability **for the selected exam type**
-3. Creates transaction record
-4. Initializes Paystack payment
-5. User completes payment via Paystack
-6. Paystack redirects to callback or triggers webhook
-7. Backend verifies payment
-8. **Assigns voucher card matching the exam type** (BECE → BECE card, WASSCE → WASSCE card)
-9. Sends voucher via SMS and Email with exam-type-specific portal URL
-10. Updates transaction and voucher status
-
-**Exam-Type Filtering:**
-- BECE purchases only receive BECE voucher cards
-- WASSCE purchases only receive WASSCE voucher cards
-- Each exam type has independent stock tracking
-- Out-of-stock errors are exam-type specific: "No BECE vouchers available" or "No WASSCE vouchers available"
-
-## SMS Provider Configuration
-
-The application uses **BulkSMS Ghana** (bulksmsghana.com) for SMS delivery:
-- Endpoint: `http://clientlogin.bulksmsgh.com/smsapi`
-- Authentication: API key passed as URL parameter
-- Response format: JSON with code 1000 for success
-- Sender ID: "ALLTEK" (configurable via SMS_SENDER_ID)
-
-## Admin Tasks
-
-Since there's no admin interface, voucher management is done via database:
-
-**Check available vouchers by exam type:**
-```sql
--- Total available by exam type
-SELECT exam_type, COUNT(*) as available 
-FROM voucher_cards 
-WHERE used = false 
-GROUP BY exam_type;
-
--- Check specific exam type
-SELECT COUNT(*) FROM voucher_cards WHERE used = false AND exam_type = 'BECE';
-SELECT COUNT(*) FROM voucher_cards WHERE used = false AND exam_type = 'WASSCE';
-```
-
-**View recent transactions:**
-```sql
-SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;
-```
-
-**Add new vouchers (MUST include exam_type):**
-```sql
--- Add BECE vouchers
-INSERT INTO voucher_cards (serial, pin, exam_type) VALUES ('SERIAL', 'PIN', 'BECE');
-
--- Add WASSCE vouchers
-INSERT INTO voucher_cards (serial, pin, exam_type) VALUES ('SERIAL', 'PIN', 'WASSCE');
-```
-
-**Fix vouchers with NULL exam type:**
-```sql
--- List vouchers missing exam type
-SELECT * FROM voucher_cards WHERE exam_type IS NULL;
-
--- Assign exam type to legacy vouchers
-UPDATE voucher_cards SET exam_type = 'WASSCE' WHERE serial LIKE 'WASSCE%' AND exam_type IS NULL;
-UPDATE voucher_cards SET exam_type = 'BECE' WHERE serial LIKE 'BECE%' AND exam_type IS NULL;
-```
-
-## Security Features
-
-The application includes multiple layers of security:
-
-1. **Webhook Signature Verification**: All Paystack webhook requests are verified using HMAC-SHA512 signature validation against the raw request body to prevent unauthorized voucher distribution
-2. **Payment Amount Validation**: Both verification endpoint and webhook validate that the payment amount matches the expected GHC 20 before assigning vouchers
-3. **Atomic Status Transitions**: Conditional database updates (WHERE status='pending') ensure only one process can claim a transaction for processing
-4. **Atomic Voucher Assignment**: Database transactions with row-level locking (FOR UPDATE) wrap voucher selection, marking, and transaction completion to prevent partial failures
-5. **Error Recovery**: Proper rollback handling ensures transactions in "processing" state are reverted to "failed" on errors, allowing retry
-6. **Concurrency Protection**: Combined atomic status transitions and transactional voucher assignment prevent double voucher distribution even when webhook and callback execute simultaneously
-
-## Design System
-
-**Color Palette:**
-- Primary Gradient: Purple (262°) → Blue (217°) → Teal (173°)
-- Purple shades: 50-900 for backgrounds, borders, text
-- Blue shades: 50-900 for accents and cards
-- Teal shades: 50-900 for highlights
-- Supporting colors: Indigo, Pink, Amber for variety
-
-**Mobile Responsiveness:**
-All elements have mobile-optimized sizing with Tailwind breakpoint (md:):
-- Hero banner: h-48 mobile → h-72 desktop (192px → 288px)
-- Text sizes: text-2xl mobile → text-4xl desktop for headings
-- Price display: text-3xl mobile → text-5xl desktop (30px → 48px)
-- Buttons: h-12 mobile → h-14 desktop (48px → 56px)
-- Icons: w-3 h-3 mobile → w-4 h-4 desktop for badges
-- Padding/spacing: Reduced 25-33% on mobile across all components
-- Payment logos: h-8 mobile → h-10 desktop (32px → 40px)
-
-**Component Patterns:**
-- Gradient backgrounds on cards, buttons, and badges
-- Glassmorphism (backdrop-blur) on header and hero badges
-- Colorful borders (border-2) with matching theme colors
-- Enhanced shadows (shadow-lg, shadow-2xl) for depth
-- Hover elevations using custom Tailwind utilities
-- Consistent spacing system (small/medium/large)
-
-**UX Patterns:**
-- **Progressive Disclosure**: Initial view shows price + CTA button, form reveals on click
-- **Logical Flow**: Price at top → Form fields → Pay button → Payment options (informs user before commitment)
-- **Clear Hierarchy**: Price visible first, form fields grouped, payment button before payment logos
-
-## Exam Types
-
-The system supports **two exam types** with dedicated result checker portals:
-
-**1. BECE (School & Private)**
-- Includes: Basic Education Certificate Examination
-- Portal: https://eresults.waecgh.org/
-- Voucher cards specifically for BECE results checking
-
-**2. WASSCE (School & Private, SSCE, ABCE, GBCE)**
-- Includes: West African Senior School Certificate Examination
-- Also covers: SSCE, ABCE, GBCE
-- Portal: https://ghana.waecdirect.org/
-- Voucher cards for all WASSCE-related examinations
-
-**Portal Information:**
-- Each voucher purchase includes the correct portal URL in SMS and email notifications
-- Portal hint text displayed in purchase form dropdown for user guidance
-- Voucher cards are exam-type specific - BECE cards work only on BECE portal, WASSCE cards only on WASSCE portal
-
-## Current State
-
-- ✅ Frontend design completed with vibrant gradient theme and student banner
-- ✅ Mobile-optimized responsive design for all screen sizes
-- ✅ Database schema created and migrated (vouchers + transactions tables)
-- ✅ Backend API routes implemented with security measures
-- ✅ Paystack payment integration with proper callback URL
-- ✅ SMS (BulkSMS Ghana) and Email (Namecheap SMTP) notification services configured
-- ✅ Payment webhook with signature verification
-- ✅ Voucher retrieval system with phone normalization and security
-- ✅ Two exam type system (BECE and WASSCE) with portal URLs
-- ✅ Test voucher cards added to database (5 cards)
-
-**Production Ready:**
-The application is fully functional with enterprise-grade security and ready for production deployment:
-
-1. ✅ All security measures implemented (webhook signature verification, amount validation, atomic transactions)
-2. ✅ Error recovery and rollback handling
-3. ✅ Concurrency-safe voucher assignment
-4. ✅ Test voucher cards added to database (5 cards)
-5. ✅ Email notifications working (Namecheap SMTP)
-6. ✅ SMS notifications working (BulkSMS Ghana)
-
-**Current Configuration:**
-- Email: info@alltekse.com (EMAILUSER, EMAILPASSWORD configured)
-- SMS: BulkSMS Ghana with sender ID "ALLTEK" (SMSAPI configured)
-- Payment: Paystack test mode (PAYSTACKSECRETKEYbright, PAYSTACKPUBLICKEYbright)
-
-**Deployment Steps:**
-1. Switch Paystack to live mode:
-   - Update `PAYSTACKSECRETKEYbright` with live secret key
-   - Update `PAYSTACKPUBLICKEYbright` with live public key
-2. Set `BASE_URL` to your production Replit domain (e.g., https://your-app.repl.co)
-3. Configure Paystack webhook URL: `https://your-domain/api/webhook/paystack`
-4. Add production voucher cards to database using SQL INSERT
-5. Test complete payment flow
-6. Publish the application
-
-**Note on Webhook Signature:**
-The raw request body is captured via Express middleware (`verify` callback in `express.json()`) and stored as `req.rawBody`. This ensures accurate HMAC-SHA512 signature validation for Paystack webhooks. If signature validation issues occur in production, verify that the webhook secret key matches your Paystack dashboard settings.
+- **Payment Gateway**: Paystack (for mobile money and card payments)
+- **SMS Delivery**: BulkSMS Ghana
+- **Email Service**: Namecheap/PrivateEmail SMTP (via Nodemailer)
+- **Database**: PostgreSQL

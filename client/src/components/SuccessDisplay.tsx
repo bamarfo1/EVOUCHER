@@ -73,7 +73,9 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             <div>
               <CardTitle className="text-2xl" data-testid="text-success-title">Payment Successful!</CardTitle>
               <CardDescription data-testid="text-success-description">
-                Your voucher has been sent to your email and phone
+                {voucherData.email && voucherData.email.trim() !== '' 
+                  ? "Your voucher has been sent to your email and phone"
+                  : "Your voucher has been sent via SMS"}
               </CardDescription>
             </div>
           </CardHeader>
@@ -122,13 +124,15 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             </div>
 
             <div className="bg-muted/50 rounded-md p-3 space-y-2">
-              <div className="flex items-start gap-2">
-                <Mail className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium">Email sent to</p>
-                  <p className="text-muted-foreground" data-testid="text-email-sent">{voucherData.email}</p>
+              {voucherData.email && voucherData.email.trim() !== '' && (
+                <div className="flex items-start gap-2">
+                  <Mail className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium">Email sent to</p>
+                    <p className="text-muted-foreground" data-testid="text-email-sent">{voucherData.email}</p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex items-start gap-2">
                 <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div className="text-sm">

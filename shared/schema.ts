@@ -16,7 +16,7 @@ export const voucherCards = pgTable("voucher_cards", {
 
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull(),
+  email: text("email"),
   phone: text("phone").notNull(),
   examType: text("exam_type").notNull(),
   amount: text("amount").notNull(),
@@ -42,7 +42,7 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
   paystackReference: true,
   voucherCardId: true,
 }).extend({
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal("")),
   phone: z.string().min(10),
   examType: z.enum(["BECE", "WASSCE"], {
     errorMap: () => ({ message: "Please select either BECE or WASSCE" }),
