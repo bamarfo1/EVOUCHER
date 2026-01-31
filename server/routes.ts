@@ -365,14 +365,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
-
-
-app.get("/api/test-db", async (req, res) => {
-  try {
-    const vouchers = await storage.getAvailableVoucher("WASSCE");
-    res.json({ success: true, vouchers });
-  } catch (err: any) {
-    res.json({ success: false, error: err.message });
-  }
-});
-
