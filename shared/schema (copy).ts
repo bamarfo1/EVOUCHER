@@ -32,7 +32,7 @@ export const transactions = pgTable("transactions", {
 
   examType: text("exam_type").notNull(),
 
-  // Amount stored in KOBO (server-controlled)
+  // Amount stored in KOBO
   amount: integer("amount").notNull(),
 
   paystackReference: text("paystack_reference").unique(),
@@ -54,23 +54,20 @@ export const insertVoucherCardSchema = createInsertSchema(voucherCards).omit({
   usedAt: true,
 });
 
-export const insertTransactionSchema = createInsertSchema(transactions)
-  .omit({
-    id: true,
-    createdAt: true,
-    completedAt: true,
-    status: true,
-    paystackReference: true,
-    voucherCardId: true,
-    amount: true, // ✅ IMPORTANT FIX
-  })
-  .extend({
-    email: z.string().email().optional().or(z.literal("")),
-    phone: z.string().min(10),
-    examType: z.enum(["BECE", "WASSCE"], {
-      errorMap: () => ({ message: "Please select either BECE or WASSCE" }),
-    }),
-  });
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+  status: true,
+  paystackReference: true,
+  voucherCardId: true,
+}).extend({
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().min(10),
+  examType: z.enum(["BECE", "WASSCE"], {
+    errorMap: () => ({ message: "Please select either BECE or WASSCE" }),
+  }),
+});
 
 /* =========================
    Types
