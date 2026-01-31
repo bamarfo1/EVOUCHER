@@ -1,32 +1,53 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, uuid, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+/* =========================
+   Voucher Cards
+========================= */
 export const voucherCards = pgTable("voucher_cards", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").defaultRandom().primaryKey(),
+
   serial: text("serial").notNull().unique(),
   pin: text("pin").notNull(),
+
   used: boolean("used").notNull().default(false),
+
   purchaserPhone: text("purchaser_phone"),
   purchaserEmail: text("purchaser_email"),
+
   examType: text("exam_type"),
+
   usedAt: timestamp("used_at"),
 });
 
+/* =========================
+   Transactions
+========================= */
 export const transactions = pgTable("transactions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").defaultRandom().primaryKey(),
+
   email: text("email"),
   phone: text("phone").notNull(),
+
   examType: text("exam_type").notNull(),
-  amount: text("amount").notNull(),
+
+  // Amount stored in KOBO
+  amount: integer("amount").notNull(),
+
   paystackReference: text("paystack_reference").unique(),
+
   status: text("status").notNull().default("pending"),
-  voucherCardId: varchar("voucher_card_id").references(() => voucherCards.id),
-  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+
+  voucherCardId: uuid("voucher_card_id").references(() => voucherCards.id),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });
 
+/* =========================
+   Zod Insert Schemas
+========================= */
 export const insertVoucherCardSchema = createInsertSchema(voucherCards).omit({
   id: true,
   used: true,
@@ -38,7 +59,6 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
   createdAt: true,
   completedAt: true,
   status: true,
-  amount: true,
   paystackReference: true,
   voucherCardId: true,
 }).extend({
@@ -49,7 +69,11 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
   }),
 });
 
+/* =========================
+   Types
+========================= */
 export type InsertVoucherCard = z.infer<typeof insertVoucherCardSchema>;
 export type VoucherCard = typeof voucherCards.$inferSelect;
+
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
