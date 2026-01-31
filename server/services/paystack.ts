@@ -1,7 +1,11 @@
 import axios from "axios";
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACKSECRETKEYbright || process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
+
+if (!PAYSTACK_SECRET_KEY) {
+  throw new Error("PAYSTACK_SECRET_KEY is not set");
+}
 
 export interface PaystackInitializeResponse {
   status: boolean;
@@ -28,7 +32,7 @@ export interface PaystackVerifyResponse {
 
 export async function initializePayment(
   email: string,
-  amount: number,
+  amount: number, // amount MUST already be in kobo
   reference: string,
   metadata: any,
   callbackUrl: string
@@ -37,7 +41,7 @@ export async function initializePayment(
     `${PAYSTACK_BASE_URL}/transaction/initialize`,
     {
       email,
-      amount: amount * 100, // Paystack expects amount in kobo (pesewas)
+      amount, // ✅ already in kobo
       reference,
       metadata,
       callback_url: callbackUrl,
@@ -53,7 +57,9 @@ export async function initializePayment(
   return response.data;
 }
 
-export async function verifyPayment(reference: string): Promise<PaystackVerifyResponse> {
+export async function verifyPayment(
+  reference: string
+): Promise<PaystackVerifyResponse> {
   const response = await axios.get(
     `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
     {
