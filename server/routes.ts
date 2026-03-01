@@ -8,6 +8,16 @@ import { randomBytes } from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  app.get("/api/card-types", async (_req: Request, res: Response) => {
+    try {
+      const cardTypes = await storage.getAvailableCardTypes();
+      res.json(cardTypes);
+    } catch (error: any) {
+      console.error("Error fetching card types:", error);
+      res.status(500).json({ error: "Failed to fetch available card types" });
+    }
+  });
+
   app.post("/api/purchase/initialize", async (req: Request, res: Response) => {
     try {
       const validatedData = insertTransactionSchema.parse(req.body);

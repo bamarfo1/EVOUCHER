@@ -26,14 +26,12 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const getPortalUrl = (examType: string) => {
-    if (examType === 'BECE') {
-      return 'https://eresults.waecgh.org/';
-    }
-    return 'https://ghana.waecdirect.org/';
+  const PORTAL_URLS: Record<string, string> = {
+    "BECE": "https://eresults.waecgh.org/",
+    "WASSCE": "https://ghana.waecdirect.org/",
   };
 
-  const waecUrl = getPortalUrl(voucherData.examType);
+  const waecUrl = PORTAL_URLS[voucherData.examType] || null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
@@ -119,7 +117,7 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Exam Type</p>
+              <p className="text-sm font-medium">Card Type</p>
               <Badge variant="secondary" data-testid="badge-exam-type">{voucherData.examType}</Badge>
             </div>
 
@@ -143,14 +141,16 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             </div>
 
             <div className="pt-4 space-y-3">
-              <Button
-                className="w-full h-12"
-                onClick={() => window.open(waecUrl, '_blank')}
-                data-testid="button-check-results"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Check Your {voucherData.examType} Results Now
-              </Button>
+              {waecUrl && (
+                <Button
+                  className="w-full h-12"
+                  onClick={() => window.open(waecUrl, '_blank')}
+                  data-testid="button-check-results"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Check Your {voucherData.examType} Results Now
+                </Button>
+              )}
 
               {onStartNew && (
                 <Button
@@ -165,22 +165,24 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             </div>
 
             <div className="space-y-2">
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                  {voucherData.examType} Result Checker Portal:
-                </p>
-                <a 
-                  href={waecUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all"
-                  data-testid="link-portal-url"
-                >
-                  {waecUrl}
-                </a>
-              </div>
+              {waecUrl && (
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    {voucherData.examType} Result Checker Portal:
+                  </p>
+                  <a 
+                    href={waecUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all"
+                    data-testid="link-portal-url"
+                  >
+                    {waecUrl}
+                  </a>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground text-center">
-                Keep your voucher details safe. You'll need them to check your results.
+                Keep your voucher details safe.
               </p>
             </div>
           </CardContent>

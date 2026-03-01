@@ -11,7 +11,7 @@ const SMS_SENDER_ID = process.env.SMS_SENDER_ID || "ALLTEK";
 
 const PORTAL_URLS: Record<string, string> = {
   "BECE": "https://eresults.waecgh.org",
-  "WASSCE": "https://ghana.waecdirect.org"
+  "WASSCE": "https://ghana.waecdirect.org",
 };
 
 const transporter = nodemailer.createTransport({
@@ -40,13 +40,18 @@ export async function sendVoucherEmail(
     return;
   }
 
-  const portalUrl = PORTAL_URLS[examType] || "https://waecdirect.org";
-  const portalName = examType === "BECE" ? "BECE Portal" : "WASSCE Portal";
+  const portalUrl = PORTAL_URLS[examType];
+  const portalName = portalUrl ? `${examType} Portal` : null;
+
+  const portalSection = portalUrl
+    ? `<p>Check your results here: <a href="${portalUrl}" style="color: #2563eb; font-weight: bold;">${portalName}</a></p>
+       <p style="color: #4b5563; font-size: 14px;">${portalUrl}</p>`
+    : '';
 
   const mailOptions = {
     from: `AllTekSE e-Voucher <${EMAIL_USER}>`,
     to: email,
-    subject: `Your ${examType} Voucher - Check Results Now`,
+    subject: `Your ${examType} Voucher from AllTekSE`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Your ${examType} Voucher</h2>
@@ -55,14 +60,13 @@ export async function sendVoucherEmail(
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 10px 0;"><strong>Serial Number:</strong> ${serial}</p>
           <p style="margin: 10px 0;"><strong>PIN:</strong> ${pin}</p>
-          <p style="margin: 10px 0;"><strong>Exam Type:</strong> ${examType}</p>
+          <p style="margin: 10px 0;"><strong>Card Type:</strong> ${examType}</p>
         </div>
         
-        <p>Check your results here: <a href="${portalUrl}" style="color: #2563eb; font-weight: bold;">${portalName}</a></p>
-        <p style="color: #4b5563; font-size: 14px;">${portalUrl}</p>
+        ${portalSection}
         
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          Keep these details safe. You will need them to check your WAEC results.
+          Keep these details safe.
         </p>
         
         <p style="color: #6b7280; font-size: 14px;">
@@ -81,8 +85,10 @@ export async function sendVoucherSMS(
   pin: string,
   examType: string
 ): Promise<void> {
-  const portalUrl = PORTAL_URLS[examType] || "waecdirect.org";
-  const message = `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. Check results: ${portalUrl}`;
+  const portalUrl = PORTAL_URLS[examType];
+  const message = portalUrl
+    ? `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. Check results: ${portalUrl}`
+    : `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. From AllTekSE e-Voucher.`;
 
   if (!SMS_API_KEY) {
     console.log("SMS API not configured. Would send:", { phone, message });

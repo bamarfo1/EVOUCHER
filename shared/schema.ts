@@ -67,9 +67,7 @@ export const insertTransactionSchema = createInsertSchema(transactions)
   .extend({
     email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(10),
-    examType: z.enum(["BECE", "WASSCE"], {
-      errorMap: () => ({ message: "Please select either BECE or WASSCE" }),
-    }),
+    examType: z.string().min(1, "Please select a card type"),
   });
 
 /* =========================
