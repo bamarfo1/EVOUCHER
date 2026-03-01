@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const paystackResponse = await initializePayment(
         emailForPaystack,
-        price,
+        price * 100,
         reference,
         {
           transactionId: transaction.id,
