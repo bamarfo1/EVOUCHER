@@ -6,10 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2 } from "lucide-react";
+import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
 import alltekseLogo from "@assets/alltekse_1772365699004.png";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
@@ -22,28 +21,30 @@ interface PurchaseFormProps {
   isLoading?: boolean;
 }
 
-const CARD_COLORS: Record<string, { gradient: string; border: string; icon: string }> = {
-  "BECE": { gradient: "from-emerald-500 to-teal-600", border: "border-emerald-300 dark:border-emerald-700", icon: "bg-emerald-500" },
-  "WASSCE": { gradient: "from-blue-500 to-indigo-600", border: "border-blue-300 dark:border-blue-700", icon: "bg-blue-500" },
+const CARD_COLORS: Record<string, { gradient: string; border: string }> = {
+  "BECE": { gradient: "from-emerald-500 to-teal-600", border: "border-emerald-300 dark:border-emerald-700" },
+  "WASSCE": { gradient: "from-blue-500 to-indigo-600", border: "border-blue-300 dark:border-blue-700" },
 };
 
 const DEFAULT_COLORS = [
-  { gradient: "from-purple-500 to-violet-600", border: "border-purple-300 dark:border-purple-700", icon: "bg-purple-500" },
-  { gradient: "from-rose-500 to-pink-600", border: "border-rose-300 dark:border-rose-700", icon: "bg-rose-500" },
-  { gradient: "from-amber-500 to-orange-600", border: "border-amber-300 dark:border-amber-700", icon: "bg-amber-500" },
-  { gradient: "from-cyan-500 to-sky-600", border: "border-cyan-300 dark:border-cyan-700", icon: "bg-cyan-500" },
-  { gradient: "from-fuchsia-500 to-purple-600", border: "border-fuchsia-300 dark:border-fuchsia-700", icon: "bg-fuchsia-500" },
-  { gradient: "from-lime-500 to-green-600", border: "border-lime-300 dark:border-lime-700", icon: "bg-lime-500" },
+  { gradient: "from-purple-500 to-violet-600", border: "border-purple-300 dark:border-purple-700" },
+  { gradient: "from-rose-500 to-pink-600", border: "border-rose-300 dark:border-rose-700" },
+  { gradient: "from-amber-500 to-orange-600", border: "border-amber-300 dark:border-amber-700" },
+  { gradient: "from-cyan-500 to-sky-600", border: "border-cyan-300 dark:border-cyan-700" },
+  { gradient: "from-fuchsia-500 to-purple-600", border: "border-fuchsia-300 dark:border-fuchsia-700" },
+  { gradient: "from-lime-500 to-green-600", border: "border-lime-300 dark:border-lime-700" },
 ];
 
 function getCardColors(examType: string, index: number) {
   return CARD_COLORS[examType] || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
 }
 
-const PORTAL_URLS: Record<string, string> = {
-  "BECE": "eresults.waecgh.org",
-  "WASSCE": "ghana.waecdirect.org",
-};
+interface CardType {
+  examType: string;
+  count: number;
+  price: number;
+  imageUrl: string | null;
+}
 
 export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFormProps) {
   const [email, setEmail] = useState("");
@@ -51,8 +52,9 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState("");
   const [selectedPrice, setSelectedPrice] = useState(20);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const { data: cardTypes, isLoading: cardTypesLoading } = useQuery<{ examType: string; count: number; price: number }[]>({
+  const { data: cardTypes, isLoading: cardTypesLoading } = useQuery<CardType[]>({
     queryKey: ["/api/card-types"],
   });
 
@@ -61,9 +63,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
     onSubmit({ email, phone, examType: selectedType });
   };
 
-  const handleCardClick = (card: { examType: string; price: number }) => {
+  const handleCardClick = (card: CardType) => {
     setSelectedType(card.examType);
     setSelectedPrice(card.price);
+    setSelectedImage(card.imageUrl);
     setEmail("");
     setPhone("");
     setDialogOpen(true);
@@ -71,27 +74,21 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 dark:from-slate-900 dark:via-purple-900/20 dark:to-blue-900/20 flex flex-col">
-      <header className="py-6 px-4 border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg">
-        <div className="max-w-md mx-auto space-y-4">
-          <div className="flex items-center justify-center gap-4">
+      <header className="py-5 px-4 border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg">
+        <div className="max-w-md mx-auto space-y-3">
+          <div className="flex items-center justify-center">
             <img 
               src={alltekseLogo} 
               alt="AllTekSE Logo" 
               className="h-16 w-auto object-contain rounded-xl shadow-xl"
               data-testid="img-alltekse-logo"
             />
-            <img 
-              src={waecLogo} 
-              alt="WAEC Logo" 
-              className="h-16 w-auto object-contain drop-shadow-lg"
-              data-testid="img-waec-logo"
-            />
           </div>
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent" data-testid="text-site-title">
               AllTekSE e-Voucher
             </h1>
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">WAEC Result Checker Platform</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Your Trusted e-Voucher Store</p>
             <Link 
               href="/retrieve-voucher"
               className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors hover-elevate px-3 py-1.5 rounded-lg"
@@ -107,7 +104,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       <section className="relative w-full h-48 md:h-72 overflow-hidden" data-testid="section-hero-banner">
         <img 
           src={studentsBanner} 
-          alt="Successful Students" 
+          alt="Students Celebrating" 
           className="w-full h-full object-cover"
           data-testid="img-students-banner"
         />
@@ -118,7 +115,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               Your Success Starts Here
             </h2>
             <p className="text-sm md:text-lg text-white/95 font-medium drop-shadow-lg">
-              Get your WAEC Result Checker Voucher instantly and unlock your future!
+              Purchase your e-Voucher instantly and securely!
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 pt-2 md:pt-4">
               <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-2 py-1 md:px-3 md:py-1.5 text-xs font-semibold shadow-lg">
@@ -130,7 +127,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 100% Secure
               </Badge>
               <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-2 py-1 md:px-3 md:py-1.5 text-xs font-semibold shadow-lg">
-                <GraduationCap className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                <ShoppingBag className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                 Trusted by Thousands
               </Badge>
             </div>
@@ -149,19 +146,19 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
           </div>
 
           {cardTypesLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-              {[1, 2].map((i) => (
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="overflow-visible">
-                  <CardContent className="p-4 md:p-6">
-                    <Skeleton className="h-10 w-10 rounded-lg mb-3" />
-                    <Skeleton className="h-6 w-24 mb-2" />
+                  <CardContent className="p-3 md:p-5">
+                    <Skeleton className="w-full h-20 rounded-lg mb-3" />
+                    <Skeleton className="h-5 w-20 mb-2" />
                     <Skeleton className="h-4 w-16" />
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : cardTypes && cardTypes.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               {cardTypes.map((card, index) => {
                 const colors = getCardColors(card.examType, index);
                 return (
@@ -174,31 +171,33 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                       card.count === 0
                         ? 'border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50'
                         : `${colors.border} hover-elevate shadow-md bg-white dark:bg-slate-800`
-                    } p-4 md:p-5`}
+                    } p-3 md:p-4`}
                     data-testid={`card-type-${card.examType.toLowerCase()}`}
                   >
-                    <div className="flex items-start gap-3 md:gap-4">
-                      <div className={`w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br ${colors.gradient} rounded-lg md:rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
-                        <GraduationCap className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    {card.imageUrl ? (
+                      <div className="w-full h-20 md:h-28 rounded-md overflow-hidden mb-2 md:mb-3 bg-slate-100 dark:bg-slate-700">
+                        <img 
+                          src={card.imageUrl} 
+                          alt={card.examType}
+                          className="w-full h-full object-cover"
+                          data-testid={`img-card-${card.examType.toLowerCase()}`}
+                        />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base md:text-lg font-bold text-slate-900 dark:text-slate-100">
-                          {card.examType}
-                        </h3>
-                        {PORTAL_URLS[card.examType] && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                            Portal: {PORTAL_URLS[card.examType]}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between gap-2 mt-2">
-                          <span className="text-lg md:text-xl font-extrabold bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">
-                            GHC {card.price}
-                          </span>
-                          <Badge variant={card.count > 0 ? "secondary" : "destructive"} className="text-xs">
-                            {card.count > 0 ? `${card.count} in stock` : "Out of stock"}
-                          </Badge>
-                        </div>
+                    ) : (
+                      <div className={`w-full h-20 md:h-28 bg-gradient-to-br ${colors.gradient} rounded-md flex items-center justify-center mb-2 md:mb-3 shadow-inner`}>
+                        <CreditCard className="w-8 h-8 md:w-10 md:h-10 text-white/80" />
                       </div>
+                    )}
+                    <h3 className="text-sm md:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {card.examType}
+                    </h3>
+                    <div className="flex items-center justify-between gap-1 mt-1">
+                      <span className="text-base md:text-lg font-extrabold bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">
+                        GHC {card.price}
+                      </span>
+                      <Badge variant={card.count > 0 ? "secondary" : "destructive"} className="text-[10px] md:text-xs px-1.5">
+                        {card.count > 0 ? `${card.count} left` : "Sold out"}
+                      </Badge>
                     </div>
                   </button>
                 );
@@ -220,9 +219,15 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="dialog-purchase-form">
           <DialogHeader className="text-center space-y-3 pb-2">
-            <div className="mx-auto w-14 h-14 bg-gradient-to-br from-purple-500 via-blue-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl">
-              <Zap className="w-7 h-7 text-white" />
-            </div>
+            {selectedImage ? (
+              <div className="mx-auto w-20 h-20 rounded-2xl overflow-hidden shadow-xl">
+                <img src={selectedImage} alt={selectedType} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="mx-auto w-14 h-14 bg-gradient-to-br from-purple-500 via-blue-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl">
+                <Zap className="w-7 h-7 text-white" />
+              </div>
+            )}
             <DialogTitle className="text-xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent font-bold" data-testid="text-dialog-title">
               Purchase {selectedType} Voucher
             </DialogTitle>
@@ -325,7 +330,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400">Quick access to Ghana's top universities</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <a 
               href="https://admissions.ug.edu.gh/" 
               target="_blank" 
@@ -409,7 +414,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Need help with university applications? We've got you covered!
+                  Need help with applications? We've got you covered!
                 </p>
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="w-4 h-4 text-primary" />

@@ -18,6 +18,7 @@ export const voucherCards = pgTable("voucher_cards", {
 
   examType: text("exam_type"),
   price: integer("price").notNull().default(20),
+  imageUrl: text("image_url"),
 
   usedAt: timestamp("used_at"),
 });
