@@ -1,9 +1,5 @@
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { sql } from "drizzle-orm";
-import ws from "ws";
-
-neonConfig.webSocketConstructor = ws;
+import pkg from "pg";
+const { Client } = pkg;
 
 async function migrate() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -14,10 +10,14 @@ async function migrate() {
 
   console.log("Running database migration...");
 
-  const pool = new Pool({ connectionString: databaseUrl });
-  const db = drizzle({ client: pool });
+  const client = new Client({
+    connectionString: databaseUrl,
+    ssl: { rejectUnauthorized: false },
+  });
 
-  await db.execute(sql`
+  await client.connect();
+
+  await client.query(`
     CREATE TABLE IF NOT EXISTS voucher_cards (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
       serial TEXT NOT NULL UNIQUE,
@@ -32,7 +32,7 @@ async function migrate() {
     )
   `);
 
-  await db.execute(sql`
+  await client.query(`
     CREATE TABLE IF NOT EXISTS transactions (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
       email TEXT,
@@ -48,7 +48,7 @@ async function migrate() {
   `);
 
   console.log("Database migration completed successfully!");
-  await pool.end();
+  await client.end();
 }
 
 migrate().catch((err) => {
