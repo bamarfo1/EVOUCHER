@@ -192,7 +192,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                         <CreditCard className="w-8 h-8 md:w-10 md:h-10 text-white/80" />
                       </div>
                     )}
-                    <h3 className="text-sm md:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+                    <h3 className="text-xs md:text-sm font-semibold text-slate-900 dark:text-slate-100 leading-tight min-h-[2rem] flex items-center">
                       {card.examType}
                     </h3>
                     <div className="flex items-center justify-between gap-1 mt-1">
