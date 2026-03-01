@@ -10,7 +10,7 @@ import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, F
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
-import alltekseLogo from "@assets/101-800x600_1763210592506.jpg";
+import alltekseLogo from "@assets/alltekse_1772365699004.png";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
 import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
@@ -74,14 +74,12 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       <header className="py-6 px-4 border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg">
         <div className="max-w-md mx-auto space-y-4">
           <div className="flex items-center justify-center gap-4">
-            <div className="bg-black rounded-xl p-3 shadow-xl">
-              <img 
-                src={alltekseLogo} 
-                alt="AllTekSE Logo" 
-                className="h-12 w-auto object-contain"
-                data-testid="img-alltekse-logo"
-              />
-            </div>
+            <img 
+              src={alltekseLogo} 
+              alt="AllTekSE Logo" 
+              className="h-16 w-auto object-contain rounded-xl shadow-xl"
+              data-testid="img-alltekse-logo"
+            />
             <img 
               src={waecLogo} 
               alt="WAEC Logo" 
