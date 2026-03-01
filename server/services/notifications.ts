@@ -5,9 +5,9 @@ const EMAIL_USER = process.env.EMAILUSER || process.env.EMAIL_USER;
 const EMAIL_PASSWORD = process.env.EMAILPASSWORD || process.env.EMAIL_PASSWORD;
 const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
 const EMAIL_PORT = process.env.EMAIL_PORT || "587";
-const SMS_API_KEY = process.env.SMSAPI || process.env.SMS_API_KEY;
-const SMS_API_URL = process.env.SMS_API_URL || "http://clientlogin.bulksmsgh.com/smsapi";
-const SMS_SENDER_ID = process.env.SMS_SENDER_ID || "ALLTEK";
+const NALO_API_KEY = process.env.NALO_SMS_API_KEY;
+const NALO_SENDER_ID = process.env.NALO_SENDER_ID || "AllTekSE";
+const NALO_API_URL = "https://sms.nalosolutions.com/smsbackend/clientapi/Reloaded";
 
 const PORTAL_URLS: Record<string, string> = {
   "BECE": "https://eresults.waecgh.org",
@@ -90,38 +90,40 @@ export async function sendVoucherSMS(
     ? `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. Check results: ${portalUrl}`
     : `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. From AllTekSE e-Voucher.`;
 
-  if (!SMS_API_KEY) {
-    console.log("SMS API not configured. Would send:", { phone, message });
+  if (!NALO_API_KEY) {
+    console.log("Nalo SMS API not configured. Would send:", { phone, message });
     return;
   }
 
   try {
-    const response = await axios.get(SMS_API_URL, {
+    const response = await axios.get(NALO_API_URL, {
       params: {
-        key: SMS_API_KEY,
-        to: phone,
-        msg: message,
-        sender_id: SMS_SENDER_ID,
+        key: NALO_API_KEY,
+        type: 0,
+        destination: phone,
+        dlr: 1,
+        source: NALO_SENDER_ID,
+        message: message,
       },
     });
 
     const responseData = response.data;
-    const responseCode = responseData?.code || responseData;
-    
-    if (responseCode === 1000 || responseCode === "1000") {
+    const status = responseData?.status || responseData;
+
+    if (status === 1701 || status === "1701") {
       console.log("SMS sent successfully to", phone);
-    } else if (responseCode === 1004 || responseCode === "1004") {
-      throw new Error("Invalid SMS API Key");
-    } else if (responseCode === 1005 || responseCode === "1005") {
+    } else if (status === 1702 || status === "1702") {
+      throw new Error("Invalid URL or missing/invalid parameters");
+    } else if (status === 1703 || status === "1703") {
+      throw new Error("Invalid API key");
+    } else if (status === 1704 || status === "1704") {
+      throw new Error("Insufficient SMS credit");
+    } else if (status === 1705 || status === "1705") {
+      throw new Error(`Invalid Sender ID: ${NALO_SENDER_ID}`);
+    } else if (status === 1706 || status === "1706") {
       throw new Error(`Invalid phone number: ${phone}`);
-    } else if (responseCode === 1006 || responseCode === "1006") {
-      throw new Error(`Invalid Sender ID: ${SMS_SENDER_ID}`);
-    } else if (responseCode === 1003 || responseCode === "1003") {
-      throw new Error("Insufficient SMS balance");
-    } else if (responseCode === 1002 || responseCode === "1002") {
-      throw new Error("Message not sent");
     } else {
-      console.log(`SMS API response:`, responseData);
+      console.log("Nalo SMS API response:", responseData);
     }
   } catch (error) {
     console.error("Failed to send SMS:", error);

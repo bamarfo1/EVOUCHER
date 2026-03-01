@@ -62,6 +62,6 @@ UPDATE voucher_cards SET image_url = 'https://your-image-url.com/image.png' WHER
 ## External Dependencies
 
 - **Payment Gateway**: Paystack (for mobile money and card payments)
-- **SMS Delivery**: BulkSMS Ghana
+- **SMS Delivery**: Nalo Solutions (nalosolutions.com)
 - **Email Service**: Namecheap/PrivateEmail SMTP (via Nodemailer)
 - **Database**: PostgreSQL
