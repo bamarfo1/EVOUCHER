@@ -67,11 +67,7 @@ export default function PaymentCallback() {
                 className="h-12 w-auto object-contain"
               />
             </div>
-            <img 
-              src={waecLogo} 
-              alt="WAEC Logo" 
-              className="h-16 w-auto object-contain"
-            />
+
           </div>
           <div className="text-center space-y-1">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
