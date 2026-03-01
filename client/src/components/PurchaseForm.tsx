@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CheckCircle2, CreditCard, Loader2 } from "lucide-react";
+import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
@@ -47,26 +48,25 @@ const PORTAL_URLS: Record<string, string> = {
 export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFormProps) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [examType, setExamType] = useState("");
-  const [showForm, setShowForm] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState("");
+  const [selectedPrice, setSelectedPrice] = useState(20);
 
   const { data: cardTypes, isLoading: cardTypesLoading } = useQuery<{ examType: string; count: number; price: number }[]>({
     queryKey: ["/api/card-types"],
   });
 
-  const selectedCard = cardTypes?.find((c) => c.examType === examType);
-  const selectedPrice = selectedCard?.price ?? 20;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ email, phone, examType });
+    onSubmit({ email, phone, examType: selectedType });
   };
 
-  const handleCardSelect = (type: string) => {
-    setExamType(type);
-    if (!showForm) {
-      setShowForm(true);
-    }
+  const handleCardClick = (card: { examType: string; price: number }) => {
+    setSelectedType(card.examType);
+    setSelectedPrice(card.price);
+    setEmail("");
+    setPhone("");
+    setDialogOpen(true);
   };
 
   return (
@@ -147,7 +147,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               <CreditCard className="w-5 h-5 md:w-6 md:h-6 text-white" />
               <h2 className="text-lg md:text-xl font-bold text-white">Available Vouchers</h2>
             </div>
-            <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400">Select a voucher card to purchase</p>
+            <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400">Tap a voucher card to purchase</p>
           </div>
 
           {cardTypesLoading ? (
@@ -166,27 +166,19 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               {cardTypes.map((card, index) => {
                 const colors = getCardColors(card.examType, index);
-                const isSelected = examType === card.examType;
                 return (
                   <button
                     key={card.examType}
                     type="button"
-                    onClick={() => card.count > 0 && handleCardSelect(card.examType)}
+                    onClick={() => card.count > 0 && handleCardClick(card)}
                     disabled={card.count === 0}
                     className={`relative text-left rounded-md border-2 transition-all duration-200 overflow-visible ${
                       card.count === 0
                         ? 'border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50'
-                        : isSelected
-                          ? `${colors.border} ring-2 ring-offset-2 ring-purple-500 shadow-xl scale-[1.02] bg-white dark:bg-slate-800`
-                          : `border-slate-200 dark:border-slate-700 hover-elevate shadow-md bg-white dark:bg-slate-800`
+                        : `${colors.border} hover-elevate shadow-md bg-white dark:bg-slate-800`
                     } p-4 md:p-5`}
                     data-testid={`card-type-${card.examType.toLowerCase()}`}
                   >
-                    {isSelected && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center shadow-lg z-10">
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                      </div>
-                    )}
                     <div className="flex items-start gap-3 md:gap-4">
                       <div className={`w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br ${colors.gradient} rounded-lg md:rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
                         <GraduationCap className="w-5 h-5 md:w-6 md:h-6 text-white" />
@@ -225,124 +217,105 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
             </Card>
           )}
         </div>
-
-        {showForm && examType && (
-          <Card className="w-full max-w-md shadow-2xl border-2 border-purple-100 dark:border-purple-900/50">
-            <CardHeader className="text-center space-y-3 pb-4 bg-gradient-to-br from-purple-50/50 via-blue-50/50 to-teal-50/50 dark:from-purple-900/20 dark:via-blue-900/20 dark:to-teal-900/20 rounded-t-lg">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 via-blue-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-xl md:text-2xl mb-1 bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent font-bold" data-testid="text-card-title">
-                  Purchase {examType} Voucher
-                </CardTitle>
-                <CardDescription className="text-sm leading-relaxed text-slate-600 dark:text-slate-400" data-testid="text-card-description">
-                  Complete your details below to receive your voucher instantly.
-                  <span className="block mt-1 font-semibold text-purple-600 dark:text-purple-400">GHC {selectedPrice} per voucher</span>
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address <span className="text-muted-foreground text-xs">(Optional)</span></Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your.email@example.com (optional)"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 h-12"
-                      data-testid="input-email"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Leave blank if you prefer SMS delivery only</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+233 XX XXX XXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="pl-10 h-12"
-                      required
-                      data-testid="input-phone"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Voucher will be sent via SMS to this number</p>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <Button
-                    type="submit"
-                    className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
-                    disabled={isLoading || !phone || !examType}
-                    data-testid="button-pay"
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 md:w-5 md:h-5" />
-                        Pay GHC {selectedPrice} Now
-                      </span>
-                    )}
-                  </Button>
-
-                  <div className="flex items-center justify-center gap-2 text-sm mt-3">
-                    <Shield className="w-5 h-5 text-emerald-500" />
-                    <span className="font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Secured by Paystack</span>
-                  </div>
-
-                  <div className="space-y-3 mt-4">
-                    <p className="text-sm font-bold text-center bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">Available Payment Options</p>
-                    <div className="grid grid-cols-2 gap-2 md:gap-3">
-                      <div className="bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-mtn">
-                        <img 
-                          src={mtnLogo} 
-                          alt="MTN Mobile Money" 
-                          className="w-full h-8 md:h-10 object-contain"
-                        />
-                      </div>
-                      <div className="bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-telecel">
-                        <img 
-                          src={telecelLogo} 
-                          alt="Telecel Cash" 
-                          className="w-full h-8 md:h-10 object-contain"
-                        />
-                      </div>
-                      <div className="bg-white dark:bg-slate-800 border-2 border-teal-200 dark:border-teal-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-airteltigo">
-                        <img 
-                          src={airtelTigoLogo} 
-                          alt="AirtelTigo Money" 
-                          className="w-full h-8 md:h-10 object-contain"
-                        />
-                      </div>
-                      <div className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-800 rounded-lg md:rounded-xl p-2 md:p-3 hover-elevate transition-all shadow-md" data-testid="payment-visa">
-                        <img 
-                          src={visaLogo} 
-                          alt="Visa Card" 
-                          className="w-full h-8 md:h-10 object-contain"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
       </main>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="dialog-purchase-form">
+          <DialogHeader className="text-center space-y-3 pb-2">
+            <div className="mx-auto w-14 h-14 bg-gradient-to-br from-purple-500 via-blue-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl">
+              <Zap className="w-7 h-7 text-white" />
+            </div>
+            <DialogTitle className="text-xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent font-bold" data-testid="text-dialog-title">
+              Purchase {selectedType} Voucher
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-slate-600 dark:text-slate-400" data-testid="text-dialog-description">
+              Complete your details below to receive your voucher instantly.
+              <span className="block mt-1 font-semibold text-purple-600 dark:text-purple-400">GHC {selectedPrice} per voucher</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="dialog-email">Email Address <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="dialog-email"
+                  type="email"
+                  placeholder="your.email@example.com (optional)"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 h-12"
+                  data-testid="input-email"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Leave blank if you prefer SMS delivery only</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dialog-phone">Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="dialog-phone"
+                  type="tel"
+                  placeholder="+233 XX XXX XXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="pl-10 h-12"
+                  required
+                  data-testid="input-phone"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Voucher will be sent via SMS to this number</p>
+            </div>
+
+            <div className="pt-3 border-t space-y-3">
+              <Button
+                type="submit"
+                className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
+                disabled={isLoading || !phone || !selectedType}
+                data-testid="button-pay"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 md:w-5 md:h-5" />
+                    Pay GHC {selectedPrice} Now
+                  </span>
+                )}
+              </Button>
+
+              <div className="flex items-center justify-center gap-2 text-sm">
+                <Shield className="w-5 h-5 text-emerald-500" />
+                <span className="font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Secured by Paystack</span>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-center bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">Available Payment Options</p>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5" data-testid="payment-mtn">
+                    <img src={mtnLogo} alt="MTN MoMo" className="w-full h-7 object-contain" />
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5" data-testid="payment-telecel">
+                    <img src={telecelLogo} alt="Telecel Cash" className="w-full h-7 object-contain" />
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5" data-testid="payment-airteltigo">
+                    <img src={airtelTigoLogo} alt="AirtelTigo" className="w-full h-7 object-contain" />
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5" data-testid="payment-visa">
+                    <img src={visaLogo} alt="Visa" className="w-full h-7 object-contain" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <section className="py-8 md:py-12 px-4 bg-gradient-to-b from-white via-purple-50/30 to-blue-50/30 dark:from-slate-900 dark:via-purple-900/10 dark:to-blue-900/10">
         <div className="max-w-4xl mx-auto">
