@@ -239,23 +239,6 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="dialog-email">Email Address <span className="text-muted-foreground text-xs">(Optional)</span></Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="dialog-email"
-                  type="email"
-                  placeholder="your.email@example.com (optional)"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-12"
-                  data-testid="input-email"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Leave blank if you prefer SMS delivery only</p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="dialog-phone">Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -271,6 +254,23 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 />
               </div>
               <p className="text-xs text-muted-foreground">Voucher will be sent via SMS to this number</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dialog-email">Email Address <span className="text-muted-foreground text-xs">(Optional)</span></Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="dialog-email"
+                  type="email"
+                  placeholder="your.email@example.com (optional)"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 h-12"
+                  data-testid="input-email"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Leave blank if you prefer SMS delivery only</p>
             </div>
 
             <div className="pt-3 border-t space-y-3">
