@@ -20,7 +20,7 @@ export interface IStorage {
   assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
   getTransactionById(id: string): Promise<Transaction | undefined>;
   getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null>;
-  getAvailableCardTypes(): Promise<{ examType: string; count: number }[]>;
+  getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number }[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -239,11 +239,12 @@ export class DbStorage implements IStorage {
     };
   }
 
-  async getAvailableCardTypes(): Promise<{ examType: string; count: number }[]> {
+  async getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number }[]> {
     const results = await db
       .select({
         examType: voucherCards.examType,
         count: sql<number>`count(*)::int`,
+        price: sql<number>`min(${voucherCards.price})`,
       })
       .from(voucherCards)
       .where(eq(voucherCards.used, false))
@@ -252,7 +253,7 @@ export class DbStorage implements IStorage {
 
     return results
       .filter((r) => r.examType !== null)
-      .map((r) => ({ examType: r.examType!, count: r.count }));
+      .map((r) => ({ examType: r.examType!, count: r.count, price: r.price }));
   }
 
   private normalizePhone(phone: string): string {

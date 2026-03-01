@@ -17,6 +17,7 @@ export const voucherCards = pgTable("voucher_cards", {
   purchaserEmail: text("purchaser_email"),
 
   examType: text("exam_type"),
+  price: integer("price").notNull().default(20),
 
   usedAt: timestamp("used_at"),
 });

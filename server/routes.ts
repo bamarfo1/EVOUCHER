@@ -29,6 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const price = availableVoucher.price;
       const reference = `TXN-${Date.now()}-${randomBytes(4).toString('hex')}`;
       
       const emailToStore = validatedData.email && validatedData.email.trim() !== '' 
@@ -39,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: emailToStore,
         phone: validatedData.phone,
         examType: validatedData.examType,
-        amount: "20",
+        amount: String(price),
         paystackReference: reference,
       });
 
@@ -51,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const paystackResponse = await initializePayment(
         emailForPaystack,
-        20,
+        price,
         reference,
         {
           transactionId: transaction.id,
@@ -129,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const expectedAmount = 20 * 100;
+      const expectedAmount = transaction.amount * 100;
       if (verification.data.amount !== expectedAmount) {
         await storage.updateTransactionStatus(transaction.id, "failed");
         return res.status(400).json({ 
@@ -227,18 +228,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event.event === "charge.success") {
         const reference = event.data.reference;
         const amount = event.data.amount;
-        const expectedAmount = 20 * 100;
-
-        if (amount !== expectedAmount) {
-          console.error("Webhook: Amount mismatch", { expected: expectedAmount, received: amount });
-          return res.status(400).send("Amount mismatch");
-        }
 
         transaction = await storage.getTransactionByReference(reference);
         
         if (!transaction) {
           console.error("Webhook: Transaction not found", reference);
           return res.status(404).send("Transaction not found");
+        }
+
+        const expectedAmount = transaction.amount * 100;
+        if (amount !== expectedAmount) {
+          console.error("Webhook: Amount mismatch", { expected: expectedAmount, received: amount });
+          return res.status(400).send("Amount mismatch");
         }
 
         if (transaction.status === "completed") {

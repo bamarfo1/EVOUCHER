@@ -29,10 +29,10 @@ Payment provider and university portal cards utilize unique accent colors. The d
 - **Frontend**: React with TypeScript, Tailwind CSS with Shadcn UI components, Wouter for routing, and TanStack Query for data fetching.
 - **Backend**: Express.js, PostgreSQL with Drizzle ORM, Nodemailer for email, Paystack API for payments, and BulkSMS Ghana for SMS delivery.
 - **Database Schema**:
-    - `voucher_cards`: `id` (UUID), `serial` (unique text), `pin` (text), `used` (boolean), `purchaser_phone`, `purchaser_email`, `exam_type`, `used_at` (timestamp). The `exam_type` field determines the card type and can be any string value.
+    - `voucher_cards`: `id` (UUID), `serial` (unique text), `pin` (text), `used` (boolean), `purchaser_phone`, `purchaser_email`, `exam_type`, `price` (integer, default 20 GHC), `used_at` (timestamp). The `exam_type` field determines the card type and can be any string value. The `price` field sets the price per voucher in GHC.
     - `transactions`: `id` (UUID), `email` (nullable), `phone`, `exam_type`, `amount`, `paystack_reference` (unique), `status` (pending/completed/failed), `voucher_card_id`, `created_at`, `completed_at` (timestamps).
 - **API Endpoints**:
-    - `GET /api/card-types` — Returns available card types with stock counts
+    - `GET /api/card-types` — Returns available card types with stock counts and prices
     - `POST /api/purchase/initialize`
     - `GET /api/payment/verify/:reference`
     - `POST /api/webhook/paystack`
@@ -40,15 +40,20 @@ Payment provider and university portal cards utilize unique accent colors. The d
 
 ## Adding New Card Types
 
-To add a new card type, simply insert voucher cards into the database with the desired `exam_type`:
+To add a new card type, simply insert voucher cards into the database with the desired `exam_type` and optionally a custom `price` (defaults to GHC 20):
 
 ```sql
+-- Default price (GHC 20)
 INSERT INTO voucher_cards (serial, pin, exam_type) VALUES
 ('SERIAL001', '1234-5678-9012', 'NEW_TYPE'),
 ('SERIAL002', '2345-6789-0123', 'NEW_TYPE');
+
+-- Custom price (GHC 50)
+INSERT INTO voucher_cards (serial, pin, exam_type, price) VALUES
+('SERIAL003', '3456-7890-1234', 'PREMIUM_TYPE', 50);
 ```
 
-The new card type will automatically appear on the frontend as a product card.
+The new card type will automatically appear on the frontend as a product card with its price.
 
 ## External Dependencies
 

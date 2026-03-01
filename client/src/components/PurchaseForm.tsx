@@ -50,9 +50,12 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   const [examType, setExamType] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  const { data: cardTypes, isLoading: cardTypesLoading } = useQuery<{ examType: string; count: number }[]>({
+  const { data: cardTypes, isLoading: cardTypesLoading } = useQuery<{ examType: string; count: number; price: number }[]>({
     queryKey: ["/api/card-types"],
   });
+
+  const selectedCard = cardTypes?.find((c) => c.examType === examType);
+  const selectedPrice = selectedCard?.price ?? 20;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,7 +202,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                         )}
                         <div className="flex items-center justify-between gap-2 mt-2">
                           <span className="text-lg md:text-xl font-extrabold bg-gradient-to-r from-purple-600 to-teal-600 bg-clip-text text-transparent">
-                            GHC 20
+                            GHC {card.price}
                           </span>
                           <Badge variant={card.count > 0 ? "secondary" : "destructive"} className="text-xs">
                             {card.count > 0 ? `${card.count} in stock` : "Out of stock"}
@@ -235,7 +238,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 </CardTitle>
                 <CardDescription className="text-sm leading-relaxed text-slate-600 dark:text-slate-400" data-testid="text-card-description">
                   Complete your details below to receive your voucher instantly.
-                  <span className="block mt-1 font-semibold text-purple-600 dark:text-purple-400">GHC 20 per voucher</span>
+                  <span className="block mt-1 font-semibold text-purple-600 dark:text-purple-400">GHC {selectedPrice} per voucher</span>
                 </CardDescription>
               </div>
             </CardHeader>
@@ -291,7 +294,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                     ) : (
                       <span className="flex items-center gap-2">
                         <Lock className="w-4 h-4 md:w-5 md:h-5" />
-                        Pay GHC 20 Now
+                        Pay GHC {selectedPrice} Now
                       </span>
                     )}
                   </Button>
