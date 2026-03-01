@@ -8,9 +8,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+const databaseUrl = process.env.DATABASE_URL;
+const needsSsl = databaseUrl.includes("sslmode=") || databaseUrl.includes(".com");
+
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false },
+  connectionString: databaseUrl,
+  ssl: needsSsl ? { rejectUnauthorized: false } : false,
 });
 
 export const db = drizzle({ client: pool, schema });

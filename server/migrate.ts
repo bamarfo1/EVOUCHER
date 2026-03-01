@@ -10,9 +10,10 @@ async function migrate() {
 
   console.log("Running database migration...");
 
+  const needsSsl = databaseUrl.includes("sslmode=") || databaseUrl.includes(".com");
   const client = new Client({
     connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: needsSsl ? { rejectUnauthorized: false } : false,
   });
 
   await client.connect();
