@@ -21,18 +21,18 @@ interface PurchaseFormProps {
   isLoading?: boolean;
 }
 
-const CARD_COLORS: Record<string, { gradient: string; border: string }> = {
-  "BECE": { gradient: "from-emerald-500 to-teal-600", border: "border-emerald-300 dark:border-emerald-700" },
-  "WASSCE": { gradient: "from-blue-500 to-indigo-600", border: "border-blue-300 dark:border-blue-700" },
+const CARD_COLORS: Record<string, { gradient: string; borderColor: string }> = {
+  "BECE": { gradient: "linear-gradient(to bottom right, #10b981, #0d9488)", borderColor: "#6ee7b7" },
+  "WASSCE": { gradient: "linear-gradient(to bottom right, #3b82f6, #4f46e5)", borderColor: "#93c5fd" },
 };
 
 const DEFAULT_COLORS = [
-  { gradient: "from-purple-500 to-violet-600", border: "border-purple-300 dark:border-purple-700" },
-  { gradient: "from-rose-500 to-pink-600", border: "border-rose-300 dark:border-rose-700" },
-  { gradient: "from-amber-500 to-orange-600", border: "border-amber-300 dark:border-amber-700" },
-  { gradient: "from-cyan-500 to-sky-600", border: "border-cyan-300 dark:border-cyan-700" },
-  { gradient: "from-fuchsia-500 to-purple-600", border: "border-fuchsia-300 dark:border-fuchsia-700" },
-  { gradient: "from-lime-500 to-green-600", border: "border-lime-300 dark:border-lime-700" },
+  { gradient: "linear-gradient(to bottom right, #a855f7, #7c3aed)", borderColor: "#d8b4fe" },
+  { gradient: "linear-gradient(to bottom right, #f43f5e, #ec4899)", borderColor: "#fda4af" },
+  { gradient: "linear-gradient(to bottom right, #f59e0b, #ea580c)", borderColor: "#fcd34d" },
+  { gradient: "linear-gradient(to bottom right, #06b6d4, #0284c7)", borderColor: "#67e8f9" },
+  { gradient: "linear-gradient(to bottom right, #d946ef, #a855f7)", borderColor: "#f0abfc" },
+  { gradient: "linear-gradient(to bottom right, #84cc16, #16a34a)", borderColor: "#bef264" },
 ];
 
 function getCardColors(examType: string, index: number) {
@@ -169,9 +169,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                     disabled={card.count === 0}
                     className={`relative text-left rounded-md border-2 transition-all duration-200 overflow-visible ${
                       card.count === 0
-                        ? 'border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50'
-                        : `${colors.border} hover-elevate shadow-md bg-white dark:bg-slate-800`
+                        ? 'opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50'
+                        : 'hover-elevate shadow-md bg-white dark:bg-slate-800'
                     } p-3 md:p-4`}
+                    style={{ borderColor: card.count === 0 ? undefined : colors.borderColor }}
                     data-testid={`card-type-${card.examType.toLowerCase()}`}
                   >
                     {card.imageUrl ? (
@@ -184,7 +185,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                         />
                       </div>
                     ) : (
-                      <div className={`w-full h-20 md:h-28 bg-gradient-to-br ${colors.gradient} rounded-md flex items-center justify-center mb-2 md:mb-3 shadow-inner`}>
+                      <div 
+                        className="w-full h-20 md:h-28 rounded-md flex items-center justify-center mb-2 md:mb-3 shadow-inner"
+                        style={{ background: colors.gradient }}
+                      >
                         <CreditCard className="w-8 h-8 md:w-10 md:h-10 text-white/80" />
                       </div>
                     )}
