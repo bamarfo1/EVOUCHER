@@ -6,8 +6,8 @@ const EMAIL_PASSWORD = process.env.EMAILPASSWORD || process.env.EMAIL_PASSWORD;
 const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
 const EMAIL_PORT = process.env.EMAIL_PORT || "587";
 const NALO_API_KEY = process.env.NALO_SMS_API_KEY;
-const NALO_SENDER_ID = process.env.NALO_SENDER_ID || "AllTekSE";
-const NALO_API_URL = "https://sms.nalosolutions.com/smsbackend/clientapi/Reloaded";
+const NALO_SENDER_ID = process.env.NALO_SENDER_ID || "https";
+const NALO_API_URL = "https://sms.nalosolutions.com/smsbackend/clientapi/Resl_Nalo/send-message/";
 
 const PORTAL_URLS: Record<string, string> = {
   "BECE": "https://eresults.waecgh.org",
