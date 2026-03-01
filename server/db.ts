@@ -1,3 +1,5 @@
+import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -6,27 +8,9 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-let pool: any;
-let db: any;
+export const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false },
+});
 
-const databaseUrl = process.env.DATABASE_URL;
-const isNeonDb = databaseUrl.includes("neon.tech") || databaseUrl.includes("neon-");
-
-if (isNeonDb) {
-  const { Pool, neonConfig } = await import("@neondatabase/serverless");
-  const { drizzle } = await import("drizzle-orm/neon-serverless");
-  const ws = (await import("ws")).default;
-  neonConfig.webSocketConstructor = ws;
-  pool = new Pool({ connectionString: databaseUrl });
-  db = drizzle({ client: pool, schema });
-} else {
-  const pg = (await import("pg")).default;
-  const { drizzle } = await import("drizzle-orm/node-postgres");
-  pool = new pg.Pool({
-    connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
-  });
-  db = drizzle({ client: pool, schema });
-}
-
-export { pool, db };
+export const db = drizzle({ client: pool, schema });
