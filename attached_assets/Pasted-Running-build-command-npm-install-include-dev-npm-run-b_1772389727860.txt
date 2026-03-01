@@ -1,0 +1,40 @@
+Running build command 'npm install --include=dev && npm run build && npm run db:push'...
+Menu
+up to date, audited 586 packages in 3s
+67 packages are looking for funding
+  run `npm fund` for details
+35 vulnerabilities (3 low, 6 moderate, 25 high, 1 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+Run `npm audit` for details.
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+vite v5.4.20 building for production...
+transforming...
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 1729 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                                                                                 1.36 kB │ gzip:   0.68 kB
+../dist/public/assets/images (2)_1763209941664-DMOLxK-r.png                                               5.80 kB
+../dist/public/assets/republic-bank-mtn-momo_1763209941271-CtYtlG8i.jpg                                  12.28 kB
+../dist/public/assets/images (1)_1763209941547-C7NPNND9.png                                              14.91 kB
+../dist/public/assets/alltekse_1772365699004-C7JPHf2E.png                                                19.81 kB
+../dist/public/assets/101-800x600_1763210592506-BNyeyb1A.jpg                                             28.79 kB
+../dist/public/assets/airteltigo_1763209941612-C1Ooofdf.jpg                                              30.99 kB
+../dist/public/assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592-qoaGfeBC.png     35.62 kB
+../dist/public/assets/Successful_African_students_celebrating_101e4f92-BCZYVXBy.png                   1,598.02 kB
+../dist/public/assets/index-BzOXjwAB.css                                                                 91.28 kB │ gzip:  14.40 kB
+../dist/public/assets/index-CJ1Yit-F.js                                                                 352.27 kB │ gzip: 108.36 kB
+✓ built in 3.63s
+  dist/index.js  28.7kb
+⚡ Done in 5ms
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/opt/render/project/src/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+(node:139) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
