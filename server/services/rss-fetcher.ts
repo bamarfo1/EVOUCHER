@@ -1,12 +1,19 @@
 import Parser from "rss-parser";
 import { db } from "../db";
 import { blogPosts } from "@shared/schema";
-import { sql } from "drizzle-orm";
 
 const parser = new Parser({
-  timeout: 10000,
+  timeout: 12000,
   headers: {
-    "User-Agent": "Mozilla/5.0 AllTekSE-Blog-Fetcher/1.0",
+    "User-Agent": "Mozilla/5.0 (compatible; AllTekSE-NewsBot/1.0)",
+    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+  },
+  customFields: {
+    item: [
+      ["media:content", "media:content", { keepArray: false }],
+      ["media:thumbnail", "media:thumbnail", { keepArray: false }],
+      ["content:encoded", "content:encoded"],
+    ],
   },
 });
 
@@ -14,49 +21,52 @@ interface RssSource {
   name: string;
   url: string;
   category: string;
+  filterByKeyword: boolean;
 }
 
 const RSS_SOURCES: RssSource[] = [
+  // ── Major Ghanaian News (filtered by education keyword) ───────────────────
   {
     name: "JoyNews Ghana",
     url: "https://www.myjoyonline.com/feed/",
     category: "Education News",
-  },
-  {
-    name: "Citi Newsroom",
-    url: "https://citinewsroom.com/feed/",
-    category: "Education News",
+    filterByKeyword: true,
   },
   {
     name: "3News Ghana",
     url: "https://3news.com/feed/",
     category: "Education News",
+    filterByKeyword: true,
   },
   {
     name: "Ghana Business News",
     url: "https://www.ghanabusinessnews.com/feed/",
     category: "Education News",
+    filterByKeyword: true,
+  },
+  // ── University RSS feeds (that actually work) ─────────────────────────────
+  {
+    name: "Ashesi University",
+    url: "https://ashesi.edu.gh/feed",
+    category: "University News",
+    filterByKeyword: false,
   },
   {
-    name: "Pulse Ghana",
-    url: "https://www.pulse.com.gh/feeds/rss.xml",
-    category: "Education News",
-  },
-  {
-    name: "Ghana Education News",
-    url: "https://www.ghanaeducation.org/feed/",
-    category: "Education News",
+    name: "GIMPA",
+    url: "https://www.gimpa.edu.gh/news/feed",
+    category: "University News",
+    filterByKeyword: false,
   },
 ];
 
 const EDUCATION_KEYWORDS = [
   "university", "universities",
-  "school", "schools", "schooling",
+  "school", "schools",
   "student", "students",
   "education", "educational",
   "academic", "academics",
   "exam", "exams", "examination",
-  "waec", "bece", "wassce", "novdec", "abce",
+  "waec", "bece", "wassce", "novdec",
   "degree", "degrees",
   "admission", "admissions",
   "graduate", "graduates", "graduation",
@@ -66,50 +76,68 @@ const EDUCATION_KEYWORDS = [
   "curriculum", "syllabus",
   "lecturer", "lecturers", "professor",
   "campus", "campuses",
-  "knust", "ug legon", "legon", "ucc", "upsa", "ashesi",
-  "ges ", "g.e.s", "ministry of education",
+  "knust", "legon", "ucc", "upsa", "ashesi", "gimpa",
+  "ministry of education",
   "head teacher", "headmaster", "headmistress",
-  "shs ", "jhs ", "basic school",
+  "shs", "jhs", "basic school",
   "fees", "tuition", "results checker",
   "placement", "ghanaian students",
 ];
 
 function isEducationRelated(title: string, summary: string): boolean {
-  const text = `${title} ${summary}`.toLowerCase();
-  // Require the match to be in the title, OR two matches anywhere
   const titleLower = title.toLowerCase();
   const inTitle = EDUCATION_KEYWORDS.some((kw) => titleLower.includes(kw));
   if (inTitle) return true;
+  const text = `${title} ${summary}`.toLowerCase();
   const matchCount = EDUCATION_KEYWORDS.filter((kw) => text.includes(kw)).length;
   return matchCount >= 2;
 }
 
 function extractImage(item: any): string | null {
-  if (item["media:content"] && item["media:content"]["$"] && item["media:content"]["$"].url) {
-    return item["media:content"]["$"].url;
-  }
-  if (item["media:thumbnail"] && item["media:thumbnail"]["$"] && item["media:thumbnail"]["$"].url) {
-    return item["media:thumbnail"]["$"].url;
-  }
-  if (item.enclosure && item.enclosure.url) {
-    return item.enclosure.url;
-  }
-  const imgMatch = (item.content || item["content:encoded"] || "").match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (item["media:content"]?.["$"]?.url) return item["media:content"]["$"].url;
+  if (item["media:thumbnail"]?.["$"]?.url) return item["media:thumbnail"]["$"].url;
+  if (item.enclosure?.url) return item.enclosure.url;
+  const rawHtml = item["content:encoded"] || item.content || "";
+  const imgMatch = rawHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
   if (imgMatch) return imgMatch[1];
   return null;
 }
 
 function stripHtml(html: string): string {
   return html
-    .replace(/<[^>]+>/g, " ")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&nbsp;/g, " ")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&hellip;/g, "…")
+    .replace(/&#\d+;/g, "")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function buildSummary(fullText: string): string {
+  const lines = fullText.split("\n").map(l => l.trim()).filter(Boolean);
+  let summary = "";
+  for (const line of lines) {
+    summary += (summary ? " " : "") + line;
+    if (summary.length >= 300) break;
+  }
+  return summary.slice(0, 400);
 }
 
 export async function fetchAndStorePosts(): Promise<number> {
@@ -122,11 +150,24 @@ export async function fetchAndStorePosts(): Promise<number> {
 
       for (const item of feed.items || []) {
         const title = item.title?.trim() || "";
-        const summary = stripHtml(item.contentSnippet || item.content || item.summary || "");
         const sourceUrl = item.link?.trim() || "";
-
         if (!title || !sourceUrl) continue;
-        if (!isEducationRelated(title, summary)) continue;
+
+        // Extract the richest available content
+        const rawContent = item["content:encoded"] || item.content || "";
+        const rawSnippet = item.contentSnippet || item.summary || "";
+
+        // Full plain text: prefer HTML body (more complete)
+        const fullText = rawContent
+          ? stripHtml(rawContent)
+          : stripHtml(rawSnippet);
+
+        // Short teaser for grid cards
+        const summary = buildSummary(fullText || rawSnippet);
+
+        if (source.filterByKeyword && !isEducationRelated(title, summary + " " + fullText)) {
+          continue;
+        }
 
         const imageUrl = extractImage(item);
         const publishedAt = item.pubDate ? new Date(item.pubDate) : null;
@@ -136,8 +177,8 @@ export async function fetchAndStorePosts(): Promise<number> {
             .insert(blogPosts)
             .values({
               title,
-              summary: summary.slice(0, 500),
-              content: summary,
+              summary,
+              content: fullText.slice(0, 8000),
               source: source.name,
               sourceUrl,
               imageUrl,
@@ -147,7 +188,7 @@ export async function fetchAndStorePosts(): Promise<number> {
             .onConflictDoNothing();
           inserted++;
         } catch (_err) {
-          // duplicate or other insert error — skip
+          // duplicate — skip silently
         }
       }
     } catch (err: any) {

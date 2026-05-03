@@ -22,6 +22,12 @@ interface BlogPost {
 
 const PAGE_SIZE = 12;
 
+function categoryStyle(cat: string | null) {
+  if (cat === "University News") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (cat === "Official Announcement") return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-purple-50 text-purple-700 border-purple-200";
+}
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -129,7 +135,7 @@ export default function BlogPage() {
 
                       <CardContent className="p-4 flex flex-col gap-2 flex-1">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <Badge className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 font-semibold">
+                          <Badge className={`text-[10px] font-semibold ${categoryStyle(post.category)}`}>
                             {post.category || "Education"}
                           </Badge>
                           {post.publishedAt && (

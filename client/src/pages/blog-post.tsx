@@ -25,6 +25,47 @@ function formatDate(dateStr: string | null): string {
   return new Date(dateStr).toLocaleDateString("en-GH", { year: "numeric", month: "long", day: "numeric" });
 }
 
+function categoryColor(cat: string | null) {
+  if (cat === "University News") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (cat === "Official Announcement") return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-purple-50 text-purple-700 border-purple-200";
+}
+
+function ContentBody({ text }: { text: string }) {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      {paragraphs.map((para, i) => {
+        if (para.startsWith("•")) {
+          const items = para.split("\n").filter(Boolean);
+          return (
+            <ul key={i} className="list-none space-y-1 pl-1">
+              {items.map((item, j) => (
+                <li key={j} className="flex gap-2 text-slate-700 text-sm md:text-base leading-relaxed">
+                  <span className="text-purple-500 mt-0.5 flex-shrink-0">•</span>
+                  <span>{item.replace(/^•\s*/, "")}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        const lines = para.split("\n").filter(Boolean);
+        return (
+          <p key={i} className="text-slate-700 text-sm md:text-base leading-relaxed">
+            {lines.join(" ")}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function BlogPostPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -82,8 +123,10 @@ export default function BlogPostPage() {
               <Skeleton className="h-8 w-3/4" />
               <Skeleton className="h-4 w-48" />
               <Skeleton className="w-full h-72 rounded-xl" />
-              <div className="space-y-2">
+              <div className="space-y-3 mt-4">
                 <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
               </div>
@@ -93,7 +136,7 @@ export default function BlogPostPage() {
               {/* Meta */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className="text-xs bg-purple-50 text-purple-700 border-purple-200 font-semibold">
+                  <Badge className={`text-xs font-semibold ${categoryColor(post.category)}`}>
                     {post.category || "Education"}
                   </Badge>
                   {post.publishedAt && (
@@ -124,15 +167,25 @@ export default function BlogPostPage() {
 
               {/* Content */}
               <Card className="border-slate-200 shadow-sm">
-                <CardContent className="p-6 space-y-4">
-                  {post.content ? (
-                    <p className="text-slate-700 leading-relaxed text-sm md:text-base whitespace-pre-line">{post.content}</p>
-                  ) : post.summary ? (
-                    <p className="text-slate-700 leading-relaxed text-sm md:text-base">{post.summary}</p>
+                <CardContent className="p-6 space-y-5">
+
+                  {/* Lead paragraph (bold summary) */}
+                  {post.summary && (
+                    <p className="text-slate-800 font-semibold text-sm md:text-base leading-relaxed border-l-4 border-purple-400 pl-4">
+                      {post.summary}
+                    </p>
+                  )}
+
+                  {/* Full article body */}
+                  {post.content && post.content.trim().length > (post.summary?.length ?? 0) + 50 ? (
+                    <ContentBody text={post.content} />
                   ) : null}
 
-                  <div className="pt-4 border-t border-slate-100">
-                    <p className="text-xs text-slate-400 mb-3">Read the full article on the source website:</p>
+                  {/* Read full at source */}
+                  <div className="pt-4 border-t border-slate-100 space-y-2">
+                    <p className="text-xs text-slate-400">
+                      This is a summary. Read the full article on the source website:
+                    </p>
                     <Button
                       className="font-semibold bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0"
                       onClick={() => window.open(post.sourceUrl, '_blank')}
@@ -144,14 +197,14 @@ export default function BlogPostPage() {
                 </CardContent>
               </Card>
 
-              {/* Notice */}
+              {/* Disclaimer */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <p className="text-xs text-amber-700 font-medium">
-                  This article is sourced from <strong>{post.source}</strong>. AllTekSE aggregates education news to keep students and parents informed. Click the link above to read the full article.
+                  This article is sourced from <strong>{post.source}</strong>. AllTekSE aggregates education news to keep students and parents informed across Ghana.
                 </p>
               </div>
 
-              {/* Back button */}
+              {/* Back */}
               <div className="pt-2">
                 <Link href="/blog">
                   <Button variant="outline" className="font-semibold border-slate-200">

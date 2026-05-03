@@ -4,6 +4,7 @@ import cron from "node-cron";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fetchAndStorePosts } from "./services/rss-fetcher";
+import { scrapeUniversityNews } from "./services/university-scraper";
 
 const app = express();
 
@@ -80,11 +81,15 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
 
-    // Run RSS fetch immediately on startup, then every day at 6 AM
-    fetchAndStorePosts().catch((e) => console.error("[RSS] Initial fetch failed:", e));
+    // Run all news fetchers on startup, then daily at 6 AM
+    const runAllFetchers = async () => {
+      await fetchAndStorePosts().catch((e) => console.error("[RSS] Fetch failed:", e));
+      await scrapeUniversityNews().catch((e) => console.error("[Scraper] Fetch failed:", e));
+    };
+    runAllFetchers();
     cron.schedule("0 6 * * *", () => {
-      log("[RSS] Running daily education news fetch...");
-      fetchAndStorePosts().catch((e) => console.error("[RSS] Cron fetch failed:", e));
+      log("[News] Running daily education news fetch...");
+      runAllFetchers();
     });
   });
 })();
