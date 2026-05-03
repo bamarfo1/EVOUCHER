@@ -30,6 +30,7 @@ export const vendors = pgTable("vendors", {
   id: uuid("id").defaultRandom().primaryKey(),
   phone: text("phone").unique().notNull(),
   passwordHash: text("password_hash").notNull(),
+  storeName: text("store_name"),
   momoNumber: text("momo_number").notNull(),
   momoName: text("momo_name").notNull(),
   contactNumber: text("contact_number").notNull(),

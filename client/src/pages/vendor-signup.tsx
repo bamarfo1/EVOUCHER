@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Phone, Lock, Eye, EyeOff, Loader2, CreditCard, User, Store, ArrowLeft } from "lucide-react";
+import { Phone, Lock, Eye, EyeOff, Loader2, CreditCard, User, Store, ArrowLeft, Building2 } from "lucide-react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
 export default function VendorSignup() {
@@ -16,6 +16,7 @@ export default function VendorSignup() {
     phone: "",
     password: "",
     confirmPassword: "",
+    storeName: "",
     momoNumber: "",
     momoName: "",
     contactNumber: "",
@@ -45,6 +46,7 @@ export default function VendorSignup() {
         body: JSON.stringify({
           phone: form.phone,
           password: form.password,
+          storeName: form.storeName || undefined,
           momoNumber: form.momoNumber,
           momoName: form.momoName,
           contactNumber: form.contactNumber,
@@ -101,6 +103,23 @@ export default function VendorSignup() {
                     {error}
                   </div>
                 )}
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="storeName" className="text-sm font-semibold text-slate-700">Platform / Store Name <span className="text-xs font-normal text-slate-400">(Optional)</span></Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      id="storeName"
+                      type="text"
+                      placeholder="e.g. Kofi's Voucher Shop"
+                      value={form.storeName}
+                      onChange={set("storeName")}
+                      className="pl-10"
+                      data-testid="input-vendor-store-name"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400">This is the name shown on your public store page. Defaults to your MoMo name if left blank.</p>
+                </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">Phone Number <span className="text-red-500">*</span></Label>

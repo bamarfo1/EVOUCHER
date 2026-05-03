@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Phone, Mail, Lock, Loader2, Shield, CreditCard, Store,
-  Search, Minus, Plus, Star, Zap, AlertCircle
+  Search, Minus, Plus, Star, Zap, AlertCircle, MessageCircle
 } from "lucide-react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
@@ -146,15 +146,25 @@ export default function VendorPage() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <a
-              href={`tel:${vendor.contactNumber}`}
+              href={`https://wa.me/${vendor.contactNumber.replace(/[\s\+\-\(\)]/g, '').replace(/^0/, '233')}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-full transition-colors"
+              data-testid="link-vendor-whatsapp"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              WhatsApp Support
+            </a>
+            <a
+              href={`tel:${vendor.contactNumber}`}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 border border-slate-200 bg-white px-3 py-2 rounded-full transition-colors"
               data-testid="link-vendor-contact"
             >
               <Phone className="w-3.5 h-3.5" />
-              Call for Help: {vendor.contactNumber}
+              Call
             </a>
             <Link
-              href="/retrieve-voucher"
+              href={`/retrieve-voucher?vendor=${slug}`}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-full transition-colors"
               data-testid="link-retrieve-voucher"
             >

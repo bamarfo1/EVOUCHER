@@ -30,7 +30,7 @@ export interface IStorage {
   getVouchersByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string }[]>;
   getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]>;
   // Vendor methods
-  createVendor(data: { phone: string; passwordHash: string; momoNumber: string; momoName: string; contactNumber: string; slug: string }): Promise<Vendor>;
+  createVendor(data: { phone: string; passwordHash: string; storeName?: string; momoNumber: string; momoName: string; contactNumber: string; slug: string }): Promise<Vendor>;
   getVendorByPhone(phone: string): Promise<Vendor | undefined>;
   getVendorBySlug(slug: string): Promise<Vendor | undefined>;
   getVendorById(id: string): Promise<Vendor | undefined>;
@@ -212,10 +212,11 @@ export class DbStorage implements IStorage {
 
   // ── Vendor ────────────────────────────────────────────────────────────────
 
-  async createVendor(data: { phone: string; passwordHash: string; momoNumber: string; momoName: string; contactNumber: string; slug: string }): Promise<Vendor> {
+  async createVendor(data: { phone: string; passwordHash: string; storeName?: string; momoNumber: string; momoName: string; contactNumber: string; slug: string }): Promise<Vendor> {
     const [vendor] = await db.insert(vendors).values({
       phone: data.phone,
       passwordHash: data.passwordHash,
+      storeName: data.storeName || null,
       momoNumber: data.momoNumber,
       momoName: data.momoName,
       contactNumber: data.contactNumber,

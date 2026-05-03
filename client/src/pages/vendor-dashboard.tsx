@@ -15,6 +15,7 @@ import alltekseLogo from "@assets/alltekse_1777780378035.png";
 interface VendorMe {
   id: string;
   phone: string;
+  storeName: string | null;
   momoNumber: string;
   momoName: string;
   contactNumber: string;
@@ -126,7 +127,7 @@ export default function VendorDashboard() {
               <h1 className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent">
                 Vendor Dashboard
               </h1>
-              <p className="text-[11px] text-slate-500 font-medium leading-tight">{vendor.momoName}</p>
+              <p className="text-[11px] text-slate-500 font-medium leading-tight">{vendor.storeName || vendor.momoName}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -288,6 +289,7 @@ export default function VendorDashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
+              { label: "Store Name", value: vendor.storeName || vendor.momoName },
               { label: "Phone", value: vendor.phone },
               { label: "MoMo Number", value: vendor.momoNumber },
               { label: "MoMo Name", value: vendor.momoName },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,10 @@ type VoucherResult = {
 };
 
 export default function RetrieveVoucher() {
+  const search = useSearch();
+  const vendorSlug = new URLSearchParams(search).get("vendor");
+  const homeHref = vendorSlug ? `/v/${vendorSlug}` : "/";
+
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -63,15 +67,15 @@ export default function RetrieveVoucher() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-purple-100/80 bg-white/90 backdrop-blur-xl shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href={homeHref} className="flex items-center gap-3">
             <img src={alltekseLogo} alt="AllTekSE Logo" className="h-10 w-auto object-contain rounded-lg" data-testid="img-alltekse-logo" />
             <div>
               <p className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent">AllTekSE e-Voucher</p>
               <p className="text-[11px] text-slate-500 font-medium leading-tight">Your Trusted e-Voucher Store</p>
             </div>
           </Link>
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-700 transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
+          <Link href={homeHref} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-700 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Store
           </Link>
         </div>
       </header>
@@ -239,7 +243,7 @@ export default function RetrieveVoucher() {
       <footer className="bg-slate-900 text-white px-4 py-6 mt-auto">
         <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
           <p className="text-slate-400">© 2025 ALLTEK SOLUTIONS & ENGINEERING</p>
-          <Link href="/" className="text-slate-300 hover:text-white transition-colors" data-testid="link-back-home">Back to Home</Link>
+          <Link href={homeHref} className="text-slate-300 hover:text-white transition-colors" data-testid="link-back-home">Back to Store</Link>
         </div>
       </footer>
     </div>

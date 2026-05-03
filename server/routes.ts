@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/vendor/register", async (req: Request, res: Response) => {
     try {
-      const { phone, password, momoNumber, momoName, contactNumber } = req.body;
+      const { phone, password, storeName, momoNumber, momoName, contactNumber } = req.body;
       if (!phone || !password || !momoNumber || !momoName || !contactNumber) {
         return res.status(400).json({ error: "All fields are required" });
       }
@@ -273,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 12);
       const slug = generateSlug(phone);
 
-      const vendor = await storage.createVendor({ phone, passwordHash, momoNumber, momoName, contactNumber, slug });
+      const vendor = await storage.createVendor({ phone, passwordHash, storeName: storeName || null, momoNumber, momoName, contactNumber, slug });
       (req.session as any).vendorId = vendor.id;
       res.json({ success: true, slug: vendor.slug });
     } catch (error: any) {
@@ -384,7 +384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priceMap = Object.fromEntries(myPrices.map(p => [p.examType, p.price]));
 
       res.json({
-        name: vendor.momoName,
+        name: vendor.storeName || vendor.momoName,
+        storeName: vendor.storeName || vendor.momoName,
         contactNumber: vendor.contactNumber,
         slug: vendor.slug,
         prices: baseTypes.map(ct => ({
