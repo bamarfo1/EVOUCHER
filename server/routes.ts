@@ -1,11 +1,13 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTransactionSchema } from "@shared/schema";
+import { insertTransactionSchema, transactions as transactionsTable } from "@shared/schema";
 import { initializePayment, verifyPayment } from "./services/paystack";
 import { sendVoucherEmail, sendVoucherSMS, type VoucherItem } from "./services/notifications";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -162,6 +164,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
       } catch (notificationError) {
         console.error("Notification error (voucher already assigned):", notificationError);
+      }
+
+      // Calculate and store vendor profit if applicable
+      if (updatedTransaction.vendorId) {
+        try {
+          const qty = (updatedTransaction as any).quantity ?? 1;
+          const [baseCard] = await storage.getAvailableCardTypes().then(types =>
+            types.filter(t => t.examType === updatedTransaction.examType)
+          );
+          const vp = await storage.getVendorPrice(updatedTransaction.vendorId!, updatedTransaction.examType);
+          if (baseCard && vp && vp.price > baseCard.price) {
+            const profit = (vp.price - baseCard.price) * qty;
+            await db.update(transactionsTable).set({ vendorProfit: profit }).where(eq(transactionsTable.id, updatedTransaction.id));
+          }
+        } catch (profitErr) {
+          console.error("Profit calc error (non-critical):", profitErr);
+        }
       }
 
       res.json({
@@ -388,6 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storeName: vendor.storeName || vendor.momoName,
         contactNumber: vendor.contactNumber,
         slug: vendor.slug,
+        status: vendor.status,
         prices: baseTypes.map(ct => ({
           examType: ct.examType,
           price: priceMap[ct.examType] ?? ct.price,
@@ -532,6 +552,70 @@ ${allUrls.map(u => `  <url>
   app.delete("/api/admin/vouchers/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       await storage.adminDeleteVoucher(req.params.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── Admin Vendor Management ───────────────────────────────────────────────
+
+  app.get("/api/admin/vendors", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const vendors = await storage.adminGetAllVendors();
+      res.json(vendors);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/admin/vendors/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { storeName, contactNumber, momoNumber, momoName, status } = req.body;
+      const vendor = await storage.adminUpdateVendor(req.params.id, { storeName, contactNumber, momoNumber, momoName, status });
+      res.json(vendor);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/admin/vendors/:id/payout", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { amount, notes } = req.body;
+      if (!amount || isNaN(Number(amount))) return res.status(400).json({ error: "Valid amount required" });
+      const payout = await storage.adminCreatePayout(req.params.id, Number(amount), notes);
+      res.json({ success: true, payout });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/vendors/:id/payouts", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const history = await storage.adminGetVendorPayouts(req.params.id);
+      res.json(history);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/admin/close-vendors-for-payout", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      await storage.adminCloseAllVendorsForPayout();
+      res.json({ success: true, message: "All active vendor accounts closed for payout" });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── Vendor Self-Update ────────────────────────────────────────────────────
+
+  app.patch("/api/vendor/me", requireVendor, async (req: Request, res: Response) => {
+    try {
+      const vendorId = (req.session as any).vendorId;
+      const { storeName } = req.body;
+      if (storeName === undefined) return res.status(400).json({ error: "storeName required" });
+      await storage.updateVendorStoreName(vendorId, storeName);
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

@@ -71,9 +71,21 @@ export const transactions = pgTable("transactions", {
   voucherCardIds: text("voucher_card_ids").array(),
 
   vendorId: uuid("vendor_id").references(() => vendors.id),
+  vendorProfit: integer("vendor_profit"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
+});
+
+/* =========================
+   Payouts
+========================= */
+export const payouts = pgTable("payouts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
+  amount: integer("amount").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 /* =========================
@@ -146,6 +158,7 @@ export type Transaction = typeof transactions.$inferSelect;
 export type Vendor = typeof vendors.$inferSelect;
 export type VendorPrice = typeof vendorPrices.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
+export type Payout = typeof payouts.$inferSelect;
 
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type BlogPost = typeof blogPosts.$inferSelect;

@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fetchAndStorePosts } from "./services/rss-fetcher";
 import { scrapeUniversityNews } from "./services/university-scraper";
+import { storage } from "./storage";
 
 const app = express();
 
@@ -90,6 +91,17 @@ app.use((req, res, next) => {
     cron.schedule("0 6 * * *", () => {
       log("[News] Running daily education news fetch...");
       runAllFetchers();
+    });
+
+    // Every Friday at 11:59 PM — close all active vendor accounts for payout
+    cron.schedule("59 23 * * 5", async () => {
+      log("[Payout] Friday: closing all active vendor accounts for weekly payout...");
+      try {
+        await storage.adminCloseAllVendorsForPayout();
+        log("[Payout] All vendor accounts closed for payout.");
+      } catch (e) {
+        console.error("[Payout] Failed to close vendor accounts:", e);
+      }
     });
   });
 })();

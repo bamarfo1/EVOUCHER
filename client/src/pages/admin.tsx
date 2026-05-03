@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, CreditCard, TrendingUp, LogOut, Plus, Image, Trash2, ChevronDown, ChevronUp, Package } from "lucide-react";
+import {
+  ShoppingBag, CreditCard, TrendingUp, LogOut, Plus, Image, Trash2,
+  ChevronDown, ChevronUp, Package, Users, Wallet, RefreshCw, Check, X, Pencil
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CardSummary {
@@ -17,6 +20,19 @@ interface SalesByType { examType: string; count: number; revenue: number; }
 interface SalesSummary { totalSales: number; totalRevenue: number; byType: SalesByType[]; }
 interface AdminSummary { sales: SalesSummary; cards: CardSummary[]; }
 interface Transaction { id: string; phone: string; email: string | null; examType: string; amount: number; status: string; createdAt: string; paystackReference: string; }
+
+interface VendorRow {
+  vendor: {
+    id: string; phone: string; storeName: string | null; momoName: string; momoNumber: string;
+    contactNumber: string; slug: string; status: string; createdAt: string;
+  };
+  totalSales: number;
+  totalRevenue: number;
+  pendingProfit: number;
+  lastPayoutAt: string | null;
+}
+
+interface Payout { id: string; vendorId: string; amount: number; notes: string | null; createdAt: string; }
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }: { onLogin: () => void }) {
@@ -206,10 +222,294 @@ function UpdateImageForm({ examTypes, onUpdated }: { examTypes: string[]; onUpda
   );
 }
 
+// ─── Vendor Payout Card ────────────────────────────────────────────────────────
+function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () => void }) {
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState(String(row.pendingProfit));
+  const [payoutNotes, setPayoutNotes] = useState("");
+  const [editStoreName, setEditStoreName] = useState(false);
+  const [storeNameVal, setStoreNameVal] = useState(row.vendor.storeName || "");
+
+  const { data: payoutHistory, refetch: refetchHistory } = useQuery<Payout[]>({
+    queryKey: ["/api/admin/vendors", row.vendor.id, "payouts"],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/vendors/${row.vendor.id}/payouts`);
+      return res.json();
+    },
+    enabled: expanded,
+  });
+
+  const payoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/vendors/${row.vendor.id}/payout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: Number(payoutAmount), notes: payoutNotes }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Payout recorded", description: `GHC ${payoutAmount} marked as paid to ${row.vendor.storeName || row.vendor.momoName}. Account reopened.` });
+      setPayoutAmount("0");
+      setPayoutNotes("");
+      refetchHistory();
+      onRefresh();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateVendorMutation = useMutation({
+    mutationFn: async (data: { storeName?: string; status?: string }) => {
+      const res = await fetch(`/api/admin/vendors/${row.vendor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Updated", description: "Vendor info updated." });
+      setEditStoreName(false);
+      onRefresh();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const statusColor = row.vendor.status === "active" ? "default" : "destructive";
+
+  return (
+    <Card className="border-slate-200">
+      <CardContent className="p-4">
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              {editStoreName ? (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={storeNameVal}
+                    onChange={e => setStoreNameVal(e.target.value)}
+                    className="h-7 text-sm w-40"
+                    placeholder="Store name"
+                    data-testid={`input-store-name-${row.vendor.id}`}
+                  />
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateVendorMutation.mutate({ storeName: storeNameVal })} disabled={updateVendorMutation.isPending}>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditStoreName(false)}>
+                    <X className="w-3.5 h-3.5 text-slate-400" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-slate-800">{row.vendor.storeName || row.vendor.momoName}</p>
+                  <button onClick={() => { setStoreNameVal(row.vendor.storeName || ""); setEditStoreName(true); }} className="text-slate-400 hover:text-slate-600" data-testid={`button-edit-store-name-${row.vendor.id}`}>
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <Badge variant={statusColor} className="text-[10px]" data-testid={`badge-vendor-status-${row.vendor.id}`}>
+                {row.vendor.status === "active" ? "Active" : "Closed for Payout"}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500">{row.vendor.phone} · MoMo: {row.vendor.momoNumber} ({row.vendor.momoName})</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {row.vendor.status === "closed_for_payout" ? (
+              <Button size="sm" variant="outline" onClick={() => updateVendorMutation.mutate({ status: "active" })} disabled={updateVendorMutation.isPending} data-testid={`button-reopen-vendor-${row.vendor.id}`}>
+                Reopen
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => updateVendorMutation.mutate({ status: "closed_for_payout" })} disabled={updateVendorMutation.isPending} data-testid={`button-close-vendor-${row.vendor.id}`}>
+                Close for Payout
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setExpanded(e => !e)} data-testid={`button-expand-vendor-${row.vendor.id}`}>
+              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="bg-slate-50 rounded-lg p-2.5 text-center">
+            <p className="text-[10px] text-slate-500 font-medium">Sales</p>
+            <p className="text-base font-black text-slate-800" data-testid={`text-vendor-sales-${row.vendor.id}`}>{row.totalSales}</p>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-2.5 text-center">
+            <p className="text-[10px] text-slate-500 font-medium">Revenue</p>
+            <p className="text-base font-black text-slate-800">GHC {row.totalRevenue}</p>
+          </div>
+          <div className="bg-amber-50 rounded-lg p-2.5 text-center border border-amber-100">
+            <p className="text-[10px] text-amber-600 font-medium">Profit Due</p>
+            <p className="text-base font-black text-amber-700" data-testid={`text-vendor-profit-${row.vendor.id}`}>GHC {row.pendingProfit}</p>
+          </div>
+        </div>
+
+        {/* Expanded: payout form + history */}
+        {expanded && (
+          <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            {/* Mark as paid */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mark Payout as Paid</p>
+              <p className="text-xs text-slate-500">Pay vendor via MoMo externally, then record it here to reopen their account.</p>
+              <div className="flex gap-2 flex-wrap">
+                <div className="relative flex-1 min-w-[120px]">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">GHC</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={payoutAmount}
+                    onChange={e => setPayoutAmount(e.target.value)}
+                    className="pl-10 text-sm"
+                    data-testid={`input-payout-amount-${row.vendor.id}`}
+                  />
+                </div>
+                <Input
+                  placeholder="Notes (optional)"
+                  value={payoutNotes}
+                  onChange={e => setPayoutNotes(e.target.value)}
+                  className="flex-1 min-w-[140px] text-sm"
+                  data-testid={`input-payout-notes-${row.vendor.id}`}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => payoutMutation.mutate()}
+                  disabled={payoutMutation.isPending || !payoutAmount || Number(payoutAmount) <= 0}
+                  data-testid={`button-mark-paid-${row.vendor.id}`}
+                >
+                  {payoutMutation.isPending ? "Saving..." : "Mark as Paid"}
+                </Button>
+              </div>
+              {row.lastPayoutAt && (
+                <p className="text-[11px] text-slate-400">Last payout: {new Date(row.lastPayoutAt).toLocaleDateString()}</p>
+              )}
+            </div>
+
+            {/* Payout history */}
+            {payoutHistory && payoutHistory.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Payout History</p>
+                <div className="divide-y divide-slate-50">
+                  {payoutHistory.map(p => (
+                    <div key={p.id} className="flex items-center justify-between py-1.5" data-testid={`payout-row-${p.id}`}>
+                      <div>
+                        <span className="text-xs font-semibold text-slate-700">GHC {p.amount}</span>
+                        {p.notes && <span className="text-xs text-slate-400 ml-2">· {p.notes}</span>}
+                      </div>
+                      <span className="text-[11px] text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Vendors Tab ──────────────────────────────────────────────────────────────
+function VendorsTab() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const { data: vendors, isLoading, refetch } = useQuery<VendorRow[]>({
+    queryKey: ["/api/admin/vendors"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/vendors");
+      if (!res.ok) throw new Error("Failed to load vendors");
+      return res.json();
+    },
+  });
+
+  const closeAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/close-vendors-for-payout", { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Done", description: "All active vendor accounts closed for payout." });
+      refetch();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const activeCount = vendors?.filter(v => v.vendor.status === "active").length ?? 0;
+  const closedCount = vendors?.filter(v => v.vendor.status === "closed_for_payout").length ?? 0;
+  const totalProfit = vendors?.reduce((s, v) => s + v.pendingProfit, 0) ?? 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Total Vendors</p>
+            <p className="text-2xl font-bold text-slate-900" data-testid="stat-total-vendors">{vendors?.length ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 mb-1">Active / Closed</p>
+            <p className="text-2xl font-bold text-slate-900">{activeCount} / {closedCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-amber-600 mb-1 font-medium">Total Profit Due</p>
+            <p className="text-2xl font-bold text-amber-700" data-testid="stat-total-profit-due">GHC {totalProfit}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button size="sm" variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+          Refresh
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-amber-300 text-amber-700 hover:bg-amber-50"
+          onClick={() => closeAllMutation.mutate()}
+          disabled={closeAllMutation.isPending || activeCount === 0}
+          data-testid="button-close-all-vendors"
+        >
+          <Wallet className="w-3.5 h-3.5 mr-1.5" />
+          {closeAllMutation.isPending ? "Closing..." : "Close All for Payout"}
+        </Button>
+      </div>
+
+      {/* Vendor list */}
+      {isLoading ? (
+        <div className="text-center py-8 text-slate-400 text-sm">Loading vendors...</div>
+      ) : !vendors || vendors.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-slate-400 text-sm">No vendors registered yet.</CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {vendors.map(row => (
+            <VendorPayoutCard key={row.vendor.id} row={row} onRefresh={() => { refetch(); qc.invalidateQueries({ queryKey: ["/api/admin/vendors"] }); }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"overview" | "vendors">("overview");
 
   const { data: authData } = useQuery<{ loggedIn: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -262,126 +562,156 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card data-testid="stat-total-sales">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <ShoppingBag className="w-4 h-4 text-purple-500" />
-                <span className="text-xs text-slate-500">Total Sales</span>
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{sales.totalSales}</p>
-            </CardContent>
-          </Card>
-          <Card data-testid="stat-total-revenue">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-4 h-4 text-teal-500" />
-                <span className="text-xs text-slate-500">Total Revenue</span>
-              </div>
-              <p className="text-2xl font-bold text-slate-900">GHC {sales.totalRevenue}</p>
-            </CardContent>
-          </Card>
+      {/* Tabs */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 flex gap-0">
+          {[
+            { key: "overview", label: "Overview", icon: ShoppingBag },
+            { key: "vendors", label: "Vendors", icon: Users },
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key as any)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === key
+                  ? "border-purple-600 text-purple-700"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              data-testid={`tab-${key}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Card Inventory */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-blue-600" />
-              <CardTitle className="text-base">Card Inventory</CardTitle>
+      <div className="max-w-4xl mx-auto p-4 space-y-4">
+        {activeTab === "overview" ? (
+          <>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card data-testid="stat-total-sales">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShoppingBag className="w-4 h-4 text-purple-500" />
+                    <span className="text-xs text-slate-500">Total Sales</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900">{sales.totalSales}</p>
+                </CardContent>
+              </Card>
+              <Card data-testid="stat-total-revenue">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="w-4 h-4 text-teal-500" />
+                    <span className="text-xs text-slate-500">Total Revenue</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900">GHC {sales.totalRevenue}</p>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {cards.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-6">No cards in database</p>
-              )}
-              {cards.map(card => (
-                <div key={card.examType} className="flex items-center gap-3 px-4 py-3" data-testid={`card-row-${card.examType}`}>
-                  <div className="w-10 h-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
-                    {card.imageUrl ? (
-                      <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-teal-400">
-                        <CreditCard className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
-                    <p className="text-xs text-slate-500">GHC {card.price} · {card.total} total</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">{card.available} left</Badge>
-                    <Badge variant={card.used > 0 ? "default" : "outline"} className="text-xs">{card.used} sold</Badge>
-                  </div>
+
+            {/* Card Inventory */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-blue-600" />
+                  <CardTitle className="text-base">Card Inventory</CardTitle>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sales by Type */}
-        {sales.byType.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-teal-600" />
-                <CardTitle className="text-base">Sales by Card Type</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {sales.byType.map(item => (
-                  <div key={item.examType} className="flex items-center justify-between px-4 py-3" data-testid={`sales-row-${item.examType}`}>
-                    <span className="text-sm text-slate-700">{item.examType}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500">{item.count} sold</span>
-                      <span className="text-sm font-semibold text-teal-700">GHC {item.revenue}</span>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {cards.length === 0 && (
+                    <p className="text-sm text-slate-400 text-center py-6">No cards in database</p>
+                  )}
+                  {cards.map(card => (
+                    <div key={card.examType} className="flex items-center gap-3 px-4 py-3" data-testid={`card-row-${card.examType}`}>
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
+                        {card.imageUrl ? (
+                          <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-teal-400">
+                            <CreditCard className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
+                        <p className="text-xs text-slate-500">GHC {card.price} · {card.total} total</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">{card.available} left</Badge>
+                        <Badge variant={card.used > 0 ? "default" : "outline"} className="text-xs">{card.used} sold</Badge>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sales by Type */}
+            {sales.byType.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-teal-600" />
+                    <CardTitle className="text-base">Sales by Card Type</CardTitle>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Add Vouchers */}
-        <AddVouchersForm onAdded={handleRefresh} />
-
-        {/* Update Image */}
-        <UpdateImageForm examTypes={examTypes} onUpdated={handleRefresh} />
-
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {!transactions || transactions.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-6">No transactions yet</p>
-            ) : (
-              <div className="divide-y max-h-80 overflow-y-auto">
-                {transactions.map(tx => (
-                  <div key={tx.id} className="px-4 py-3" data-testid={`txn-row-${tx.id}`}>
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-sm font-medium text-slate-800 truncate">{tx.phone}</span>
-                      <Badge variant={tx.status === "completed" ? "default" : tx.status === "pending" ? "secondary" : "destructive"} className="text-[10px] flex-shrink-0">
-                        {tx.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">{tx.examType} · GHC {tx.amount}</span>
-                      <span className="text-xs text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</span>
-                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {sales.byType.map(item => (
+                      <div key={item.examType} className="flex items-center justify-between px-4 py-3" data-testid={`sales-row-${item.examType}`}>
+                        <span className="text-sm text-slate-700">{item.examType}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-500">{item.count} sold</span>
+                          <span className="text-sm font-semibold text-teal-700">GHC {item.revenue}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+
+            {/* Add Vouchers */}
+            <AddVouchersForm onAdded={handleRefresh} />
+
+            {/* Update Image */}
+            <UpdateImageForm examTypes={examTypes} onUpdated={handleRefresh} />
+
+            {/* Recent Transactions */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {!transactions || transactions.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-6">No transactions yet</p>
+                ) : (
+                  <div className="divide-y max-h-80 overflow-y-auto">
+                    {transactions.map(tx => (
+                      <div key={tx.id} className="px-4 py-3" data-testid={`txn-row-${tx.id}`}>
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="text-sm font-medium text-slate-800 truncate">{tx.phone}</span>
+                          <Badge variant={tx.status === "completed" ? "default" : tx.status === "pending" ? "secondary" : "destructive"} className="text-[10px] flex-shrink-0">
+                            {tx.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-500">{tx.examType} · GHC {tx.amount}</span>
+                          <span className="text-xs text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <VendorsTab />
+        )}
       </div>
     </div>
   );

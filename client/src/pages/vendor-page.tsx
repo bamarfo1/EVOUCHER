@@ -21,8 +21,10 @@ import { Link } from "wouter";
 
 interface VendorInfo {
   name: string;
+  storeName: string;
   contactNumber: string;
   slug: string;
+  status?: string;
   prices: {
     examType: string;
     price: number;
@@ -175,6 +177,15 @@ export default function VendorPage() {
         </div>
       </header>
 
+      {/* Closed-for-payout banner */}
+      {vendor.status === "closed_for_payout" && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 text-center">
+          <p className="text-sm font-semibold text-amber-800" data-testid="banner-closed-for-payout">
+            This store is temporarily closed for weekly payout processing. Please check back shortly.
+          </p>
+        </div>
+      )}
+
       {/* Vendor Banner */}
       <section className="bg-gradient-to-r from-purple-700 via-blue-700 to-teal-600 px-4 py-10 text-white text-center">
         <div className="max-w-xl mx-auto space-y-3">
@@ -224,10 +235,10 @@ export default function VendorPage() {
                   <button
                     key={card.examType}
                     type="button"
-                    onClick={() => !soldOut && openCard(card, colors)}
-                    disabled={soldOut}
+                    onClick={() => !soldOut && vendor.status !== "closed_for_payout" && openCard(card, colors)}
+                    disabled={soldOut || vendor.status === "closed_for_payout"}
                     className={`group relative text-left rounded-xl overflow-hidden border transition-all duration-200 ${
-                      soldOut
+                      soldOut || vendor.status === "closed_for_payout"
                         ? "opacity-50 cursor-not-allowed bg-slate-50 border-slate-200"
                         : "bg-white border-slate-200 hover-elevate shadow-md hover:shadow-xl hover:-translate-y-0.5"
                     }`}

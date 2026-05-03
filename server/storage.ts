@@ -8,11 +8,13 @@ import {
   type InsertBlogPost,
   type Vendor,
   type VendorPrice,
+  type Payout,
   voucherCards,
   transactions,
   blogPosts,
   vendors,
   vendorPrices,
+  payouts,
 } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 
@@ -38,6 +40,13 @@ export interface IStorage {
   getVendorPrices(vendorId: string): Promise<VendorPrice[]>;
   getVendorPrice(vendorId: string, examType: string): Promise<VendorPrice | undefined>;
   getVendorStats(vendorId: string): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }>;
+  updateVendorStoreName(vendorId: string, storeName: string): Promise<void>;
+  // Admin vendor methods
+  adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]>;
+  adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string }): Promise<Vendor>;
+  adminCreatePayout(vendorId: string, amount: number, notes?: string): Promise<Payout>;
+  adminGetVendorPayouts(vendorId: string): Promise<Payout[]>;
+  adminCloseAllVendorsForPayout(): Promise<void>;
   // Blog methods
   getBlogPosts(limit: number, offset: number): Promise<BlogPost[]>;
   getBlogPost(id: string): Promise<BlogPost | undefined>;
@@ -260,6 +269,69 @@ export class DbStorage implements IStorage {
       .from(vendorPrices)
       .where(and(eq(vendorPrices.vendorId, vendorId), eq(vendorPrices.examType, examType)));
     return price;
+  }
+
+  async updateVendorStoreName(vendorId: string, storeName: string): Promise<void> {
+    await db.update(vendors).set({ storeName }).where(eq(vendors.id, vendorId));
+  }
+
+  async adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]> {
+    const allVendors = await db.select().from(vendors).orderBy(desc(vendors.createdAt));
+    const results = await Promise.all(allVendors.map(async (vendor) => {
+      // Get last payout date
+      const [lastPayout] = await db.select({ createdAt: payouts.createdAt })
+        .from(payouts).where(eq(payouts.vendorId, vendor.id))
+        .orderBy(desc(payouts.createdAt)).limit(1);
+
+      // Get sales stats for all time
+      const [totals] = await db.select({
+        totalSales: sql<number>`count(*)::int`,
+        totalRevenue: sql<number>`coalesce(sum(${transactions.amount}::numeric), 0)::int`,
+      }).from(transactions)
+        .where(and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed")));
+
+      // Pending profit: sum of vendor_profit since last payout
+      const pendingCondition = lastPayout
+        ? and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"), sql`${transactions.createdAt} > ${lastPayout.createdAt}`)
+        : and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"));
+      const [pending] = await db.select({
+        pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::int`,
+      }).from(transactions).where(pendingCondition);
+
+      return {
+        vendor,
+        totalSales: totals?.totalSales ?? 0,
+        totalRevenue: totals?.totalRevenue ?? 0,
+        pendingProfit: pending?.pendingProfit ?? 0,
+        lastPayoutAt: lastPayout?.createdAt ?? null,
+      };
+    }));
+    return results;
+  }
+
+  async adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string }): Promise<Vendor> {
+    const updateData: Record<string, any> = {};
+    if (data.storeName !== undefined) updateData.storeName = data.storeName || null;
+    if (data.contactNumber !== undefined) updateData.contactNumber = data.contactNumber;
+    if (data.momoNumber !== undefined) updateData.momoNumber = data.momoNumber;
+    if (data.momoName !== undefined) updateData.momoName = data.momoName;
+    if (data.status !== undefined) updateData.status = data.status;
+    const [updated] = await db.update(vendors).set(updateData).where(eq(vendors.id, id)).returning();
+    return updated;
+  }
+
+  async adminCreatePayout(vendorId: string, amount: number, notes?: string): Promise<Payout> {
+    const [payout] = await db.insert(payouts).values({ vendorId, amount, notes: notes || null }).returning();
+    await db.update(vendors).set({ status: "active" }).where(eq(vendors.id, vendorId));
+    return payout;
+  }
+
+  async adminGetVendorPayouts(vendorId: string): Promise<Payout[]> {
+    return await db.select().from(payouts).where(eq(payouts.vendorId, vendorId)).orderBy(desc(payouts.createdAt));
+  }
+
+  async adminCloseAllVendorsForPayout(): Promise<void> {
+    await db.update(vendors).set({ status: "closed_for_payout" }).where(eq(vendors.status, "active"));
   }
 
   async getVendorStats(vendorId: string): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }> {

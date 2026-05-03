@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import {
   Store, LogOut, Copy, ExternalLink, TrendingUp, Package,
-  DollarSign, Phone, CreditCard, Loader2, Check, Settings, RefreshCw
+  DollarSign, Phone, CreditCard, Loader2, Check, Settings, RefreshCw, Pencil, X
 } from "lucide-react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
@@ -90,6 +91,28 @@ export default function VendorDashboard() {
       setTimeout(() => setSavedField(null), 2000);
       queryClient.invalidateQueries({ queryKey: ["/api/vendor/me/card-types"] });
     },
+  });
+
+  const [editingStoreName, setEditingStoreName] = useState(false);
+  const [storeNameInput, setStoreNameInput] = useState("");
+  const { toast } = useToast();
+
+  const saveStoreNameMutation = useMutation({
+    mutationFn: async (storeName: string) => {
+      const res = await fetch("/api/vendor/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeName }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Store name updated", description: "Your store name has been saved." });
+      setEditingStoreName(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/vendor/me"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const logoutMutation = useMutation({
@@ -288,8 +311,49 @@ export default function VendorDashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Store Name — editable */}
+            <div className="flex items-center justify-between gap-2 py-1 border-b border-slate-50">
+              <span className="text-xs font-semibold text-slate-500">Store Name</span>
+              {editingStoreName ? (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={storeNameInput}
+                    onChange={e => setStoreNameInput(e.target.value)}
+                    className="h-7 text-sm w-44"
+                    placeholder="Enter store name"
+                    autoFocus
+                    data-testid="input-store-name"
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => saveStoreNameMutation.mutate(storeNameInput)}
+                    disabled={saveStoreNameMutation.isPending}
+                    data-testid="button-save-store-name"
+                  >
+                    {saveStoreNameMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingStoreName(false)}>
+                    <X className="w-3.5 h-3.5 text-slate-400" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-800" data-testid="text-account-store-name">
+                    {vendor.storeName || vendor.momoName}
+                  </span>
+                  <button
+                    onClick={() => { setStoreNameInput(vendor.storeName || ""); setEditingStoreName(true); }}
+                    className="text-slate-400 hover:text-purple-600 transition-colors"
+                    data-testid="button-edit-store-name"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
             {[
-              { label: "Store Name", value: vendor.storeName || vendor.momoName },
               { label: "Phone", value: vendor.phone },
               { label: "MoMo Number", value: vendor.momoNumber },
               { label: "MoMo Name", value: vendor.momoName },
