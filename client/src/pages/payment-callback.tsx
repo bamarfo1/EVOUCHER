@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle2, XCircle, Mail, MessageCircle } from "lucide-react";
+import { Loader2, XCircle, Mail, MessageCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SuccessDisplay from "@/components/SuccessDisplay";
-import waecLogo from "@assets/waec_nobg.png";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
 export default function PaymentCallback() {
@@ -56,90 +54,103 @@ export default function PaymentCallback() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
-      <header className="py-6 px-4 border-b bg-card shadow-sm">
-        <div className="max-w-md mx-auto space-y-4">
-          <div className="flex items-center justify-center">
-            <img 
-              src={alltekseLogo} 
-              alt="AllTekSE Logo" 
-              className="h-16 w-auto object-contain"
-            />
-          </div>
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #f8f7ff 0%, #eff6ff 50%, #f0fdfa 100%)" }}>
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-purple-100/80 bg-white/90 backdrop-blur-xl shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+          <img
+            src={alltekseLogo}
+            alt="AllTekSE Logo"
+            className="h-10 w-auto object-contain rounded-lg"
+          />
+          <div>
+            <h1 className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent">
               AllTekSE e-Voucher
             </h1>
-            <p className="text-sm text-muted-foreground">E-voucher Shop</p>
+            <p className="text-[11px] text-slate-500 font-medium leading-tight">Your Trusted e-Voucher Store</p>
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-              {status === "verifying" && <Loader2 className="w-10 h-10 text-primary animate-spin" />}
-              {status === "success" && <CheckCircle2 className="w-10 h-10 text-primary" />}
-              {status === "failed" && <XCircle className="w-10 h-10 text-destructive" />}
-            </div>
-            <CardTitle className="text-2xl">
-              {status === "verifying" && "Verifying Payment..."}
-              {status === "success" && "Payment Successful!"}
-              {status === "failed" && "Payment Failed"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            {status === "verifying" && (
-              <p className="text-muted-foreground">
-                Please wait while we verify your payment and prepare your voucher.
-              </p>
-            )}
-            
-            {status === "failed" && (
-              <>
-                <p className="text-muted-foreground">{errorMessage}</p>
+        <div className="w-full max-w-sm text-center space-y-6">
+
+          {status === "verifying" && (
+            <>
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center shadow-xl shadow-purple-200 animate-pulse">
+                <Loader2 className="w-10 h-10 text-white animate-spin" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-slate-800">Verifying Payment</h2>
+                <p className="text-sm text-slate-500 max-w-xs mx-auto">
+                  Please wait while we confirm your payment and prepare your voucher PIN...
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2 pt-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-1.5 rounded-full bg-purple-200 overflow-hidden"
+                    style={{ width: `${100 - (i - 1) * 20}%` }}
+                  >
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse"
+                      style={{ animationDelay: `${i * 0.2}s` }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {status === "failed" && (
+            <>
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-red-400 to-rose-500 rounded-full flex items-center justify-center shadow-xl shadow-red-200">
+                <XCircle className="w-10 h-10 text-white" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-slate-800">Payment Failed</h2>
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4 text-left">
+                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
+                </div>
+              </div>
+              <div className="space-y-3">
                 <Button
-                  className="w-full"
+                  className="w-full h-12 font-bold bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 shadow-md"
                   onClick={() => setLocation("/")}
                   data-testid="button-try-again"
                 >
                   Try Again
                 </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                <p className="text-xs text-slate-400">
+                  Need help? Contact us below and we'll sort it out quickly.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </main>
 
-      <footer className="py-6 px-4 border-t bg-card">
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white px-4 py-6">
         <div className="max-w-md mx-auto space-y-3">
-          <div className="text-center space-y-2">
-            <p className="text-sm font-medium">Need Help?</p>
-            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                <a href="mailto:support@alltekse.com" className="hover:text-foreground transition-colors">
-                  support@alltekse.com
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
-                <a 
-                  href="https://wa.me/233593260440" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-foreground transition-colors"
-                >
-                  WhatsApp: 0593260440
-                </a>
-              </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+            <p className="text-slate-400 font-medium">Need Help?</p>
+            <div className="flex items-center gap-4">
+              <a href="mailto:support@alltekse.com" className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors">
+                <Mail className="w-3.5 h-3.5" />
+                support@alltekse.com
+              </a>
+              <a href="https://wa.me/233593260440" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors">
+                <MessageCircle className="w-3.5 h-3.5" />
+                WhatsApp
+              </a>
             </div>
           </div>
-          <div className="text-center pt-2 border-t border-border/50">
-            <p className="text-xs font-semibold text-muted-foreground" data-testid="text-powered-by">
-              Powered by ALLTEK SOLUTIONS & ENGINEERING
-            </p>
+          <div className="border-t border-slate-800 pt-3 text-center">
+            <p className="text-xs text-slate-500" data-testid="text-powered-by">© 2025 ALLTEK SOLUTIONS & ENGINEERING</p>
           </div>
         </div>
       </footer>
