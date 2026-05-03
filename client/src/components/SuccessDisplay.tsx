@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import alltekseLogo from "@assets/alltekse_logo_nobg.png";
+import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
 interface SuccessDisplayProps {
   voucherData: {
