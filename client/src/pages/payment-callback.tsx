@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, Mail, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SuccessDisplay from "@/components/SuccessDisplay";
-import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
+import waecLogo from "@assets/waec_nobg.png";
 import alltekseLogo from "@assets/alltekse_nobg.png";
 
 export default function PaymentCallback() {

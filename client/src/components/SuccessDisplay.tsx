@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import waecLogo from "@assets/Buy-WASSCE-Results-Checker-Cards-WAEC-Shortcode.png_1763208493592.png";
 import alltekseLogo from "@assets/alltekse_nobg.png";
 
 interface SuccessDisplayProps {
@@ -37,18 +36,12 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
       <header className="py-6 px-4 border-b bg-card shadow-sm">
         <div className="max-w-md mx-auto space-y-4">
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center">
             <img 
               src={alltekseLogo} 
               alt="AllTekSE Logo" 
               className="h-16 w-auto object-contain"
               data-testid="img-alltekse-logo"
-            />
-            <img 
-              src={waecLogo} 
-              alt="WAEC Logo" 
-              className="h-16 w-auto object-contain"
-              data-testid="img-waec-logo"
             />
           </div>
           <div className="text-center space-y-1">
