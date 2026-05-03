@@ -509,10 +509,17 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               </div>
             </div>
           </div>
-          <div className="text-center pt-2 border-t border-purple-200/50 dark:border-purple-800/50">
+          <div className="text-center pt-2 border-t border-purple-200/50 dark:border-purple-800/50 space-y-1">
             <p className="text-xs font-semibold text-muted-foreground" data-testid="text-powered-by">
               Powered by ALLTEK SOLUTIONS & ENGINEERING
             </p>
+            <a
+              href="/admin"
+              className="text-xs text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+              data-testid="link-admin"
+            >
+              Admin
+            </a>
           </div>
         </div>
       </footer>
