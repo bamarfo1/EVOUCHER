@@ -413,6 +413,64 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
   );
 }
 
+// ─── Card Type Row ─────────────────────────────────────────────────────────────
+function CardTypeRow({ card, onDeleted }: { card: CardSummary; onDeleted: () => void }) {
+  const { toast } = useToast();
+  const [confirming, setConfirming] = useState(false);
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/card-types/${encodeURIComponent(card.examType)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to delete");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Card type deleted", description: `Removed ${data.deleted} unused ${card.examType} voucher${data.deleted !== 1 ? "s" : ""}.` });
+      setConfirming(false);
+      onDeleted();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3" data-testid={`card-row-${card.examType}`}>
+      <div className="w-10 h-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
+        {card.imageUrl ? (
+          <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-teal-400">
+            <CreditCard className="w-4 h-4 text-white" />
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
+        <p className="text-xs text-slate-500">GHC {card.price} · {card.total} total</p>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant="secondary" className="text-xs">{card.available} left</Badge>
+        <Badge variant={card.used > 0 ? "default" : "outline"} className="text-xs">{card.used} sold</Badge>
+        {card.available === 0 && (
+          confirming ? (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} data-testid={`button-confirm-delete-${card.examType}`}>
+                {deleteMutation.isPending ? "Deleting..." : "Confirm"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} data-testid={`button-cancel-delete-${card.examType}`}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button size="icon" variant="ghost" onClick={() => setConfirming(true)} className="text-red-400 hover-elevate" data-testid={`button-delete-${card.examType}`}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Vendors Tab ──────────────────────────────────────────────────────────────
 function VendorsTab() {
   const { toast } = useToast();
@@ -625,25 +683,7 @@ export default function AdminPage() {
                     <p className="text-sm text-slate-400 text-center py-6">No cards in database</p>
                   )}
                   {cards.map(card => (
-                    <div key={card.examType} className="flex items-center gap-3 px-4 py-3" data-testid={`card-row-${card.examType}`}>
-                      <div className="w-10 h-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
-                        {card.imageUrl ? (
-                          <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-teal-400">
-                            <CreditCard className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
-                        <p className="text-xs text-slate-500">GHC {card.price} · {card.total} total</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">{card.available} left</Badge>
-                        <Badge variant={card.used > 0 ? "default" : "outline"} className="text-xs">{card.used} sold</Badge>
-                      </div>
-                    </div>
+                    <CardTypeRow key={card.examType} card={card} onDeleted={handleRefresh} />
                   ))}
                 </div>
               </CardContent>

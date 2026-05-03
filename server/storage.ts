@@ -58,6 +58,7 @@ export interface IStorage {
   adminAddVouchers(vouchers: { serial: string; pin: string; examType: string; price: number }[]): Promise<number>;
   adminUpdateCardImage(examType: string, imageUrl: string): Promise<void>;
   adminDeleteVoucher(id: string): Promise<void>;
+  adminDeleteCardType(examType: string): Promise<{ deleted: number }>;
 }
 
 export class DbStorage implements IStorage {
@@ -450,6 +451,17 @@ export class DbStorage implements IStorage {
 
   async adminDeleteVoucher(id: string): Promise<void> {
     await db.delete(voucherCards).where(and(eq(voucherCards.id, id), eq(voucherCards.used, false)));
+  }
+
+  async adminDeleteCardType(examType: string): Promise<{ deleted: number }> {
+    // Delete only unused vouchers — used ones stay to preserve transaction history
+    const deleted = await db
+      .delete(voucherCards)
+      .where(and(eq(voucherCards.examType, examType), eq(voucherCards.used, false)))
+      .returning();
+    // Also remove vendor pricing entries for this card type
+    await db.delete(vendorPrices).where(eq(vendorPrices.examType, examType));
+    return { deleted: deleted.length };
   }
 
   private normalizePhone(phone: string): string {

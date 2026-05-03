@@ -558,6 +558,17 @@ ${allUrls.map(u => `  <url>
     }
   });
 
+  app.delete("/api/admin/card-types/:examType", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { examType } = req.params;
+      if (!examType) return res.status(400).json({ error: "examType required" });
+      const result = await storage.adminDeleteCardType(examType);
+      res.json({ success: true, deleted: result.deleted });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ─── Admin Vendor Management ───────────────────────────────────────────────
 
   app.get("/api/admin/vendors", requireAdmin, async (_req: Request, res: Response) => {
