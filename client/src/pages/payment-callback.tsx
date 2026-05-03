@@ -30,6 +30,7 @@ export default function PaymentCallback() {
       const data = await response.json();
 
       if (data.status === "success" && data.vouchers) {
+        const vendorSlug = sessionStorage.getItem("purchase_vendor_slug") || "";
         setVoucherData({
           vouchers: data.vouchers,
           email: sessionStorage.getItem("purchase_email") || "",
@@ -37,9 +38,11 @@ export default function PaymentCallback() {
           transactionId: data.transactionId,
           amount: data.amount,
           createdAt: data.createdAt,
+          vendorSlug,
         });
         sessionStorage.removeItem("purchase_phone");
         sessionStorage.removeItem("purchase_email");
+        sessionStorage.removeItem("purchase_vendor_slug");
         setStatus("success");
       } else {
         setStatus("failed");
@@ -53,7 +56,8 @@ export default function PaymentCallback() {
   };
 
   if (status === "success" && voucherData) {
-    return <SuccessDisplay voucherData={voucherData} onStartNew={() => setLocation("/")} />;
+    const returnPath = voucherData.vendorSlug ? `/v/${voucherData.vendorSlug}` : "/";
+    return <SuccessDisplay voucherData={voucherData} onStartNew={() => setLocation(returnPath)} />;
   }
 
   return (

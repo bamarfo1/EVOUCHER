@@ -84,6 +84,7 @@ export default function VendorPage() {
     try {
       sessionStorage.setItem("purchase_phone", phone);
       sessionStorage.setItem("purchase_email", email || "");
+      sessionStorage.setItem("purchase_vendor_slug", slug || "");
       const res = await fetch("/api/purchase/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
