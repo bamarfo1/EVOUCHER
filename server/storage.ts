@@ -4,10 +4,13 @@ import {
   type InsertVoucherCard,
   type Transaction,
   type InsertTransaction,
+  type BlogPost,
+  type InsertBlogPost,
   voucherCards,
-  transactions
+  transactions,
+  blogPosts,
 } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined>;
@@ -19,8 +22,12 @@ export interface IStorage {
   updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
   assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
   getTransactionById(id: string): Promise<Transaction | undefined>;
-  getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null>;
+  getVouchersByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string }[]>;
   getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]>;
+  // Blog methods
+  getBlogPosts(limit: number, offset: number): Promise<BlogPost[]>;
+  getBlogPost(id: string): Promise<BlogPost | undefined>;
+  getBlogPostCount(): Promise<number>;
   // Admin methods
   adminGetCardSummary(): Promise<{ examType: string; total: number; used: number; available: number; price: number; imageUrl: string | null }[]>;
   adminGetSalesSummary(): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }>;
@@ -33,178 +40,91 @@ export interface IStorage {
 export class DbStorage implements IStorage {
   async getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined> {
     const conditions = [eq(voucherCards.used, false)];
-    
-    if (examType) {
-      conditions.push(eq(voucherCards.examType, examType));
-    }
-    
-    const [voucher] = await db
-      .select()
-      .from(voucherCards)
-      .where(and(...conditions))
-      .limit(1);
+    if (examType) conditions.push(eq(voucherCards.examType, examType));
+    const [voucher] = await db.select().from(voucherCards).where(and(...conditions)).limit(1);
     return voucher;
   }
 
   async getVoucherById(id: string): Promise<VoucherCard | undefined> {
-    const [voucher] = await db
-      .select()
-      .from(voucherCards)
-      .where(eq(voucherCards.id, id));
+    const [voucher] = await db.select().from(voucherCards).where(eq(voucherCards.id, id));
     return voucher;
   }
 
-  async markVoucherAsUsed(
-    id: string, 
-    phone: string, 
-    email: string | null, 
-    examType: string
-  ): Promise<VoucherCard> {
+  async markVoucherAsUsed(id: string, phone: string, email: string | null, examType: string): Promise<VoucherCard> {
     const [voucher] = await db
       .update(voucherCards)
-      .set({
-        used: true,
-        purchaserPhone: phone,
-        purchaserEmail: email,
-        examType: examType,
-        usedAt: sql`now()`,
-      })
+      .set({ used: true, purchaserPhone: phone, purchaserEmail: email, examType, usedAt: sql`now()` })
       .where(eq(voucherCards.id, id))
       .returning();
     return voucher;
   }
 
   async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction> {
-    const [transaction] = await db
-      .insert(transactions)
-      .values(insertTransaction as any)
-      .returning();
+    const [transaction] = await db.insert(transactions).values(insertTransaction as any).returning();
     return transaction;
   }
 
   async getTransactionByReference(reference: string): Promise<Transaction | undefined> {
-    const [transaction] = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.paystackReference, reference));
+    const [transaction] = await db.select().from(transactions).where(eq(transactions.paystackReference, reference));
     return transaction;
   }
 
-  async updateTransactionStatus(
-    id: string, 
-    status: string, 
-    voucherCardId?: string
-  ): Promise<Transaction> {
-    const updateData: any = {
-      status,
-    };
-    
-    if (status === "completed") {
-      updateData.completedAt = sql`now()`;
-    }
-    
-    if (voucherCardId) {
-      updateData.voucherCardId = voucherCardId;
-    }
-
-    const [transaction] = await db
-      .update(transactions)
-      .set(updateData)
-      .where(eq(transactions.id, id))
-      .returning();
+  async updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction> {
+    const updateData: any = { status };
+    if (status === "completed") updateData.completedAt = sql`now()`;
+    if (voucherCardId) updateData.voucherCardId = voucherCardId;
+    const [transaction] = await db.update(transactions).set(updateData).where(eq(transactions.id, id)).returning();
     return transaction;
   }
 
-  async updateTransactionStatusConditional(
-    id: string,
-    fromStatus: string,
-    toStatus: string
-  ): Promise<Transaction | null> {
+  async updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null> {
     const [transaction] = await db
       .update(transactions)
       .set({ status: toStatus })
-      .where(and(
-        eq(transactions.id, id),
-        eq(transactions.status, fromStatus)
-      ))
+      .where(and(eq(transactions.id, id), eq(transactions.status, fromStatus)))
       .returning();
     return transaction || null;
   }
 
-  async assignVoucherToTransaction(
-    transactionId: string,
-    phone: string,
-    email: string | null,
-    examType: string
-  ): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
+  async assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
     return await db.transaction(async (tx) => {
-      // Find available voucher card matching the exam type
       const [availableVoucher] = await tx
         .select()
         .from(voucherCards)
-        .where(
-          and(
-            eq(voucherCards.used, false),
-            eq(voucherCards.examType, examType)
-          )
-        )
+        .where(and(eq(voucherCards.used, false), eq(voucherCards.examType, examType)))
         .limit(1)
         .for('update');
 
       if (!availableVoucher) {
-        await tx
-          .update(transactions)
-          .set({ status: "failed" })
-          .where(eq(transactions.id, transactionId));
+        await tx.update(transactions).set({ status: "failed" }).where(eq(transactions.id, transactionId));
         return null;
       }
 
       const [updatedVoucher] = await tx
         .update(voucherCards)
-        .set({
-          used: true,
-          purchaserPhone: phone,
-          purchaserEmail: email,
-          usedAt: sql`now()`,
-        })
+        .set({ used: true, purchaserPhone: phone, purchaserEmail: email, usedAt: sql`now()` })
         .where(eq(voucherCards.id, availableVoucher.id))
         .returning();
 
       const [updatedTransaction] = await tx
         .update(transactions)
-        .set({
-          status: "completed",
-          voucherCardId: updatedVoucher.id,
-          completedAt: sql`now()`,
-        })
+        .set({ status: "completed", voucherCardId: updatedVoucher.id, completedAt: sql`now()` })
         .where(eq(transactions.id, transactionId))
         .returning();
 
-      return {
-        transaction: updatedTransaction,
-        voucher: updatedVoucher,
-      };
+      return { transaction: updatedTransaction, voucher: updatedVoucher };
     });
   }
 
   async getTransactionById(id: string): Promise<Transaction | undefined> {
-    const [transaction] = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.id, id));
+    const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
     return transaction;
   }
 
-  async getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null> {
+  async getVouchersByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string }[]> {
     const normalizedPhone = this.normalizePhone(phone);
-    console.log('[Voucher Retrieval] Normalized search phone:', normalizedPhone);
-    console.log('[Voucher Retrieval] Search date:', date);
-    
-    // Use SQL to normalize phone numbers for comparison
-    // This SQL normalizes the phone by:
-    // 1. Removing spaces, +, -, (, )
-    // 2. Replacing leading '0' with '233'
-    // 3. Adding '233' prefix if missing
+    console.log('[Voucher Retrieval] Normalized search phone:', normalizedPhone, 'Date:', date);
+
     const results = await db
       .select({
         serial: voucherCards.serial,
@@ -228,22 +148,10 @@ export class DbStorage implements IStorage {
           `
         )
       )
-      .orderBy(sql`${transactions.createdAt} DESC`)
-      .limit(1);
-    
+      .orderBy(sql`${transactions.createdAt} DESC`);
+
     console.log('[Voucher Retrieval] Found results:', results.length);
-    
-    if (results.length === 0) {
-      console.log('[Voucher Retrieval] No matching voucher found');
-      return null;
-    }
-    
-    console.log('[Voucher Retrieval] Match found!');
-    return {
-      serial: results[0].serial,
-      pin: results[0].pin,
-      examType: results[0].examType,
-    };
+    return results;
   }
 
   async getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]> {
@@ -264,6 +172,29 @@ export class DbStorage implements IStorage {
       .map((r) => ({ examType: r.examType!, count: r.count, price: r.price, imageUrl: r.imageUrl }));
   }
 
+  // ── Blog ──────────────────────────────────────────────────────────────────
+
+  async getBlogPosts(limit: number, offset: number): Promise<BlogPost[]> {
+    return await db
+      .select()
+      .from(blogPosts)
+      .orderBy(desc(blogPosts.publishedAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
+    return post;
+  }
+
+  async getBlogPostCount(): Promise<number> {
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(blogPosts);
+    return row?.count ?? 0;
+  }
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+
   async adminGetCardSummary(): Promise<{ examType: string; total: number; used: number; available: number; price: number; imageUrl: string | null }[]> {
     const results = await db
       .select({
@@ -278,12 +209,7 @@ export class DbStorage implements IStorage {
       .groupBy(voucherCards.examType)
       .orderBy(voucherCards.examType);
     return results.filter(r => r.examType !== null).map(r => ({
-      examType: r.examType!,
-      total: r.total,
-      used: r.used,
-      available: r.available,
-      price: r.price,
-      imageUrl: r.imageUrl,
+      examType: r.examType!, total: r.total, used: r.used, available: r.available, price: r.price, imageUrl: r.imageUrl,
     }));
   }
 
@@ -307,19 +233,11 @@ export class DbStorage implements IStorage {
       .groupBy(transactions.examType)
       .orderBy(transactions.examType);
 
-    return {
-      totalSales: totals?.totalSales ?? 0,
-      totalRevenue: totals?.totalRevenue ?? 0,
-      byType,
-    };
+    return { totalSales: totals?.totalSales ?? 0, totalRevenue: totals?.totalRevenue ?? 0, byType };
   }
 
   async adminGetRecentTransactions(limit: number): Promise<Transaction[]> {
-    return await db
-      .select()
-      .from(transactions)
-      .orderBy(sql`${transactions.createdAt} desc`)
-      .limit(limit);
+    return await db.select().from(transactions).orderBy(sql`${transactions.createdAt} desc`).limit(limit);
   }
 
   async adminAddVouchers(vouchers: { serial: string; pin: string; examType: string; price: number }[]): Promise<number> {
@@ -333,10 +251,7 @@ export class DbStorage implements IStorage {
   }
 
   async adminUpdateCardImage(examType: string, imageUrl: string): Promise<void> {
-    await db
-      .update(voucherCards)
-      .set({ imageUrl })
-      .where(eq(voucherCards.examType, examType));
+    await db.update(voucherCards).set({ imageUrl }).where(eq(voucherCards.examType, examType));
   }
 
   async adminDeleteVoucher(id: string): Promise<void> {
@@ -345,13 +260,8 @@ export class DbStorage implements IStorage {
 
   private normalizePhone(phone: string): string {
     let cleaned = phone.replace(/[\s\+\-\(\)]/g, '');
-    
-    if (cleaned.startsWith('0')) {
-      cleaned = '233' + cleaned.substring(1);
-    } else if (!cleaned.startsWith('233')) {
-      cleaned = '233' + cleaned;
-    }
-    
+    if (cleaned.startsWith('0')) cleaned = '233' + cleaned.substring(1);
+    else if (!cleaned.startsWith('233')) cleaned = '233' + cleaned;
     return cleaned;
   }
 }

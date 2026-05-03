@@ -103,14 +103,24 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               <p className="text-[11px] text-slate-500 font-medium leading-tight">Your Trusted e-Voucher Store</p>
             </div>
           </div>
-          <Link
-            href="/retrieve-voucher"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-full transition-colors"
-            data-testid="link-retrieve-voucher"
-          >
-            <Search className="w-3.5 h-3.5" />
-            Lost Voucher? Retrieve Here
-          </Link>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-700 border border-slate-200 px-3 py-2 rounded-full transition-colors"
+              data-testid="link-blog"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              Edu News
+            </Link>
+            <Link
+              href="/retrieve-voucher"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-full transition-colors"
+              data-testid="link-retrieve-voucher"
+            >
+              <Search className="w-3.5 h-3.5" />
+              Lost Voucher?
+            </Link>
+          </div>
         </div>
       </header>
 

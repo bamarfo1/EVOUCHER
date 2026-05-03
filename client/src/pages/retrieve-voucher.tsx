@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Phone, Calendar, Search, CheckCircle2, XCircle, Copy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Phone, Calendar, Search, CheckCircle2, XCircle, Copy, ArrowLeft, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
-type VoucherResponse = {
+type VoucherResult = {
   serial: string;
   pin: string;
   examType: string;
@@ -16,210 +18,228 @@ type VoucherResponse = {
 export default function RetrieveVoucher() {
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState("");
-  const [searchQuery, setSearchQuery] = useState<{ phone: string; date: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [results, setResults] = useState<VoucherResult[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { data: voucher, isLoading, error } = useQuery<VoucherResponse>({
-    queryKey: searchQuery 
-      ? [`/api/voucher/retrieve?phone=${encodeURIComponent(searchQuery.phone)}&date=${searchQuery.date}`]
-      : ['/api/voucher/retrieve'],
-    enabled: !!searchQuery,
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone || !date) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both phone number and purchase date",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSearchQuery({ phone, date });
+  const copyToClipboard = (text: string, key: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+    toast({ title: "Copied!", description: `${label} copied to clipboard` });
   };
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: `${label} copied to clipboard`,
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone || !date) {
+      toast({ title: "Missing Information", description: "Please enter both phone number and purchase date", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    setResults(null);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/voucher/retrieve?phone=${encodeURIComponent(phone)}&date=${encodeURIComponent(date)}`);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "No voucher found for this phone number and date.");
+      } else {
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : [data]);
+      }
+    } catch {
+      setError("Failed to retrieve voucher. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-teal-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 bg-clip-text text-transparent">
-            Retrieve Your Voucher
-          </h1>
-          <p className="text-muted-foreground">
-            Enter your phone number and purchase date to retrieve your WAEC voucher
-          </p>
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #f8f7ff 0%, #eff6ff 50%, #f0fdfa 100%)" }}>
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-purple-100/80 bg-white/90 backdrop-blur-xl shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <Link href="/" className="flex items-center gap-3">
+            <img src={alltekseLogo} alt="AllTekSE Logo" className="h-10 w-auto object-contain rounded-lg" data-testid="img-alltekse-logo" />
+            <div>
+              <p className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent">AllTekSE e-Voucher</p>
+              <p className="text-[11px] text-slate-500 font-medium leading-tight">Your Trusted e-Voucher Store</p>
+            </div>
+          </Link>
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-700 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
+          </Link>
         </div>
+      </header>
 
-        <Card className="shadow-2xl border-2 border-purple-100 dark:border-purple-900">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950">
-            <CardTitle className="flex items-center gap-2">
-              <Search className="w-5 h-5 text-purple-600" />
-              Voucher Lookup
-            </CardTitle>
-            <CardDescription>
-              We'll find your voucher using your phone number and purchase date
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="059918713 or +233599188713"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="pl-10 h-12"
-                    required
-                    data-testid="input-retrieve-phone"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Enter in any format: 059918713, 233599188713, or +233599188713
-                </p>
-              </div>
+      <main className="flex-1 px-4 py-10">
+        <div className="max-w-xl mx-auto space-y-6">
 
-              <div className="space-y-2">
-                <Label htmlFor="date">Purchase Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="pl-10 h-12"
-                    required
-                    data-testid="input-retrieve-date"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Select the date you purchased the voucher
-                </p>
-              </div>
+          {/* Page heading */}
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg mb-2">
+              <Search className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-800">Retrieve Your Voucher</h1>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto">
+              Enter the phone number used during purchase and the purchase date — we'll find all your vouchers for that day.
+            </p>
+          </div>
 
-              <Button
-                type="submit"
-                className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-xl bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 hover:from-purple-700 hover:via-blue-700 hover:to-teal-700 text-white border-0"
-                disabled={isLoading}
-                data-testid="button-retrieve-search"
-              >
-                <span className="flex items-center gap-2">
-                  <Search className="w-5 h-5" />
-                  {isLoading ? "Searching..." : "Search Voucher"}
-                </span>
-              </Button>
-            </form>
-
-            {/* Results Section */}
-            {searchQuery && !isLoading && (
-              <div className="mt-6 pt-6 border-t">
-                {error ? (
-                  <div className="bg-red-50 dark:bg-red-950 border-2 border-red-200 dark:border-red-800 rounded-xl p-6 text-center" data-testid="result-error">
-                    <XCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-lg font-bold text-red-700 dark:text-red-300 mb-2">
-                      Voucher Not Found
-                    </h3>
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      No voucher found for this phone number and date. Please check your details and try again.
-                    </p>
+          {/* Search form */}
+          <Card className="border-slate-200 shadow-md overflow-hidden">
+            <div className="h-1 w-full bg-gradient-to-r from-purple-500 via-blue-500 to-teal-500" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold text-slate-700 flex items-center gap-2">
+                <Search className="w-4 h-4 text-purple-500" />
+                Voucher Lookup
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="0591234567 or +233591234567"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="pl-10 h-11 border-slate-200 focus-visible:ring-purple-500"
+                      required
+                      data-testid="input-retrieve-phone"
+                    />
                   </div>
-                ) : voucher ? (
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-xl p-6" data-testid="result-success">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CheckCircle2 className="w-6 h-6 text-green-600" />
-                      <h3 className="text-xl font-bold text-green-700 dark:text-green-300">
-                        Voucher Found!
-                      </h3>
+                  <p className="text-xs text-slate-400">Any format works: 059..., 233059..., or +233059...</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="date" className="text-sm font-semibold text-slate-700">Purchase Date</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      id="date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="pl-10 h-11 border-slate-200 focus-visible:ring-purple-500"
+                      required
+                      data-testid="input-retrieve-date"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400">Select the exact date you made the purchase</p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 font-bold text-white border-0 shadow-md"
+                  style={{ background: "linear-gradient(135deg, #7c3aed, #2563eb)" }}
+                  disabled={isLoading}
+                  data-testid="button-retrieve-search"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  {isLoading ? "Searching..." : "Find My Vouchers"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Results */}
+          {!isLoading && error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center space-y-2" data-testid="result-error">
+              <XCircle className="w-10 h-10 text-red-400 mx-auto" />
+              <h3 className="text-base font-bold text-red-700">Voucher Not Found</h3>
+              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-xs text-red-400">Try a different date or phone format, or contact support.</p>
+            </div>
+          )}
+
+          {!isLoading && results && results.length > 0 && (
+            <div className="space-y-4" data-testid="result-success">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-base font-bold text-slate-800">
+                  {results.length} Voucher{results.length > 1 ? "s" : ""} Found
+                </h3>
+                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold ml-auto">
+                  {new Date(date).toLocaleDateString("en-GH", { day: "numeric", month: "short", year: "numeric" })}
+                </Badge>
+              </div>
+
+              {results.map((voucher, idx) => (
+                <Card key={idx} className="border-slate-200 shadow-sm overflow-hidden">
+                  <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-teal-500" />
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge className="text-xs bg-purple-50 text-purple-700 border-purple-200 font-bold">
+                        {voucher.examType}
+                      </Badge>
+                      <span className="text-xs text-slate-400 font-medium">Voucher {idx + 1} of {results.length}</span>
                     </div>
-                    
-                    <div className="space-y-4">
-                      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border-2 border-green-200 dark:border-green-800">
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-sm font-semibold text-muted-foreground">Serial Number</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(voucher.serial, "Serial number")}
-                            data-testid="button-copy-serial"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-serial">
+
+                    {/* Serial */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Serial Number</p>
+                      <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+                        <p className="text-sm font-black font-mono tracking-widest text-slate-800" data-testid="text-serial">
                           {voucher.serial}
                         </p>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-sm font-semibold text-muted-foreground">PIN</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(voucher.pin, "PIN")}
-                            data-testid="button-copy-pin"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-pin">
-                          {voucher.pin}
-                        </p>
-                      </div>
-
-                      {voucher.examType && (
-                        <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border-2 border-teal-200 dark:border-teal-800">
-                          <Label className="text-sm font-semibold text-muted-foreground">Exam Type</Label>
-                          <p className="text-lg font-bold text-teal-600 dark:text-teal-400 uppercase" data-testid="text-exam-type">
-                            {voucher.examType.replace('-', ' ')}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                          <strong>Note:</strong> Keep your voucher details safe. Use them to check your WAEC results online.
-                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(voucher.serial, `serial-${idx}`, "Serial number")}
+                          data-testid="button-copy-serial"
+                          className="text-xs flex-shrink-0 text-slate-400 hover:text-purple-700"
+                        >
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                          {copiedKey === `serial-${idx}` ? "Copied!" : "Copy"}
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                ) : null}
+
+                    {/* PIN */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">PIN</p>
+                      <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-3 py-2.5">
+                        <p className="text-lg font-black font-mono tracking-widest text-purple-800" data-testid="text-pin">
+                          {voucher.pin}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(voucher.pin, `pin-${idx}`, "PIN")}
+                          data-testid="button-copy-pin"
+                          className="text-xs flex-shrink-0 text-purple-400 hover:text-purple-700"
+                        >
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                          {copiedKey === `pin-${idx}` ? "Copied!" : "Copy"}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 justify-center pt-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                Keep your voucher details safe and secure.
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="text-center">
-          <a 
-            href="/" 
-            className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold underline"
-            data-testid="link-back-home"
-          >
-            ← Back to Home
-          </a>
+            </div>
+          )}
         </div>
-      </div>
+      </main>
 
-      <footer className="py-6 px-4 border-t border-purple-200/50 dark:border-purple-800/50">
-        <div className="text-center">
-          <p className="text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-400" data-testid="text-powered-by">
-            Powered by ALLTEK SOLUTIONS & ENGINEERING
-          </p>
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white px-4 py-6 mt-auto">
+        <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+          <p className="text-slate-400">© 2025 ALLTEK SOLUTIONS & ENGINEERING</p>
+          <Link href="/" className="text-slate-300 hover:text-white transition-colors" data-testid="link-back-home">Back to Home</Link>
         </div>
       </footer>
     </div>

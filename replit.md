@@ -2,7 +2,7 @@
 
 ## Overview
 
-AllTekSE e-Voucher is a professional platform designed for purchasing voucher cards (WAEC result checkers and more). It offers instant delivery of vouchers via SMS and email upon successful payment through Paystack. The system supports dynamic card types — any new card type added to the database automatically appears as a purchasable product card on the frontend. Key capabilities include a robust voucher retrieval system, comprehensive mobile optimization, and support for unlimited card types.
+AllTekSE e-Voucher is a professional platform designed for purchasing voucher cards (WAEC result checkers and more). It offers instant delivery of vouchers via SMS and email upon successful payment through Paystack. The system supports dynamic card types — any new card type added to the database automatically appears as a purchasable product card on the frontend. Key capabilities include a robust voucher retrieval system, comprehensive mobile optimization, support for unlimited card types, an education news blog powered by Ghanaian RSS feeds, and full SEO support.
 
 ## User Preferences
 
@@ -20,23 +20,46 @@ Payment provider and university portal cards utilize unique accent colors. The d
 ### Technical Implementations
 - **Dynamic Card Types**: Card types are not hardcoded — they are derived from distinct `exam_type` values in the `voucher_cards` table. Adding cards with a new `exam_type` to the database automatically creates a new product card on the frontend.
 - **Purchase Options**: Supports purchases with only a phone number (SMS delivery) or both email and phone. The system handles cases without email by generating a placeholder email (`{phone}@noemail.alltekse.com`) for Paystack and skipping email notifications.
-- **Voucher Retrieval**: Allows users to recover lost vouchers using their phone number and purchase date, with robust phone number normalization and secure SQL-level filtering. Retrieval details are displayed on the web interface only.
+- **Voucher Retrieval**: Allows users to recover lost vouchers using their phone number and purchase date, with robust phone number normalization and secure SQL-level filtering. Returns ALL vouchers for that phone/date (not just one). Retrieval details are displayed on the web interface only.
 - **Portal URLs**: Known card types (BECE, WASSCE) have specific portal URLs in notifications. Other card types get generic messages without portal links.
 - **Payment Flow**: Users select a card type, fill in their details, the system checks voucher availability, creates a transaction, initializes Paystack payment, verifies payment, assigns a matching voucher, and sends it via SMS and email.
 - **Security Features**: Includes Paystack webhook signature verification (HMAC-SHA512), payment amount validation (GHC 20), atomic status transitions, atomic voucher assignment with row-level locking, error recovery with rollback handling, and concurrency protection to prevent double voucher distribution.
+- **Education News Blog**: Auto-fetches Ghanaian education news from RSS feeds daily at 6 AM (via node-cron), and runs once on startup. Posts are stored in `blog_posts` table, filtered by education keywords. Blog is accessible at `/blog` and individual posts at `/blog/:id`.
+- **SEO**: Comprehensive meta tags in `index.html` (Open Graph, Twitter Card, structured data / JSON-LD), dynamic sitemap at `/sitemap.xml` including all blog posts, and robots.txt at `/robots.txt`.
 
 ### System Design Choices
 - **Frontend**: React with TypeScript, Tailwind CSS with Shadcn UI components, Wouter for routing, and TanStack Query for data fetching.
-- **Backend**: Express.js, PostgreSQL with Drizzle ORM, Nodemailer for email, Paystack API for payments, and BulkSMS Ghana for SMS delivery.
+- **Backend**: Express.js, PostgreSQL with Drizzle ORM, Nodemailer for email, Paystack API for payments, and Nalo Solutions for SMS delivery.
 - **Database Schema**:
     - `voucher_cards`: `id` (UUID), `serial` (unique text), `pin` (text), `used` (boolean), `purchaser_phone`, `purchaser_email`, `exam_type`, `price` (integer, default 20 GHC), `image_url` (text, nullable), `used_at` (timestamp). The `exam_type` field determines the card type and can be any string value. The `price` field sets the price per voucher in GHC. The `image_url` field is an optional URL to a product image displayed on the card.
     - `transactions`: `id` (UUID), `email` (nullable), `phone`, `exam_type`, `amount`, `paystack_reference` (unique), `status` (pending/completed/failed), `voucher_card_id`, `created_at`, `completed_at` (timestamps).
+    - `blog_posts`: `id` (UUID), `title`, `summary`, `content`, `source`, `source_url` (unique), `image_url`, `category`, `published_at`, `created_at`.
 - **API Endpoints**:
     - `GET /api/card-types` — Returns available card types with stock counts and prices
     - `POST /api/purchase/initialize`
     - `GET /api/payment/verify/:reference`
     - `POST /api/webhook/paystack`
-    - `GET /api/voucher/retrieve?phone={phone}&date={date}`
+    - `GET /api/voucher/retrieve?phone={phone}&date={date}` — Returns array of all matching vouchers
+    - `GET /api/blog/posts?limit={n}&offset={n}` — Paginated blog posts
+    - `GET /api/blog/posts/:id` — Single blog post
+    - `GET /sitemap.xml` — XML sitemap
+    - `GET /robots.txt` — Robots file
+- **Frontend Pages**:
+    - `/` — Home with product cards and purchase flow
+    - `/retrieve-voucher` — Voucher retrieval (returns all vouchers for a phone+date)
+    - `/blog` — Education news blog with pagination
+    - `/blog/:id` — Individual blog post
+    - `/payment-callback` — Post-payment success/failure handling
+    - `/admin` — Admin dashboard (auth-protected)
+
+### RSS News Sources
+Education news is fetched from these Ghanaian sources (general feeds, filtered by education keywords):
+- JoyNews Ghana (myjoyonline.com)
+- Citi Newsroom (citinewsroom.com)
+- 3News Ghana (3news.com)
+- Ghana Business News (ghanabusinessnews.com)
+- Ghana Education News (ghanaeducation.org)
+- Pulse Ghana (pulse.com.gh)
 
 ## Adding New Card Types
 
@@ -65,3 +88,5 @@ UPDATE voucher_cards SET image_url = 'https://your-image-url.com/image.png' WHER
 - **SMS Delivery**: Nalo Solutions (nalosolutions.com)
 - **Email Service**: Namecheap/PrivateEmail SMTP (via Nodemailer)
 - **Database**: PostgreSQL
+- **RSS Parsing**: rss-parser package
+- **Cron Jobs**: node-cron (daily RSS fetch at 6 AM)

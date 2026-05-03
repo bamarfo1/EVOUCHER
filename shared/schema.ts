@@ -34,7 +34,6 @@ export const transactions = pgTable("transactions", {
 
   examType: text("exam_type").notNull(),
 
-  // Amount stored in KOBO (server-controlled)
   amount: integer("amount").notNull(),
 
   paystackReference: text("paystack_reference").unique(),
@@ -45,6 +44,22 @@ export const transactions = pgTable("transactions", {
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
+});
+
+/* =========================
+   Blog Posts
+========================= */
+export const blogPosts = pgTable("blog_posts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  content: text("content"),
+  source: text("source").notNull(),
+  sourceUrl: text("source_url").notNull().unique(),
+  imageUrl: text("image_url"),
+  category: text("category").default("Education"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 /* =========================
@@ -64,13 +79,18 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     status: true,
     paystackReference: true,
     voucherCardId: true,
-    amount: true, // ✅ IMPORTANT FIX
+    amount: true,
   })
   .extend({
     email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(10),
     examType: z.string().min(1, "Please select a card type"),
   });
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
+  id: true,
+  createdAt: true,
+});
 
 /* =========================
    Types
@@ -80,3 +100,6 @@ export type VoucherCard = typeof voucherCards.$inferSelect;
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
+
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;

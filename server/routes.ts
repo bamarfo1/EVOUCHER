@@ -323,24 +323,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const voucher = await storage.getVoucherByPhoneAndDate(
+      const vouchers = await storage.getVouchersByPhoneAndDate(
         phone as string, 
         date as string
       );
 
-      if (!voucher) {
+      if (!vouchers || vouchers.length === 0) {
         return res.status(404).json({ 
           error: "No voucher found for this phone number and date" 
         });
       }
 
-      res.json(voucher);
+      res.json(vouchers);
     } catch (error: any) {
       console.error("Voucher retrieval error:", error);
       res.status(500).json({ 
         error: error.message || "Failed to retrieve voucher" 
       });
     }
+  });
+
+  // ─── Blog ──────────────────────────────────────────────────────────────────
+
+  app.get("/api/blog/posts", async (req: Request, res: Response) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 12, 50);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const [posts, total] = await Promise.all([
+        storage.getBlogPosts(limit, offset),
+        storage.getBlogPostCount(),
+      ]);
+      res.json({ posts, total });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/blog/posts/:id", async (req: Request, res: Response) => {
+    try {
+      const post = await storage.getBlogPost(req.params.id);
+      if (!post) return res.status(404).json({ error: "Post not found" });
+      res.json(post);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ─── Sitemap ───────────────────────────────────────────────────────────────
+
+  app.get("/sitemap.xml", async (_req: Request, res: Response) => {
+    try {
+      const baseUrl = process.env.BASE_URL || "https://allteksevoucher.store";
+      const [posts] = await Promise.all([storage.getBlogPosts(200, 0)]);
+
+      const staticUrls = [
+        { loc: baseUrl, priority: "1.0", changefreq: "daily" },
+        { loc: `${baseUrl}/blog`, priority: "0.9", changefreq: "daily" },
+        { loc: `${baseUrl}/retrieve-voucher`, priority: "0.7", changefreq: "monthly" },
+      ];
+
+      const postUrls = posts.map((p) => ({
+        loc: `${baseUrl}/blog/${p.id}`,
+        priority: "0.7",
+        changefreq: "weekly",
+        lastmod: p.publishedAt ? new Date(p.publishedAt).toISOString().split("T")[0] : new Date(p.createdAt).toISOString().split("T")[0],
+      }));
+
+      const allUrls = [...staticUrls, ...postUrls];
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${allUrls.map(u => `  <url>
+    <loc>${u.loc}</loc>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>${(u as any).lastmod ? `\n    <lastmod>${(u as any).lastmod}</lastmod>` : ""}
+  </url>`).join("\n")}
+</urlset>`;
+
+      res.header("Content-Type", "application/xml");
+      res.send(xml);
+    } catch (error: any) {
+      res.status(500).send("Sitemap error");
+    }
+  });
+
+  app.get("/robots.txt", (_req: Request, res: Response) => {
+    const baseUrl = process.env.BASE_URL || "https://allteksevoucher.store";
+    res.header("Content-Type", "text/plain");
+    res.send(`User-agent: *
+Allow: /
+Allow: /blog
+Allow: /retrieve-voucher
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`);
   });
 
   app.post("/api/test/notifications", async (req: Request, res: Response) => {
