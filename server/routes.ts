@@ -608,6 +608,24 @@ ${allUrls.map(u => `  <url>
     }
   });
 
+  // ─── Vendor Payouts ────────────────────────────────────────────────────────
+
+  app.get("/api/vendor/me/payouts", requireVendor, async (req: Request, res: Response) => {
+    try {
+      const vendorId = (req.session as any).vendorId;
+      const history = await storage.adminGetVendorPayouts(vendorId);
+      const vendorRows = await storage.adminGetAllVendors();
+      const me = vendorRows.find(r => r.vendor.id === vendorId);
+      res.json({
+        payouts: history,
+        pendingProfit: me?.pendingProfit ?? 0,
+        lastPayoutAt: me?.lastPayoutAt ?? null,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ─── Vendor Self-Update ────────────────────────────────────────────────────
 
   app.patch("/api/vendor/me", requireVendor, async (req: Request, res: Response) => {

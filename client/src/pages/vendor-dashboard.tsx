@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Store, LogOut, Copy, ExternalLink, TrendingUp, Package,
-  DollarSign, Phone, CreditCard, Loader2, Check, Settings, RefreshCw, Pencil, X
+  DollarSign, Phone, CreditCard, Loader2, Check, Settings, RefreshCw, Pencil, X, Wallet, Clock
 } from "lucide-react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
@@ -38,6 +38,20 @@ interface CardTypeInfo {
   imageUrl: string | null;
 }
 
+interface PayoutInfo {
+  id: string;
+  vendorId: string;
+  amount: number;
+  notes: string | null;
+  createdAt: string;
+}
+
+interface VendorPayouts {
+  payouts: PayoutInfo[];
+  pendingProfit: number;
+  lastPayoutAt: string | null;
+}
+
 export default function VendorDashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -57,6 +71,11 @@ export default function VendorDashboard() {
 
   const { data: stats } = useQuery<VendorStats>({
     queryKey: ["/api/vendor/me/stats"],
+    enabled: !!vendor,
+  });
+
+  const { data: payoutData } = useQuery<VendorPayouts>({
+    queryKey: ["/api/vendor/me/payouts"],
     enabled: !!vendor,
   });
 
@@ -232,6 +251,70 @@ export default function VendorDashboard() {
             </Card>
           </div>
         )}
+
+        {/* Payouts */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-amber-600" />
+              <CardTitle className="text-base font-bold">Payouts</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Pending profit banner */}
+            <div className={`rounded-lg p-4 flex items-center justify-between gap-3 ${
+              (payoutData?.pendingProfit ?? 0) > 0
+                ? "bg-amber-50 border border-amber-200"
+                : "bg-slate-50 border border-slate-100"
+            }`}>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Profit Due</p>
+                <p className={`text-2xl font-black mt-0.5 ${(payoutData?.pendingProfit ?? 0) > 0 ? "text-amber-700" : "text-slate-400"}`} data-testid="text-pending-profit">
+                  GHC {payoutData?.pendingProfit ?? 0}
+                </p>
+                {payoutData?.lastPayoutAt && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Since last payout: {new Date(payoutData.lastPayoutAt).toLocaleDateString()}
+                  </p>
+                )}
+                {!payoutData?.lastPayoutAt && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">Since your first sale</p>
+                )}
+              </div>
+              <Wallet className={`w-8 h-8 flex-shrink-0 ${(payoutData?.pendingProfit ?? 0) > 0 ? "text-amber-400" : "text-slate-300"}`} />
+            </div>
+
+            {/* Account status note */}
+            {vendor.status === "closed_for_payout" && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 text-sm text-orange-800 font-medium">
+                Your store is temporarily closed for payout processing. It will reopen after the admin records your payment.
+              </div>
+            )}
+
+            {/* Payout history */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Payout History</p>
+              {!payoutData || payoutData.payouts.length === 0 ? (
+                <div className="flex items-center gap-2 py-4 text-slate-400">
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm">No payouts recorded yet. Payments are processed weekly.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {payoutData.payouts.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-2.5" data-testid={`payout-row-${p.id}`}>
+                      <div>
+                        <span className="text-sm font-bold text-emerald-700">GHC {p.amount}</span>
+                        {p.notes && <span className="text-xs text-slate-400 ml-2">· {p.notes}</span>}
+                      </div>
+                      <span className="text-xs text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Set Prices */}
         <Card className="border-slate-200 shadow-sm">
