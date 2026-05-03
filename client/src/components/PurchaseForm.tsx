@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import alltekseLogo from "@assets/alltekse_1772365699004.png";
+import alltekseLogo from "@assets/alltekse_nobg.png";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
 import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
