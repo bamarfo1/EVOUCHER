@@ -135,7 +135,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               data-testid="link-vendor-portal"
             >
               <FileEdit className="w-3.5 h-3.5" />
-              Sell Vouchers
+              Start Selling Vouchers
             </Link>
             <Link
               href="/retrieve-voucher"
