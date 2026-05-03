@@ -25,8 +25,8 @@ const DEFAULT_CARD_IMAGES: Record<string, string> = {
 };
 
 function getCardImage(examType: string, imageUrl: string | null): string | null {
-  if (imageUrl) return imageUrl;
-  return DEFAULT_CARD_IMAGES[examType] ?? null;
+  if (DEFAULT_CARD_IMAGES[examType]) return DEFAULT_CARD_IMAGES[examType];
+  return imageUrl ?? null;
 }
 
 interface PurchaseFormProps {
