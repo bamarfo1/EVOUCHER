@@ -16,6 +16,19 @@ import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
 import visaLogo from "@assets/images (2)_1763209941664.png";
 import studentsBanner from "@assets/generated_images/Successful_African_students_celebrating_101e4f92.png";
 
+import beceCardImage from "@assets/IMG-20260503-WA0021_1777811282955.jpg";
+import wassceCardImage from "@assets/IMG-20260503-WA0022_1777811293981.jpg";
+
+const DEFAULT_CARD_IMAGES: Record<string, string> = {
+  "BECE": beceCardImage,
+  "WASSCE": wassceCardImage,
+};
+
+function getCardImage(examType: string, imageUrl: string | null): string | null {
+  if (imageUrl) return imageUrl;
+  return DEFAULT_CARD_IMAGES[examType] ?? null;
+}
+
 interface PurchaseFormProps {
   onSubmit: (data: { email: string; phone: string; examType: string; quantity: number }) => void;
   isLoading?: boolean;
@@ -78,7 +91,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   const handleCardClick = (card: CardType, colors: { gradient: string; borderColor: string; accentColor: string }) => {
     setSelectedType(card.examType);
     setSelectedPrice(card.price);
-    setSelectedImage(card.imageUrl);
+    setSelectedImage(getCardImage(card.examType, card.imageUrl));
     setSelectedColors(colors);
     setMaxQty(Math.min(card.count, 200));
     setQuantity(1);
@@ -222,10 +235,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                     )}
 
                     {/* Image / placeholder */}
-                    {card.imageUrl ? (
+                    {(() => { const img = getCardImage(card.examType, card.imageUrl); return img ? (
                       <div className="w-full h-28 md:h-36 overflow-hidden bg-slate-100">
                         <img
-                          src={card.imageUrl}
+                          src={img}
                           alt={card.examType}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           data-testid={`img-card-${card.examType.toLowerCase()}`}
@@ -238,7 +251,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                       >
                         <CreditCard className={`w-10 h-10 md:w-12 md:h-12 ${soldOut ? "text-slate-300" : "text-white/80"}`} />
                       </div>
-                    )}
+                    ); })()}
 
                     {/* Card info */}
                     <div className="p-3 md:p-4 space-y-2">
