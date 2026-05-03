@@ -9,6 +9,10 @@ import RetrieveVoucher from "@/pages/retrieve-voucher";
 import AdminPage from "@/pages/admin";
 import BlogPage from "@/pages/blog";
 import BlogPostPage from "@/pages/blog-post";
+import VendorSignup from "@/pages/vendor-signup";
+import VendorLogin from "@/pages/vendor-login";
+import VendorDashboard from "@/pages/vendor-dashboard";
+import VendorPage from "@/pages/vendor-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +23,10 @@ function Router() {
       <Route path="/retrieve-voucher" component={RetrieveVoucher} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog/:id" component={BlogPostPage} />
+      <Route path="/vendor/signup" component={VendorSignup} />
+      <Route path="/vendor/login" component={VendorLogin} />
+      <Route path="/vendor/dashboard" component={VendorDashboard} />
+      <Route path="/v/:slug" component={VendorPage} />
       <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>

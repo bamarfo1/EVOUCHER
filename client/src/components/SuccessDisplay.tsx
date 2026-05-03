@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle, ShieldCheck, CreditCard } from "lucide-react";
+import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle, ShieldCheck, CreditCard, Download, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
@@ -16,6 +16,9 @@ interface SuccessDisplayProps {
     vouchers: VoucherItem[];
     email: string;
     phone: string;
+    transactionId?: string;
+    amount?: number;
+    createdAt?: string;
   };
   onStartNew?: () => void;
 }
@@ -24,6 +27,105 @@ const PORTAL_URLS: Record<string, string> = {
   "BECE": "https://eresults.waecgh.org/",
   "WASSCE": "https://ghana.waecdirect.org/",
 };
+
+function printReceipt(voucherData: SuccessDisplayProps["voucherData"]) {
+  const { vouchers, email, phone, transactionId, amount, createdAt } = voucherData;
+  const examType = vouchers[0]?.examType ?? "";
+  const qty = vouchers.length;
+  const date = createdAt ? new Date(createdAt).toLocaleString("en-GH", { dateStyle: "long", timeStyle: "short" }) : new Date().toLocaleString("en-GH", { dateStyle: "long", timeStyle: "short" });
+
+  const voucherRows = vouchers.map((v, i) => `
+    <tr style="border-bottom:1px solid #e2e8f0;">
+      <td style="padding:10px 8px;font-size:13px;color:#64748b;">${qty > 1 ? `Voucher ${i + 1}` : examType}</td>
+      <td style="padding:10px 8px;font-size:13px;font-weight:700;font-family:monospace;color:#1e293b;">${v.serial}</td>
+      <td style="padding:10px 8px;font-size:15px;font-weight:900;font-family:monospace;color:#6d28d9;">${v.pin}</td>
+    </tr>
+  `).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>AllTekSE Receipt</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#f8fafc; padding:20px; }
+    .receipt { max-width:520px; margin:0 auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+    .header { background:linear-gradient(135deg,#7c3aed,#2563eb,#0d9488); padding:28px 28px 24px; color:#fff; text-align:center; }
+    .header h1 { font-size:22px; font-weight:900; margin-bottom:4px; }
+    .header p { font-size:12px; opacity:0.8; }
+    .success-badge { display:inline-block; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); padding:4px 14px; border-radius:50px; font-size:12px; font-weight:700; margin-top:10px; }
+    .body { padding:24px 28px; }
+    .section-title { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; margin-bottom:8px; margin-top:18px; }
+    .info-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13px; }
+    .info-row:last-child { border-bottom:none; }
+    .info-label { color:#64748b; font-weight:500; }
+    .info-value { color:#1e293b; font-weight:700; }
+    table { width:100%; border-collapse:collapse; margin-top:6px; }
+    thead tr { background:#f8fafc; }
+    thead th { padding:8px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; text-align:left; }
+    .footer { background:#0f172a; padding:18px 28px; text-align:center; }
+    .footer p { color:#64748b; font-size:11px; margin-bottom:3px; }
+    .footer .brand { color:#c4b5fd; font-weight:700; font-size:12px; }
+    @media print {
+      body { background:white; padding:0; }
+      .receipt { box-shadow:none; }
+      .no-print { display:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="header">
+      <h1>AllTekSE e-Voucher</h1>
+      <p>Your Trusted e-Voucher Store</p>
+      <div class="success-badge">Payment Successful</div>
+    </div>
+    <div class="body">
+      <p class="section-title">Transaction Details</p>
+      <div>
+        ${transactionId ? `<div class="info-row"><span class="info-label">Transaction ID</span><span class="info-value" style="font-size:11px;font-family:monospace;">${transactionId.substring(0, 18)}...</span></div>` : ""}
+        <div class="info-row"><span class="info-label">Date</span><span class="info-value">${date}</span></div>
+        <div class="info-row"><span class="info-label">Card Type</span><span class="info-value">${examType}</span></div>
+        <div class="info-row"><span class="info-label">Quantity</span><span class="info-value">${qty}</span></div>
+        ${amount ? `<div class="info-row"><span class="info-label">Amount Paid</span><span class="info-value" style="color:#059669;">GHC ${amount}</span></div>` : ""}
+        <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${phone}</span></div>
+        ${email ? `<div class="info-row"><span class="info-label">Email</span><span class="info-value">${email}</span></div>` : ""}
+      </div>
+
+      <p class="section-title" style="margin-top:20px;">Voucher${qty > 1 ? "s" : ""}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Serial</th>
+            <th>PIN</th>
+          </tr>
+        </thead>
+        <tbody>${voucherRows}</tbody>
+      </table>
+
+      <div style="margin-top:20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;">
+        <p style="font-size:11px;color:#1e40af;font-weight:700;">Keep this receipt safe.</p>
+        <p style="font-size:11px;color:#3b82f6;margin-top:3px;">Your voucher details have also been sent via SMS${email ? " and email" : ""}.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p class="brand">AllTekSE e-Voucher</p>
+      <p>support@alltekse.com | WhatsApp: +233 59 326 0440</p>
+      <p style="margin-top:6px;">© 2025 ALLTEK SOLUTIONS & ENGINEERING</p>
+    </div>
+  </div>
+  <script>window.onload = function(){ window.print(); }</script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=600,height=800");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
+}
 
 export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDisplayProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -76,7 +178,7 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             </Badge>
           </div>
 
-          {/* Voucher cards — one per voucher */}
+          {/* Voucher cards */}
           <div className="space-y-3">
             {vouchers.map((v, i) => (
               <Card key={i} className="border-slate-200 shadow-lg overflow-hidden">
@@ -177,6 +279,18 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
                 Check {examType} Results Now
               </Button>
             )}
+
+            {/* Receipt Download */}
+            <Button
+              variant="outline"
+              className="w-full h-12 font-semibold border-slate-200 gap-2"
+              onClick={() => printReceipt(voucherData)}
+              data-testid="button-download-receipt"
+            >
+              <Download className="w-4 h-4" />
+              Download Receipt (PDF)
+            </Button>
+
             {onStartNew && (
               <Button
                 variant="outline"

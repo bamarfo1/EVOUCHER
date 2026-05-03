@@ -117,6 +117,14 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               Edu News
             </Link>
             <Link
+              href="/vendor/login"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-700 border border-slate-200 px-3 py-2 rounded-full transition-colors"
+              data-testid="link-vendor-portal"
+            >
+              <FileEdit className="w-3.5 h-3.5" />
+              Sell Vouchers
+            </Link>
+            <Link
               href="/retrieve-voucher"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-full transition-colors"
               data-testid="link-retrieve-voucher"

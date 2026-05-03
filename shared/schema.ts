@@ -24,6 +24,31 @@ export const voucherCards = pgTable("voucher_cards", {
 });
 
 /* =========================
+   Vendors
+========================= */
+export const vendors = pgTable("vendors", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  phone: text("phone").unique().notNull(),
+  passwordHash: text("password_hash").notNull(),
+  momoNumber: text("momo_number").notNull(),
+  momoName: text("momo_name").notNull(),
+  contactNumber: text("contact_number").notNull(),
+  slug: text("slug").unique().notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/* =========================
+   Vendor Prices
+========================= */
+export const vendorPrices = pgTable("vendor_prices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
+  examType: text("exam_type").notNull(),
+  price: integer("price").notNull(),
+});
+
+/* =========================
    Transactions
 ========================= */
 export const transactions = pgTable("transactions", {
@@ -43,6 +68,8 @@ export const transactions = pgTable("transactions", {
 
   voucherCardId: uuid("voucher_card_id").references(() => voucherCards.id),
   voucherCardIds: text("voucher_card_ids").array(),
+
+  vendorId: uuid("vendor_id").references(() => vendors.id),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -83,13 +110,23 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     voucherCardId: true,
     voucherCardIds: true,
     amount: true,
+    vendorId: true,
   })
   .extend({
     email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(10),
     examType: z.string().min(1, "Please select a card type"),
     quantity: z.number().int().min(1).max(200).default(1),
+    vendorSlug: z.string().optional(),
   });
+
+export const insertVendorSchema = z.object({
+  phone: z.string().min(10, "Enter a valid phone number"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  momoNumber: z.string().min(10, "Enter a valid MoMo number"),
+  momoName: z.string().min(2, "Enter your MoMo account name"),
+  contactNumber: z.string().min(10, "Enter a valid contact number"),
+});
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
   id: true,
@@ -104,6 +141,10 @@ export type VoucherCard = typeof voucherCards.$inferSelect;
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
+
+export type Vendor = typeof vendors.$inferSelect;
+export type VendorPrice = typeof vendorPrices.$inferSelect;
+export type InsertVendor = z.infer<typeof insertVendorSchema>;
 
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type BlogPost = typeof blogPosts.$inferSelect;

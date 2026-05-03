@@ -34,6 +34,9 @@ export default function PaymentCallback() {
           vouchers: data.vouchers,
           email: sessionStorage.getItem("purchase_email") || "",
           phone: sessionStorage.getItem("purchase_phone") || "",
+          transactionId: data.transactionId,
+          amount: data.amount,
+          createdAt: data.createdAt,
         });
         sessionStorage.removeItem("purchase_phone");
         sessionStorage.removeItem("purchase_email");
