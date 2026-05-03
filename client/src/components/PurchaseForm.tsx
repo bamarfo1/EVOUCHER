@@ -80,7 +80,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
     setSelectedPrice(card.price);
     setSelectedImage(card.imageUrl);
     setSelectedColors(colors);
-    setMaxQty(Math.min(card.count, 10));
+    setMaxQty(Math.min(card.count, 200));
     setQuantity(1);
     setEmail("");
     setPhone("");

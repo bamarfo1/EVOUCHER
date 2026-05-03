@@ -88,7 +88,7 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(10),
     examType: z.string().min(1, "Please select a card type"),
-    quantity: z.number().int().min(1).max(50).default(1),
+    quantity: z.number().int().min(1).max(200).default(1),
   });
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
