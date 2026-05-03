@@ -44,7 +44,8 @@ export interface IStorage {
   // Admin vendor methods
   adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]>;
   adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string }): Promise<Vendor>;
-  adminCreatePayout(vendorId: string, amount: number, notes?: string): Promise<Payout>;
+  adminCloseVendorForPayout(vendorId: string): Promise<Payout | null>;
+  adminMarkPayoutPaid(payoutId: string): Promise<Payout>;
   adminGetVendorPayouts(vendorId: string): Promise<Payout[]>;
   adminCloseAllVendorsForPayout(): Promise<void>;
   // Blog methods
@@ -288,10 +289,12 @@ export class DbStorage implements IStorage {
   async adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]> {
     const allVendors = await db.select().from(vendors).orderBy(desc(vendors.createdAt));
     const results = await Promise.all(allVendors.map(async (vendor) => {
-      // Get last payout date
-      const [lastPayout] = await db.select({ createdAt: payouts.createdAt })
-        .from(payouts).where(eq(payouts.vendorId, vendor.id))
-        .orderBy(desc(payouts.createdAt)).limit(1);
+      // Get last PAID payout — this is the cutoff for "new" profit
+      const [lastPaidPayout] = await db.select({ paidAt: payouts.paidAt })
+        .from(payouts)
+        .where(and(eq(payouts.vendorId, vendor.id), eq(payouts.status, "paid")))
+        .orderBy(desc(payouts.paidAt))
+        .limit(1);
 
       // Get sales stats for all time
       const [totals] = await db.select({
@@ -300,9 +303,9 @@ export class DbStorage implements IStorage {
       }).from(transactions)
         .where(and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed")));
 
-      // Pending profit: sum of vendor_profit since last payout
-      const pendingCondition = lastPayout
-        ? and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"), sql`${transactions.createdAt} > ${lastPayout.createdAt}`)
+      // Pending profit: sum of vendor_profit since last PAID payout
+      const pendingCondition = lastPaidPayout?.paidAt
+        ? and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"), sql`${transactions.createdAt} > ${lastPaidPayout.paidAt}`)
         : and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"));
       const [pending] = await db.select({
         pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::int`,
@@ -313,7 +316,7 @@ export class DbStorage implements IStorage {
         totalSales: totals?.totalSales ?? 0,
         totalRevenue: totals?.totalRevenue ?? 0,
         pendingProfit: pending?.pendingProfit ?? 0,
-        lastPayoutAt: lastPayout?.createdAt ?? null,
+        lastPayoutAt: lastPaidPayout?.paidAt ?? null,
       };
     }));
     return results;
@@ -330,9 +333,42 @@ export class DbStorage implements IStorage {
     return updated;
   }
 
-  async adminCreatePayout(vendorId: string, amount: number, notes?: string): Promise<Payout> {
-    const [payout] = await db.insert(payouts).values({ vendorId, amount, notes: notes || null }).returning();
-    await db.update(vendors).set({ status: "active" }).where(eq(vendors.id, vendorId));
+  async adminCloseVendorForPayout(vendorId: string): Promise<Payout | null> {
+    // Calculate pending profit since last paid payout
+    const [lastPaidPayout] = await db.select({ paidAt: payouts.paidAt })
+      .from(payouts)
+      .where(and(eq(payouts.vendorId, vendorId), eq(payouts.status, "paid")))
+      .orderBy(desc(payouts.paidAt))
+      .limit(1);
+
+    const pendingCondition = lastPaidPayout?.paidAt
+      ? and(eq(transactions.vendorId, vendorId), eq(transactions.status, "completed"), sql`${transactions.createdAt} > ${lastPaidPayout.paidAt}`)
+      : and(eq(transactions.vendorId, vendorId), eq(transactions.status, "completed"));
+
+    const [pending] = await db.select({
+      pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::int`,
+    }).from(transactions).where(pendingCondition);
+
+    const amount = pending?.pendingProfit ?? 0;
+
+    // Close vendor
+    await db.update(vendors).set({ status: "closed_for_payout" }).where(eq(vendors.id, vendorId));
+
+    // Auto-create unpaid payout record (only if there's something owed)
+    if (amount <= 0) return null;
+    const [payout] = await db.insert(payouts).values({ vendorId, amount, status: "unpaid" }).returning();
+    return payout;
+  }
+
+  async adminMarkPayoutPaid(payoutId: string): Promise<Payout> {
+    const now = new Date();
+    const [payout] = await db
+      .update(payouts)
+      .set({ status: "paid", paidAt: now })
+      .where(eq(payouts.id, payoutId))
+      .returning();
+    // Reopen the vendor
+    await db.update(vendors).set({ status: "active" }).where(eq(vendors.id, payout.vendorId));
     return payout;
   }
 
@@ -341,7 +377,8 @@ export class DbStorage implements IStorage {
   }
 
   async adminCloseAllVendorsForPayout(): Promise<void> {
-    await db.update(vendors).set({ status: "closed_for_payout" }).where(eq(vendors.status, "active"));
+    const activeVendors = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.status, "active"));
+    await Promise.all(activeVendors.map(v => this.adminCloseVendorForPayout(v.id)));
   }
 
   async getVendorStats(vendorId: string): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }> {

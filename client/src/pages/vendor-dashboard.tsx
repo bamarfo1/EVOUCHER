@@ -42,6 +42,8 @@ interface PayoutInfo {
   id: string;
   vendorId: string;
   amount: number;
+  status: string;
+  paidAt: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -302,12 +304,20 @@ export default function VendorDashboard() {
               ) : (
                 <div className="divide-y divide-slate-100">
                   {payoutData.payouts.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-2.5" data-testid={`payout-row-${p.id}`}>
-                      <div>
-                        <span className="text-sm font-bold text-emerald-700">GHC {p.amount}</span>
-                        {p.notes && <span className="text-xs text-slate-400 ml-2">· {p.notes}</span>}
+                    <div key={p.id} className="flex items-center justify-between py-2.5 gap-2" data-testid={`payout-row-${p.id}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-sm font-bold ${p.status === "paid" ? "text-emerald-700" : "text-amber-700"}`}>GHC {p.amount}</span>
+                          <Badge variant={p.status === "paid" ? "default" : "destructive"} className="text-[10px]">
+                            {p.status === "paid" ? "Paid" : "Unpaid"}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {p.status === "paid" && p.paidAt
+                            ? `Paid on ${new Date(p.paidAt).toLocaleDateString()}`
+                            : `Closed on ${new Date(p.createdAt).toLocaleDateString()}`}
+                        </p>
                       </div>
-                      <span className="text-xs text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</span>
                     </div>
                   ))}
                 </div>

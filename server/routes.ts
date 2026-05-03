@@ -590,11 +590,18 @@ ${allUrls.map(u => `  <url>
     }
   });
 
-  app.post("/api/admin/vendors/:id/payout", requireAdmin, async (req: Request, res: Response) => {
+  app.post("/api/admin/vendors/:id/close-for-payout", requireAdmin, async (req: Request, res: Response) => {
     try {
-      const { amount, notes } = req.body;
-      if (!amount || isNaN(Number(amount))) return res.status(400).json({ error: "Valid amount required" });
-      const payout = await storage.adminCreatePayout(req.params.id, Number(amount), notes);
+      const payout = await storage.adminCloseVendorForPayout(req.params.id);
+      res.json({ success: true, payout });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/admin/payouts/:id/mark-paid", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const payout = await storage.adminMarkPayoutPaid(req.params.id);
       res.json({ success: true, payout });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

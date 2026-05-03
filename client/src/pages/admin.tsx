@@ -32,7 +32,7 @@ interface VendorRow {
   lastPayoutAt: string | null;
 }
 
-interface Payout { id: string; vendorId: string; amount: number; notes: string | null; createdAt: string; }
+interface Payout { id: string; vendorId: string; amount: number; notes: string | null; status: string; paidAt: string | null; createdAt: string; }
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }: { onLogin: () => void }) {
@@ -226,8 +226,6 @@ function UpdateImageForm({ examTypes, onUpdated }: { examTypes: string[]; onUpda
 function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () => void }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState(String(row.pendingProfit));
-  const [payoutNotes, setPayoutNotes] = useState("");
   const [editStoreName, setEditStoreName] = useState(false);
   const [storeNameVal, setStoreNameVal] = useState(row.vendor.storeName || "");
 
@@ -240,20 +238,32 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
     enabled: expanded,
   });
 
-  const payoutMutation = useMutation({
+  const closeForPayoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/admin/vendors/${row.vendor.id}/payout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(payoutAmount), notes: payoutNotes }),
-      });
+      const res = await fetch(`/api/admin/vendors/${row.vendor.id}/close-for-payout`, { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      const name = row.vendor.storeName || row.vendor.momoName;
+      const msg = data.payout
+        ? `${name} closed. Unpaid payout of GHC ${data.payout.amount} recorded.`
+        : `${name} closed for payout. No profit due at this time.`;
+      toast({ title: "Closed for payout", description: msg });
+      refetchHistory();
+      onRefresh();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (payoutId: string) => {
+      const res = await fetch(`/api/admin/payouts/${payoutId}/mark-paid`, { method: "POST" });
       if (!res.ok) throw new Error((await res.json()).error || "Failed");
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Payout recorded", description: `GHC ${payoutAmount} marked as paid to ${row.vendor.storeName || row.vendor.momoName}. Account reopened.` });
-      setPayoutAmount("0");
-      setPayoutNotes("");
+      toast({ title: "Payout marked as paid", description: `${row.vendor.storeName || row.vendor.momoName}'s account has been reopened.` });
       refetchHistory();
       onRefresh();
     },
@@ -279,6 +289,7 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
   });
 
   const statusColor = row.vendor.status === "active" ? "default" : "destructive";
+  const unpaidPayouts = payoutHistory?.filter(p => p.status === "unpaid") ?? [];
 
   return (
     <Card className="border-slate-200">
@@ -318,13 +329,25 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
             <p className="text-xs text-slate-500">{row.vendor.phone} · MoMo: {row.vendor.momoNumber} ({row.vendor.momoName})</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {row.vendor.status === "closed_for_payout" ? (
-              <Button size="sm" variant="outline" onClick={() => updateVendorMutation.mutate({ status: "active" })} disabled={updateVendorMutation.isPending} data-testid={`button-reopen-vendor-${row.vendor.id}`}>
-                Reopen
+            {row.vendor.status === "active" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => closeForPayoutMutation.mutate()}
+                disabled={closeForPayoutMutation.isPending}
+                data-testid={`button-close-vendor-${row.vendor.id}`}
+              >
+                {closeForPayoutMutation.isPending ? "Closing..." : "Close for Payout"}
               </Button>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => updateVendorMutation.mutate({ status: "closed_for_payout" })} disabled={updateVendorMutation.isPending} data-testid={`button-close-vendor-${row.vendor.id}`}>
-                Close for Payout
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => updateVendorMutation.mutate({ status: "active" })}
+                disabled={updateVendorMutation.isPending}
+                data-testid={`button-reopen-vendor-${row.vendor.id}`}
+              >
+                Reopen
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={() => setExpanded(e => !e)} data-testid={`button-expand-vendor-${row.vendor.id}`}>
@@ -349,62 +372,52 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
           </div>
         </div>
 
-        {/* Expanded: payout form + history */}
+        {/* Expanded: payout history */}
         {expanded && (
-          <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
-            {/* Mark as paid */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mark Payout as Paid</p>
-              <p className="text-xs text-slate-500">Pay vendor via MoMo externally, then record it here to reopen their account.</p>
-              <div className="flex gap-2 flex-wrap">
-                <div className="relative flex-1 min-w-[120px]">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">GHC</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={payoutAmount}
-                    onChange={e => setPayoutAmount(e.target.value)}
-                    className="pl-10 text-sm"
-                    data-testid={`input-payout-amount-${row.vendor.id}`}
-                  />
-                </div>
-                <Input
-                  placeholder="Notes (optional)"
-                  value={payoutNotes}
-                  onChange={e => setPayoutNotes(e.target.value)}
-                  className="flex-1 min-w-[140px] text-sm"
-                  data-testid={`input-payout-notes-${row.vendor.id}`}
-                />
-                <Button
-                  size="sm"
-                  onClick={() => payoutMutation.mutate()}
-                  disabled={payoutMutation.isPending || !payoutAmount || Number(payoutAmount) <= 0}
-                  data-testid={`button-mark-paid-${row.vendor.id}`}
-                >
-                  {payoutMutation.isPending ? "Saving..." : "Mark as Paid"}
-                </Button>
-              </div>
-              {row.lastPayoutAt && (
-                <p className="text-[11px] text-slate-400">Last payout: {new Date(row.lastPayoutAt).toLocaleDateString()}</p>
-              )}
-            </div>
-
-            {/* Payout history */}
-            {payoutHistory && payoutHistory.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Payout History</p>
-                <div className="divide-y divide-slate-50">
-                  {payoutHistory.map(p => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5" data-testid={`payout-row-${p.id}`}>
-                      <div>
-                        <span className="text-xs font-semibold text-slate-700">GHC {p.amount}</span>
-                        {p.notes && <span className="text-xs text-slate-400 ml-2">· {p.notes}</span>}
+          <div className="mt-4 border-t border-slate-100 pt-4 space-y-3">
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Payout History</p>
+            {!payoutHistory || payoutHistory.length === 0 ? (
+              <p className="text-xs text-slate-400">No payouts recorded yet.</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {payoutHistory.map(p => (
+                  <div key={p.id} className="flex items-center justify-between py-2 gap-2" data-testid={`payout-row-${p.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-800">GHC {p.amount}</span>
+                        <Badge
+                          variant={p.status === "paid" ? "default" : "destructive"}
+                          className="text-[10px]"
+                          data-testid={`badge-payout-status-${p.id}`}
+                        >
+                          {p.status === "paid" ? "Paid" : "Unpaid"}
+                        </Badge>
                       </div>
-                      <span className="text-[11px] text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</span>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {p.status === "paid" && p.paidAt
+                          ? `Paid on ${new Date(p.paidAt).toLocaleDateString()}`
+                          : `Closed on ${new Date(p.createdAt).toLocaleDateString()}`}
+                        {p.notes && ` · ${p.notes}`}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                    {p.status === "unpaid" && (
+                      <Button
+                        size="sm"
+                        onClick={() => markPaidMutation.mutate(p.id)}
+                        disabled={markPaidMutation.isPending}
+                        data-testid={`button-mark-paid-${p.id}`}
+                      >
+                        {markPaidMutation.isPending ? "..." : "Mark as Paid"}
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
+            )}
+            {unpaidPayouts.length > 0 && (
+              <p className="text-xs text-amber-600 font-medium">
+                {unpaidPayouts.length} unpaid payout{unpaidPayouts.length > 1 ? "s" : ""} · Total: GHC {unpaidPayouts.reduce((s, p) => s + p.amount, 0)}
+              </p>
             )}
           </div>
         )}

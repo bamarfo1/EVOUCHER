@@ -87,6 +87,8 @@ export const payouts = pgTable("payouts", {
   vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
   amount: integer("amount").notNull(),
   notes: text("notes"),
+  status: text("status").notNull().default("unpaid"),
+  paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
