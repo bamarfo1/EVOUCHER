@@ -250,13 +250,22 @@ export class DbStorage implements IStorage {
   }
 
   async upsertVendorPrice(vendorId: string, examType: string, price: number): Promise<void> {
-    await db
-      .insert(vendorPrices)
-      .values({ vendorId, examType, price })
-      .onConflictDoUpdate({
-        target: [vendorPrices.vendorId, vendorPrices.examType],
-        set: { price },
-      });
+    // Try upsert using unique constraint; fall back to delete+insert if constraint missing
+    try {
+      await db
+        .insert(vendorPrices)
+        .values({ vendorId, examType, price })
+        .onConflictDoUpdate({
+          target: [vendorPrices.vendorId, vendorPrices.examType],
+          set: { price },
+        });
+    } catch {
+      // Fallback: delete existing row and insert fresh
+      await db.delete(vendorPrices).where(
+        and(eq(vendorPrices.vendorId, vendorId), eq(vendorPrices.examType, examType))
+      );
+      await db.insert(vendorPrices).values({ vendorId, examType, price });
+    }
   }
 
   async getVendorPrices(vendorId: string): Promise<VendorPrice[]> {

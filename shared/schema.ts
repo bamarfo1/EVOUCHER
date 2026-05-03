@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, uuid, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, uuid, integer, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -47,7 +47,9 @@ export const vendorPrices = pgTable("vendor_prices", {
   vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
   examType: text("exam_type").notNull(),
   price: integer("price").notNull(),
-});
+}, (t) => ({
+  vendorExamTypeUnique: unique().on(t.vendorId, t.examType),
+}));
 
 /* =========================
    Transactions
