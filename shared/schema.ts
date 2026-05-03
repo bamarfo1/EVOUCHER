@@ -35,12 +35,14 @@ export const transactions = pgTable("transactions", {
   examType: text("exam_type").notNull(),
 
   amount: integer("amount").notNull(),
+  quantity: integer("quantity").notNull().default(1),
 
   paystackReference: text("paystack_reference").unique(),
 
   status: text("status").notNull().default("pending"),
 
   voucherCardId: uuid("voucher_card_id").references(() => voucherCards.id),
+  voucherCardIds: text("voucher_card_ids").array(),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -79,12 +81,14 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     status: true,
     paystackReference: true,
     voucherCardId: true,
+    voucherCardIds: true,
     amount: true,
   })
   .extend({
     email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(10),
     examType: z.string().min(1, "Please select a card type"),
+    quantity: z.number().int().min(1).max(50).default(1),
   });
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({

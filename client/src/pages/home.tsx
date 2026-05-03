@@ -16,7 +16,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handlePurchaseSubmit = async (data: { email: string; phone: string; examType: string }) => {
+  const handlePurchaseSubmit = async (data: { email: string; phone: string; examType: string; quantity: number }) => {
     setIsLoading(true);
     setErrorMessage(null);
     
@@ -25,6 +25,9 @@ export default function Home() {
       const response = await res.json();
 
       if (response.authorizationUrl) {
+        // Store phone & email so we can show them on the success page after redirect
+        sessionStorage.setItem("purchase_phone", data.phone);
+        sessionStorage.setItem("purchase_email", data.email || "");
         window.location.href = response.authorizationUrl;
       } else {
         setErrorMessage("Failed to initialize payment. Please try again.");

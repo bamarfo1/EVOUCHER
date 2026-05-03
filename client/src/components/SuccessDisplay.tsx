@@ -1,20 +1,29 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle, ShieldCheck, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
+export interface VoucherItem {
+  serial: string;
+  pin: string;
+  examType: string;
+}
+
 interface SuccessDisplayProps {
   voucherData: {
-    serial: string;
-    pin: string;
+    vouchers: VoucherItem[];
     email: string;
     phone: string;
-    examType: string;
   };
   onStartNew?: () => void;
 }
+
+const PORTAL_URLS: Record<string, string> = {
+  "BECE": "https://eresults.waecgh.org/",
+  "WASSCE": "https://ghana.waecdirect.org/",
+};
 
 export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDisplayProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -25,13 +34,11 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const PORTAL_URLS: Record<string, string> = {
-    "BECE": "https://eresults.waecgh.org/",
-    "WASSCE": "https://ghana.waecdirect.org/",
-  };
-
-  const waecUrl = PORTAL_URLS[voucherData.examType] || null;
+  const vouchers = voucherData.vouchers ?? [];
+  const examType = vouchers[0]?.examType ?? "";
+  const waecUrl = PORTAL_URLS[examType] ?? null;
   const hasEmail = voucherData.email && voucherData.email.trim() !== '';
+  const qty = vouchers.length;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #f8f7ff 0%, #eff6ff 50%, #f0fdfa 100%)" }}>
@@ -39,12 +46,7 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-purple-100/80 bg-white/90 backdrop-blur-xl shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <img
-            src={alltekseLogo}
-            alt="AllTekSE Logo"
-            className="h-10 w-auto object-contain rounded-lg"
-            data-testid="img-alltekse-logo"
-          />
+          <img src={alltekseLogo} alt="AllTekSE Logo" className="h-10 w-auto object-contain rounded-lg" data-testid="img-alltekse-logo" />
           <div>
             <h1 className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent" data-testid="text-site-title">
               AllTekSE e-Voucher
@@ -65,94 +67,99 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             <div>
               <h2 className="text-2xl font-black text-slate-800" data-testid="text-success-title">Payment Successful!</h2>
               <p className="text-sm text-slate-500 mt-1" data-testid="text-success-description">
-                {hasEmail
-                  ? "Your voucher has been sent to your email and phone"
-                  : "Your voucher has been sent via SMS"}
+                {qty > 1 ? `${qty} vouchers have been sent` : "Your voucher has been sent"}
+                {hasEmail ? " to your email and phone" : " via SMS"}
               </p>
             </div>
             <Badge className="bg-purple-100 text-purple-700 border-purple-200 font-semibold px-3 py-1" data-testid="badge-exam-type">
-              {voucherData.examType} Voucher
+              {qty > 1 ? `${qty} × ` : ""}{examType} Voucher{qty > 1 ? "s" : ""}
             </Badge>
           </div>
 
-          {/* Voucher details card */}
-          <Card className="border-slate-200 shadow-lg overflow-hidden">
-            <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-500" />
-            <CardContent className="p-5 space-y-4">
-
-              {/* Serial */}
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Serial Number</p>
-                <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
-                  <p className="text-lg font-black font-mono tracking-widest text-slate-800" data-testid="text-serial">
-                    {voucherData.serial}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(voucherData.serial, 'serial')}
-                    data-testid="button-copy-serial"
-                    className="text-xs flex-shrink-0 text-slate-500 hover:text-purple-700"
-                  >
-                    <Copy className="w-3.5 h-3.5 mr-1" />
-                    {copiedField === 'serial' ? 'Copied!' : 'Copy'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* PIN */}
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">PIN</p>
-                <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-4 py-3">
-                  <p className="text-2xl font-black font-mono tracking-widest text-purple-800" data-testid="text-pin">
-                    {voucherData.pin}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(voucherData.pin, 'pin')}
-                    data-testid="button-copy-pin"
-                    className="text-xs flex-shrink-0 text-purple-500 hover:text-purple-700"
-                  >
-                    <Copy className="w-3.5 h-3.5 mr-1" />
-                    {copiedField === 'pin' ? 'Copied!' : 'Copy'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Delivery info */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-2">
-                {hasEmail && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-3.5 h-3.5 text-blue-600" />
+          {/* Voucher cards — one per voucher */}
+          <div className="space-y-3">
+            {vouchers.map((v, i) => (
+              <Card key={i} className="border-slate-200 shadow-lg overflow-hidden">
+                <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-500" />
+                <CardContent className="p-5 space-y-4">
+                  {qty > 1 && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-purple-100 rounded-md flex items-center justify-center flex-shrink-0">
+                        <CreditCard className="w-3.5 h-3.5 text-purple-600" />
+                      </div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Voucher {i + 1} of {qty}</p>
                     </div>
-                    <span className="text-slate-500 font-medium">Email sent to</span>
-                    <span className="text-slate-700 font-bold truncate" data-testid="text-email-sent">{voucherData.email}</span>
+                  )}
+
+                  {/* Serial */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Serial Number</p>
+                    <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                      <p className="text-base font-black font-mono tracking-widest text-slate-800" data-testid={`text-serial-${i}`}>
+                        {v.serial}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(v.serial, `serial-${i}`)}
+                        data-testid={`button-copy-serial-${i}`}
+                        className="text-xs flex-shrink-0 text-slate-500 hover:text-purple-700"
+                      >
+                        <Copy className="w-3.5 h-3.5 mr-1" />
+                        {copiedField === `serial-${i}` ? 'Copied!' : 'Copy'}
+                      </Button>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="w-6 h-6 bg-emerald-100 rounded-md flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+
+                  {/* PIN */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">PIN</p>
+                    <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-4 py-3">
+                      <p className="text-xl font-black font-mono tracking-widest text-purple-800" data-testid={`text-pin-${i}`}>
+                        {v.pin}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(v.pin, `pin-${i}`)}
+                        data-testid={`button-copy-pin-${i}`}
+                        className="text-xs flex-shrink-0 text-purple-500 hover:text-purple-700"
+                      >
+                        <Copy className="w-3.5 h-3.5 mr-1" />
+                        {copiedField === `pin-${i}` ? 'Copied!' : 'Copy'}
+                      </Button>
+                    </div>
                   </div>
-                  <span className="text-slate-500 font-medium">SMS sent to</span>
-                  <span className="text-slate-700 font-bold" data-testid="text-phone-sent">{voucherData.phone}</span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Delivery info */}
+          <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-2">
+            {hasEmail && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-3.5 h-3.5 text-blue-600" />
                 </div>
+                <span className="text-slate-500 font-medium">Email sent to</span>
+                <span className="text-slate-700 font-bold truncate" data-testid="text-email-sent">{voucherData.email}</span>
               </div>
-            </CardContent>
-          </Card>
+            )}
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-6 h-6 bg-emerald-100 rounded-md flex items-center justify-center flex-shrink-0">
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <span className="text-slate-500 font-medium">SMS sent to</span>
+              <span className="text-slate-700 font-bold" data-testid="text-phone-sent">{voucherData.phone}</span>
+            </div>
+          </div>
 
           {/* Portal link */}
           {waecUrl && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">{voucherData.examType} Result Portal</p>
-              <a
-                href={waecUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-500 hover:underline break-all"
-                data-testid="link-portal-url"
-              >
+              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">{examType} Result Portal</p>
+              <a href={waecUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all" data-testid="link-portal-url">
                 {waecUrl}
               </a>
             </div>
@@ -167,7 +174,7 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
                 data-testid="button-check-results"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Check {voucherData.examType} Results Now
+                Check {examType} Results Now
               </Button>
             )}
             {onStartNew && (

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2, CheckCircle, ExternalLink, Star } from "lucide-react";
+import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2, CheckCircle, ExternalLink, Star, Minus, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
@@ -17,7 +17,7 @@ import visaLogo from "@assets/images (2)_1763209941664.png";
 import studentsBanner from "@assets/generated_images/Successful_African_students_celebrating_101e4f92.png";
 
 interface PurchaseFormProps {
-  onSubmit: (data: { email: string; phone: string; examType: string }) => void;
+  onSubmit: (data: { email: string; phone: string; examType: string; quantity: number }) => void;
   isLoading?: boolean;
 }
 
@@ -58,6 +58,8 @@ const UNIVERSITIES = [
 export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFormProps) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [maxQty, setMaxQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState("");
   const [selectedPrice, setSelectedPrice] = useState(20);
@@ -70,7 +72,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ email, phone, examType: selectedType });
+    onSubmit({ email, phone, examType: selectedType, quantity });
   };
 
   const handleCardClick = (card: CardType, colors: { gradient: string; borderColor: string; accentColor: string }) => {
@@ -78,6 +80,8 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
     setSelectedPrice(card.price);
     setSelectedImage(card.imageUrl);
     setSelectedColors(colors);
+    setMaxQty(Math.min(card.count, 10));
+    setQuantity(1);
     setEmail("");
     setPhone("");
     setDialogOpen(true);
@@ -335,6 +339,41 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               <p className="text-xs text-slate-400">Leave blank for SMS-only delivery</p>
             </div>
 
+            {/* Quantity selector */}
+            {maxQty > 1 && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold text-slate-700">
+                  Quantity <span className="text-xs font-normal text-slate-400">(max {maxQty})</span>
+                </Label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                    data-testid="button-qty-minus"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <div className="flex-1 text-center">
+                    <span className="text-2xl font-black text-slate-800" data-testid="text-quantity">{quantity}</span>
+                    <p className="text-xs text-slate-400 font-medium">
+                      Total: GHC {selectedPrice * quantity}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                    disabled={quantity >= maxQty}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                    data-testid="button-qty-plus"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="pt-2 space-y-3">
               <Button
                 type="submit"
@@ -354,7 +393,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 ) : (
                   <span className="flex items-center gap-2">
                     <Lock className="w-4 h-4" />
-                    Pay GHC {selectedPrice} — Secure Checkout
+                    Pay GHC {selectedPrice * quantity} — Secure Checkout
                   </span>
                 )}
               </Button>

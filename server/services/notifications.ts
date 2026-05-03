@@ -24,54 +24,69 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export interface VoucherItem {
+  serial: string;
+  pin: string;
+}
+
 export async function sendVoucherEmail(
   email: string | null | undefined,
-  serial: string,
-  pin: string,
+  vouchers: VoucherItem[],
   examType: string
 ): Promise<void> {
   if (!email || email.trim() === '') {
     console.log("No email provided, skipping email notification");
     return;
   }
-  
+
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log("Email not configured. Would send:", { email, serial, pin, examType });
+    console.log("Email not configured. Would send:", { email, vouchers, examType });
     return;
   }
 
   const portalUrl = PORTAL_URLS[examType];
-  const portalName = portalUrl ? `${examType} Portal` : null;
+  const qty = vouchers.length;
+  const subject = qty > 1
+    ? `Your ${qty} x ${examType} Vouchers from AllTekSE`
+    : `Your ${examType} Voucher from AllTekSE`;
+
+  const voucherRows = vouchers.map((v, i) => `
+    <tr style="border-bottom: 1px solid #e5e7eb;">
+      <td style="padding: 10px 12px; font-weight: bold; color: #6b7280;">${qty > 1 ? `Voucher ${i + 1}` : "Serial"}</td>
+      <td style="padding: 10px 12px; font-family: monospace; font-size: 15px; font-weight: bold; color: #111827;">${v.serial}</td>
+      <td style="padding: 10px 12px; font-family: monospace; font-size: 15px; font-weight: bold; color: #7c3aed;">${v.pin}</td>
+    </tr>`).join("");
 
   const portalSection = portalUrl
-    ? `<p>Check your results here: <a href="${portalUrl}" style="color: #2563eb; font-weight: bold;">${portalName}</a></p>
+    ? `<p style="margin-top:16px;">Check your results here: <a href="${portalUrl}" style="color: #2563eb; font-weight: bold;">${examType} Portal</a></p>
        <p style="color: #4b5563; font-size: 14px;">${portalUrl}</p>`
     : '';
 
   const mailOptions = {
     from: `AllTekSE e-Voucher <${EMAIL_USER}>`,
     to: email,
-    subject: `Your ${examType} Voucher from AllTekSE`,
+    subject,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Your ${examType} Voucher</h2>
+        <h2 style="color: #7c3aed;">${subject}</h2>
         <p>Thank you for your purchase! Here are your voucher details:</p>
-        
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 10px 0;"><strong>Serial Number:</strong> ${serial}</p>
-          <p style="margin: 10px 0;"><strong>PIN:</strong> ${pin}</p>
-          <p style="margin: 10px 0;"><strong>Card Type:</strong> ${examType}</p>
-        </div>
-        
+
+        <table style="width: 100%; border-collapse: collapse; background: #f9fafb; border-radius: 8px; overflow: hidden; margin: 20px 0;">
+          <thead>
+            <tr style="background: #7c3aed; color: white;">
+              <th style="padding: 10px 12px; text-align: left;">#</th>
+              <th style="padding: 10px 12px; text-align: left;">Serial Number</th>
+              <th style="padding: 10px 12px; text-align: left;">PIN</th>
+            </tr>
+          </thead>
+          <tbody>${voucherRows}</tbody>
+        </table>
+
+        <p><strong>Card Type:</strong> ${examType}</p>
         ${portalSection}
-        
-        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          Keep these details safe.
-        </p>
-        
-        <p style="color: #6b7280; font-size: 14px;">
-          Need help? Contact support@alltekse.com or WhatsApp 0593260440
-        </p>
+
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">Keep these details safe.</p>
+        <p style="color: #6b7280; font-size: 14px;">Need help? Contact support@alltekse.com or WhatsApp 0593260440</p>
       </div>
     `,
   };
@@ -81,14 +96,23 @@ export async function sendVoucherEmail(
 
 export async function sendVoucherSMS(
   phone: string,
-  serial: string,
-  pin: string,
+  vouchers: VoucherItem[],
   examType: string
 ): Promise<void> {
   const portalUrl = PORTAL_URLS[examType];
-  const message = portalUrl
-    ? `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. Check results: ${portalUrl}`
-    : `${examType} Voucher - Serial: ${serial}, PIN: ${pin}. From AllTekSE e-Voucher.`;
+
+  let message: string;
+  if (vouchers.length === 1) {
+    const v = vouchers[0];
+    message = portalUrl
+      ? `${examType} Voucher - Serial: ${v.serial}, PIN: ${v.pin}. Check results: ${portalUrl}`
+      : `${examType} Voucher - Serial: ${v.serial}, PIN: ${v.pin}. From AllTekSE e-Voucher.`;
+  } else {
+    const lines = vouchers.map((v, i) => `#${i + 1} Serial:${v.serial} PIN:${v.pin}`).join(" | ");
+    message = portalUrl
+      ? `${examType} Vouchers (${vouchers.length}): ${lines}. Check results: ${portalUrl}`
+      : `${examType} Vouchers (${vouchers.length}): ${lines}. AllTekSE e-Voucher.`;
+  }
 
   if (!NALO_API_KEY) {
     console.log("Nalo SMS API not configured. Would send:", { phone, message });

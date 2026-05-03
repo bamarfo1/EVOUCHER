@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTransactionSchema } from "@shared/schema";
 import { initializePayment, verifyPayment } from "./services/paystack";
-import { sendVoucherEmail, sendVoucherSMS } from "./services/notifications";
+import { sendVoucherEmail, sendVoucherSMS, type VoucherItem } from "./services/notifications";
 import { randomBytes } from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -21,15 +21,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/purchase/initialize", async (req: Request, res: Response) => {
     try {
       const validatedData = insertTransactionSchema.parse(req.body);
-      
-      const availableVoucher = await storage.getAvailableVoucher(validatedData.examType);
-      if (!availableVoucher) {
+      const quantity = validatedData.quantity ?? 1;
+
+      // Check enough stock is available
+      const availableCount = await storage.getAvailableVoucherCount(validatedData.examType);
+      if (availableCount === 0) {
         return res.status(400).json({ 
-          error: `No ${validatedData.examType} vouchers available at the moment. Please try again later or select a different exam type.` 
+          error: `No ${validatedData.examType} vouchers available at the moment. Please try again later or select a different card type.` 
+        });
+      }
+      if (quantity > availableCount) {
+        return res.status(400).json({ 
+          error: `Only ${availableCount} ${validatedData.examType} voucher${availableCount === 1 ? '' : 's'} available. Please reduce your quantity.` 
         });
       }
 
-      const price = availableVoucher.price;
+      // Get price from a sample available voucher
+      const sampleVoucher = await storage.getAvailableVoucher(validatedData.examType);
+      const unitPrice = sampleVoucher!.price;
+      const totalAmount = unitPrice * quantity;
+
       const reference = `TXN-${Date.now()}-${randomBytes(4).toString('hex')}`;
       
       const emailToStore = validatedData.email && validatedData.email.trim() !== '' 
@@ -40,7 +51,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: emailToStore,
         phone: validatedData.phone,
         examType: validatedData.examType,
-        amount: String(price),
+        amount: String(totalAmount),
+        quantity,
         paystackReference: reference,
       });
 
@@ -52,12 +64,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const paystackResponse = await initializePayment(
         emailForPaystack,
-        price * 100,
+        totalAmount * 100,
         reference,
         {
           transactionId: transaction.id,
           examType: validatedData.examType,
           phone: validatedData.phone,
+          quantity,
         },
         `${baseUrl}/payment-callback?reference=${reference}`
       );
@@ -87,14 +100,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (transaction.status === "completed") {
-        const voucher = await storage.getVoucherById(transaction.voucherCardId!);
+        // Return all assigned vouchers
+        const allIds: string[] = (transaction as any).voucherCardIds ?? (transaction.voucherCardId ? [transaction.voucherCardId] : []);
+        const voucherItems = await Promise.all(allIds.map(id => storage.getVoucherById(id)));
         return res.json({
           status: "success",
-          voucher: {
-            serial: voucher?.serial,
-            pin: voucher?.pin,
+          vouchers: voucherItems.filter(Boolean).map(v => ({
+            serial: v!.serial,
+            pin: v!.pin,
             examType: transaction.examType,
-          },
+          })),
         });
       }
 
@@ -138,11 +153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const result = await storage.assignVoucherToTransaction(
+      const qty = (transaction as any).quantity ?? 1;
+      const result = await storage.assignVouchersToTransaction(
         transaction.id,
         transaction.phone,
         transaction.email,
-        transaction.examType
+        transaction.examType,
+        qty
       );
       
       if (!result) {
@@ -151,23 +168,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
+      const { transaction: updatedTransaction, vouchers: updatedVouchers } = result;
       isProcessing = false;
+
+      const voucherItems: VoucherItem[] = updatedVouchers.map(v => ({ serial: v.serial, pin: v.pin }));
 
       try {
         await Promise.all([
-          sendVoucherEmail(
-            updatedTransaction.email,
-            updatedVoucher.serial,
-            updatedVoucher.pin,
-            updatedTransaction.examType
-          ),
-          sendVoucherSMS(
-            updatedTransaction.phone,
-            updatedVoucher.serial,
-            updatedVoucher.pin,
-            updatedTransaction.examType
-          ),
+          sendVoucherEmail(updatedTransaction.email, voucherItems, updatedTransaction.examType),
+          sendVoucherSMS(updatedTransaction.phone, voucherItems, updatedTransaction.examType),
         ]);
       } catch (notificationError) {
         console.error("Notification error (voucher already assigned):", notificationError);
@@ -175,11 +184,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         status: "success",
-        voucher: {
-          serial: updatedVoucher.serial,
-          pin: updatedVoucher.pin,
+        vouchers: updatedVouchers.map(v => ({
+          serial: v.serial,
+          pin: v.pin,
           examType: updatedTransaction.examType,
-        },
+        })),
       });
     } catch (error: any) {
       console.error("Payment verification error:", error);
@@ -262,11 +271,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         isProcessing = true;
         
-        const result = await storage.assignVoucherToTransaction(
+        const webhookQty = (transaction as any).quantity ?? 1;
+        const result = await storage.assignVouchersToTransaction(
           transaction.id,
           transaction.phone,
           transaction.email,
-          transaction.examType
+          transaction.examType,
+          webhookQty
         );
         
         if (!result) {
@@ -274,23 +285,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).send(`No ${transaction.examType} vouchers available`);
         }
 
-        const { transaction: updatedTransaction, voucher: updatedVoucher } = result;
+        const { transaction: updatedTransaction, vouchers: updatedVouchers } = result;
         isProcessing = false;
+
+        const webhookVoucherItems: VoucherItem[] = updatedVouchers.map(v => ({ serial: v.serial, pin: v.pin }));
 
         try {
           await Promise.all([
-            sendVoucherEmail(
-              updatedTransaction.email,
-              updatedVoucher.serial,
-              updatedVoucher.pin,
-              updatedTransaction.examType
-            ),
-            sendVoucherSMS(
-              updatedTransaction.phone,
-              updatedVoucher.serial,
-              updatedVoucher.pin,
-              updatedTransaction.examType
-            ),
+            sendVoucherEmail(updatedTransaction.email, webhookVoucherItems, updatedTransaction.examType),
+            sendVoucherSMS(updatedTransaction.phone, webhookVoucherItems, updatedTransaction.examType),
           ]);
         } catch (notificationError) {
           console.error("Webhook notification error (voucher already assigned):", notificationError);

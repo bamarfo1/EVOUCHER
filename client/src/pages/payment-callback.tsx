@@ -29,14 +29,14 @@ export default function PaymentCallback() {
       const response = await fetch(`/api/payment/verify/${reference}`);
       const data = await response.json();
 
-      if (data.status === "success" && data.voucher) {
+      if (data.status === "success" && data.vouchers) {
         setVoucherData({
-          serial: data.voucher.serial,
-          pin: data.voucher.pin,
-          examType: data.voucher.examType,
-          email: "",
-          phone: "",
+          vouchers: data.vouchers,
+          email: sessionStorage.getItem("purchase_email") || "",
+          phone: sessionStorage.getItem("purchase_phone") || "",
         });
+        sessionStorage.removeItem("purchase_phone");
+        sessionStorage.removeItem("purchase_email");
         setStatus("success");
       } else {
         setStatus("failed");
@@ -59,11 +59,7 @@ export default function PaymentCallback() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-purple-100/80 bg-white/90 backdrop-blur-xl shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <img
-            src={alltekseLogo}
-            alt="AllTekSE Logo"
-            className="h-10 w-auto object-contain rounded-lg"
-          />
+          <img src={alltekseLogo} alt="AllTekSE Logo" className="h-10 w-auto object-contain rounded-lg" />
           <div>
             <h1 className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent">
               AllTekSE e-Voucher
@@ -89,15 +85,8 @@ export default function PaymentCallback() {
               </div>
               <div className="flex flex-col items-center gap-2 pt-2">
                 {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-1.5 rounded-full bg-purple-200 overflow-hidden"
-                    style={{ width: `${100 - (i - 1) * 20}%` }}
-                  >
-                    <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse"
-                      style={{ animationDelay: `${i * 0.2}s` }}
-                    />
+                  <div key={i} className="h-1.5 rounded-full bg-purple-200 overflow-hidden" style={{ width: `${100 - (i - 1) * 20}%` }}>
+                    <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
                   </div>
                 ))}
               </div>
@@ -124,9 +113,7 @@ export default function PaymentCallback() {
                 >
                   Try Again
                 </Button>
-                <p className="text-xs text-slate-400">
-                  Need help? Contact us below and we'll sort it out quickly.
-                </p>
+                <p className="text-xs text-slate-400">Need help? Contact us below and we'll sort it out quickly.</p>
               </div>
             </>
           )}

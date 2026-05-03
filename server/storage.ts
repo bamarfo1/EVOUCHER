@@ -14,13 +14,14 @@ import { eq, and, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined>;
+  getAvailableVoucherCount(examType: string): Promise<number>;
   getVoucherById(id: string): Promise<VoucherCard | undefined>;
   markVoucherAsUsed(id: string, phone: string, email: string | null, examType: string): Promise<VoucherCard>;
-  createTransaction(transaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction>;
+  createTransaction(transaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string; quantity?: number }): Promise<Transaction>;
   getTransactionByReference(reference: string): Promise<Transaction | undefined>;
   updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction>;
   updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
-  assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null>;
+  assignVouchersToTransaction(transactionId: string, phone: string, email: string | null, examType: string, quantity: number): Promise<{ transaction: Transaction; vouchers: VoucherCard[] } | null>;
   getTransactionById(id: string): Promise<Transaction | undefined>;
   getVouchersByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string }[]>;
   getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]>;
@@ -45,6 +46,14 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
+  async getAvailableVoucherCount(examType: string): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(voucherCards)
+      .where(and(eq(voucherCards.used, false), eq(voucherCards.examType, examType)));
+    return row?.count ?? 0;
+  }
+
   async getVoucherById(id: string): Promise<VoucherCard | undefined> {
     const [voucher] = await db.select().from(voucherCards).where(eq(voucherCards.id, id));
     return voucher;
@@ -59,7 +68,7 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
-  async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string }): Promise<Transaction> {
+  async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string; quantity?: number }): Promise<Transaction> {
     const [transaction] = await db.insert(transactions).values(insertTransaction as any).returning();
     return transaction;
   }
@@ -86,34 +95,53 @@ export class DbStorage implements IStorage {
     return transaction || null;
   }
 
-  async assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
+  async assignVouchersToTransaction(transactionId: string, phone: string, email: string | null, examType: string, quantity: number): Promise<{ transaction: Transaction; vouchers: VoucherCard[] } | null> {
     return await db.transaction(async (tx) => {
-      const [availableVoucher] = await tx
+      // Lock exactly `quantity` available vouchers
+      const availableVouchers = await tx
         .select()
         .from(voucherCards)
         .where(and(eq(voucherCards.used, false), eq(voucherCards.examType, examType)))
-        .limit(1)
+        .limit(quantity)
         .for('update');
 
-      if (!availableVoucher) {
+      if (availableVouchers.length < quantity) {
         await tx.update(transactions).set({ status: "failed" }).where(eq(transactions.id, transactionId));
         return null;
       }
 
-      const [updatedVoucher] = await tx
-        .update(voucherCards)
-        .set({ used: true, purchaserPhone: phone, purchaserEmail: email, usedAt: sql`now()` })
-        .where(eq(voucherCards.id, availableVoucher.id))
-        .returning();
+      // Mark all as used
+      const updatedVouchers: VoucherCard[] = [];
+      for (const v of availableVouchers) {
+        const [updated] = await tx
+          .update(voucherCards)
+          .set({ used: true, purchaserPhone: phone, purchaserEmail: email, usedAt: sql`now()` })
+          .where(eq(voucherCards.id, v.id))
+          .returning();
+        updatedVouchers.push(updated);
+      }
 
+      const allIds = updatedVouchers.map(v => v.id);
       const [updatedTransaction] = await tx
         .update(transactions)
-        .set({ status: "completed", voucherCardId: updatedVoucher.id, completedAt: sql`now()` })
+        .set({
+          status: "completed",
+          voucherCardId: updatedVouchers[0].id,
+          voucherCardIds: allIds,
+          completedAt: sql`now()`,
+        })
         .where(eq(transactions.id, transactionId))
         .returning();
 
-      return { transaction: updatedTransaction, voucher: updatedVoucher };
+      return { transaction: updatedTransaction, vouchers: updatedVouchers };
     });
+  }
+
+  // Keep old single-voucher method for backward compat (webhook uses it with qty=1)
+  async assignVoucherToTransaction(transactionId: string, phone: string, email: string | null, examType: string): Promise<{ transaction: Transaction; voucher: VoucherCard } | null> {
+    const result = await this.assignVouchersToTransaction(transactionId, phone, email, examType, 1);
+    if (!result) return null;
+    return { transaction: result.transaction, voucher: result.vouchers[0] };
   }
 
   async getTransactionById(id: string): Promise<Transaction | undefined> {
