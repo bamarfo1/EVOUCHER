@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const crypto = require('crypto');
       if (!req.rawBody) return res.status(400).send("Invalid request: no raw body");
       
-      const secretKey = process.env.PAYSTACKSECRETKEYbright || process.env.PAYSTACK_SECRET_KEY || '';
+      const secretKey = process.env.PAYSTACK_SECRET_KEY || '';
       const hash = crypto.createHmac('sha512', secretKey).update(req.rawBody as Buffer).digest('hex');
       if (hash !== req.headers['x-paystack-signature']) return res.status(401).send("Invalid signature");
 
