@@ -167,15 +167,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Calculate and store vendor profit if applicable
-      if (updatedTransaction.vendorId) {
+      // Use the base price from the assigned vouchers themselves — always correct even when stock hits 0
+      if (updatedTransaction.vendorId && updatedVouchers.length > 0) {
         try {
-          const qty = (updatedTransaction as any).quantity ?? 1;
-          const [baseCard] = await storage.getAvailableCardTypes().then(types =>
-            types.filter(t => t.examType === updatedTransaction.examType)
-          );
+          const basePrice = updatedVouchers[0].price;
           const vp = await storage.getVendorPrice(updatedTransaction.vendorId!, updatedTransaction.examType);
-          if (baseCard && vp && vp.price > baseCard.price) {
-            const profit = (vp.price - baseCard.price) * qty;
+          if (vp && vp.price > basePrice) {
+            const profit = (vp.price - basePrice) * updatedVouchers.length;
             await db.update(transactionsTable).set({ vendorProfit: profit }).where(eq(transactionsTable.id, updatedTransaction.id));
           }
         } catch (profitErr) {
@@ -242,6 +240,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ]);
         } catch (notificationError) {
           console.error("Webhook notification error:", notificationError);
+        }
+
+        // Calculate and store vendor profit — use voucher base price, not stock lookup
+        if (updatedTransaction.vendorId && updatedVouchers.length > 0) {
+          try {
+            const basePrice = updatedVouchers[0].price;
+            const vp = await storage.getVendorPrice(updatedTransaction.vendorId!, updatedTransaction.examType);
+            if (vp && vp.price > basePrice) {
+              const profit = (vp.price - basePrice) * updatedVouchers.length;
+              await db.update(transactionsTable).set({ vendorProfit: profit }).where(eq(transactionsTable.id, updatedTransaction.id));
+            }
+          } catch (profitErr) {
+            console.error("Webhook profit calc error (non-critical):", profitErr);
+          }
         }
       }
       res.status(200).send("OK");
