@@ -21,6 +21,13 @@ export interface IStorage {
   getTransactionById(id: string): Promise<Transaction | undefined>;
   getVoucherByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string } | null>;
   getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]>;
+  // Admin methods
+  adminGetCardSummary(): Promise<{ examType: string; total: number; used: number; available: number; price: number; imageUrl: string | null }[]>;
+  adminGetSalesSummary(): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }>;
+  adminGetRecentTransactions(limit: number): Promise<Transaction[]>;
+  adminAddVouchers(vouchers: { serial: string; pin: string; examType: string; price: number }[]): Promise<number>;
+  adminUpdateCardImage(examType: string, imageUrl: string): Promise<void>;
+  adminDeleteVoucher(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -255,6 +262,85 @@ export class DbStorage implements IStorage {
     return results
       .filter((r) => r.examType !== null)
       .map((r) => ({ examType: r.examType!, count: r.count, price: r.price, imageUrl: r.imageUrl }));
+  }
+
+  async adminGetCardSummary(): Promise<{ examType: string; total: number; used: number; available: number; price: number; imageUrl: string | null }[]> {
+    const results = await db
+      .select({
+        examType: voucherCards.examType,
+        total: sql<number>`count(*)::int`,
+        used: sql<number>`sum(case when ${voucherCards.used} then 1 else 0 end)::int`,
+        available: sql<number>`sum(case when not ${voucherCards.used} then 1 else 0 end)::int`,
+        price: sql<number>`min(${voucherCards.price})`,
+        imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
+      })
+      .from(voucherCards)
+      .groupBy(voucherCards.examType)
+      .orderBy(voucherCards.examType);
+    return results.filter(r => r.examType !== null).map(r => ({
+      examType: r.examType!,
+      total: r.total,
+      used: r.used,
+      available: r.available,
+      price: r.price,
+      imageUrl: r.imageUrl,
+    }));
+  }
+
+  async adminGetSalesSummary(): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }> {
+    const [totals] = await db
+      .select({
+        totalSales: sql<number>`count(*)::int`,
+        totalRevenue: sql<number>`coalesce(sum(${transactions.amount}::numeric), 0)::int`,
+      })
+      .from(transactions)
+      .where(eq(transactions.status, "completed"));
+
+    const byType = await db
+      .select({
+        examType: transactions.examType,
+        count: sql<number>`count(*)::int`,
+        revenue: sql<number>`coalesce(sum(${transactions.amount}::numeric), 0)::int`,
+      })
+      .from(transactions)
+      .where(eq(transactions.status, "completed"))
+      .groupBy(transactions.examType)
+      .orderBy(transactions.examType);
+
+    return {
+      totalSales: totals?.totalSales ?? 0,
+      totalRevenue: totals?.totalRevenue ?? 0,
+      byType,
+    };
+  }
+
+  async adminGetRecentTransactions(limit: number): Promise<Transaction[]> {
+    return await db
+      .select()
+      .from(transactions)
+      .orderBy(sql`${transactions.createdAt} desc`)
+      .limit(limit);
+  }
+
+  async adminAddVouchers(vouchers: { serial: string; pin: string; examType: string; price: number }[]): Promise<number> {
+    if (vouchers.length === 0) return 0;
+    const inserted = await db
+      .insert(voucherCards)
+      .values(vouchers.map(v => ({ serial: v.serial, pin: v.pin, examType: v.examType, price: v.price })))
+      .onConflictDoNothing()
+      .returning();
+    return inserted.length;
+  }
+
+  async adminUpdateCardImage(examType: string, imageUrl: string): Promise<void> {
+    await db
+      .update(voucherCards)
+      .set({ imageUrl })
+      .where(eq(voucherCards.examType, examType));
+  }
+
+  async adminDeleteVoucher(id: string): Promise<void> {
+    await db.delete(voucherCards).where(and(eq(voucherCards.id, id), eq(voucherCards.used, false)));
   }
 
   private normalizePhone(phone: string): string {

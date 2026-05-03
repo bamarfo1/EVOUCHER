@@ -372,6 +372,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── Admin Auth ───────────────────────────────────────────────────────────
+  const ADMIN_EMAIL = "bmarfo422@outlook.com";
+  const ADMIN_PASSWORD = "Pass.422.244@";
+
+  function requireAdmin(req: Request, res: Response, next: Function) {
+    if ((req.session as any).adminLoggedIn) return next();
+    res.status(401).json({ error: "Unauthorized" });
+  }
+
+  app.post("/api/admin/login", (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      (req.session as any).adminLoggedIn = true;
+      return res.json({ success: true });
+    }
+    res.status(401).json({ error: "Invalid credentials" });
+  });
+
+  app.post("/api/admin/logout", (req: Request, res: Response) => {
+    req.session.destroy(() => {});
+    res.json({ success: true });
+  });
+
+  app.get("/api/admin/check", (req: Request, res: Response) => {
+    res.json({ loggedIn: !!(req.session as any).adminLoggedIn });
+  });
+
+  // ─── Admin Data ────────────────────────────────────────────────────────────
+  app.get("/api/admin/summary", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const [sales, cards] = await Promise.all([
+        storage.adminGetSalesSummary(),
+        storage.adminGetCardSummary(),
+      ]);
+      res.json({ sales, cards });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/transactions", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const txns = await storage.adminGetRecentTransactions(limit);
+      res.json(txns);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/admin/vouchers", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { vouchers } = req.body;
+      if (!Array.isArray(vouchers) || vouchers.length === 0) {
+        return res.status(400).json({ error: "vouchers array required" });
+      }
+      const count = await storage.adminAddVouchers(vouchers);
+      res.json({ success: true, added: count });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put("/api/admin/card-image", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { examType, imageUrl } = req.body;
+      if (!examType || !imageUrl) return res.status(400).json({ error: "examType and imageUrl required" });
+      await storage.adminUpdateCardImage(examType, imageUrl);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/admin/vouchers/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      await storage.adminDeleteVoucher(req.params.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
