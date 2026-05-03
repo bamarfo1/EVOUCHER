@@ -17,7 +17,18 @@ import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
 import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
 import visaLogo from "@assets/images (2)_1763209941664.png";
+import beceCardImage from "@assets/IMG-20260503-WA0021_1777811282955.jpg";
+import wassceCardImage from "@assets/IMG-20260503-WA0022_1777811293981.jpg";
 import { Link } from "wouter";
+
+const HARDCODED_CARD_IMAGES: Record<string, string> = {
+  "BECE": beceCardImage,
+  "WASSCE": wassceCardImage,
+};
+function getCardImage(examType: string, imageUrl: string | null): string | null {
+  if (HARDCODED_CARD_IMAGES[examType]) return HARDCODED_CARD_IMAGES[examType];
+  return imageUrl ?? null;
+}
 
 interface VendorInfo {
   name: string;
@@ -246,15 +257,15 @@ export default function VendorPage() {
                     data-testid={`vendor-card-${card.examType.toLowerCase()}`}
                   >
                     {!soldOut && <div className="h-1 w-full" style={{ background: colors.gradient }} />}
-                    {card.imageUrl ? (
+                    {(() => { const img = getCardImage(card.examType, card.imageUrl); return img ? (
                       <div className="w-full h-28 md:h-36 overflow-hidden bg-slate-100">
-                        <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={img} alt={card.examType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       </div>
                     ) : (
                       <div className="w-full h-28 md:h-36 flex items-center justify-center" style={{ background: soldOut ? "#f1f5f9" : colors.gradient }}>
                         <CreditCard className={`w-10 h-10 md:w-12 md:h-12 ${soldOut ? "text-slate-300" : "text-white/80"}`} />
                       </div>
-                    )}
+                    ); })()}
                     <div className="p-3 md:p-4 space-y-2">
                       <h3 className="text-sm md:text-base font-bold text-slate-800 leading-snug">{card.examType}</h3>
                       <div className="flex items-center justify-between gap-2">
