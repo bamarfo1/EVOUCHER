@@ -287,35 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   //webhook from renders agent
-  app.post("/api/webhook/paystack", async (req: Request, res: Response) => {
-    let transaction: any = null;
-    let isProcessing = false;
+  
 
-    try {
-      if (!req.rawBody) return res.status(400).send("Invalid request: no raw body");
-
-      const secretKey = process.env.PAYSTACK_SECRET_KEY || "";
-      const hash = createHmac("sha512", secretKey)
-        .update(req.rawBody as Buffer)
-        .digest("hex");
-
-      if (hash !== req.headers["x-paystack-signature"])
-        return res.status(401).send("Invalid signature");
-
-      const event = req.body;
-
-      if (event.event === "charge.success") {
-        // ... your existing charge.success logic ...
-      } else {
-        res.status(200).send("OK");
-      }
-    } catch (error) {
-      console.error("Webhook error:", error);
-      res.status(200).send("OK");
-    }
-  });
-
-  /* // ─── Webhook ───────────────────────────────────────────────────────────────
+  // ─── Webhook ───────────────────────────────────────────────────────────────
   app.post("/api/webhook/paystack", async (req: Request, res: Response) => {
     let transaction: any = null;
     let isProcessing = false;
@@ -383,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  */
+
 
   // ─── Voucher Retrieve ──────────────────────────────────────────────────────
   app.get("/api/voucher/retrieve", async (req: Request, res: Response) => {
