@@ -11,6 +11,7 @@ import {
   sendVoucherSMS,
   type VoucherItem,
 } from "./services/notifications";
+import crypto from "crypto";
 import { randomBytes, createHmac } from "crypto";
 
 import bcrypt from "bcryptjs";
@@ -290,11 +291,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   // ─── Webhook ───────────────────────────────────────────────────────────────
+
   app.post("/api/webhook/paystack", async (req: Request, res: Response) => {
     let transaction: any = null;
     let isProcessing = false;
     try {
-      const crypto = require('crypto');
+      //const crypto = require('crypto');
       if (!req.rawBody) return res.status(400).send("Invalid request: no raw body");
       
       const secretKey = process.env.PAYSTACK_SECRET_KEY || '';
