@@ -1,0 +1,29 @@
+   at file:///opt/render/project/src/dist/index.js:1941:3
+6:27:35 PM [express] POST /api/webhook/paystack 200 in 1ms
+No email provided, skipping email notification
+Nalo SMS API response: 1701|233593260440|api.0315048.20260524.1779647258.308037
+6:27:38 PM [express] GET /api/payment/verify/TXN-1779647235063-5f23a605 200 in 781ms :: {"status":"s…
+6:28:57 PM [express] GET /api/card-types 200 in 20ms :: [{"examType":"BECE","count":18,"price":"17.5…
+6:33:07 PM [express] GET /api/webhook/paystack 200 in 1ms
+6:38:15 PM [express] GET /api/admin/check 304 in 1ms :: {"loggedIn":true}
+6:38:16 PM [express] GET /api/admin/summary 200 in 66ms :: {"sales":{"totalSales":31,"totalRevenue":…
+6:38:16 PM [express] GET /api/admin/transactions 200 in 49ms :: [{"id":"8d782cec-2a72-4497-acd4-f9e8…
+6:39:09 PM [express] POST /api/admin/vouchers 200 in 49ms :: {"success":true,"added":3}
+Menu
+6:39:09 PM [express] GET /api/admin/summary 200 in 30ms :: {"sales":{"totalSales":31,"totalRevenue":…
+6:39:09 PM [express] GET /api/admin/transactions 304 in 29ms :: [{"id":"8d782cec-2a72-4497-acd4-f9e8…
+6:40:19 PM [express] GET /api/card-types 200 in 18ms :: [{"examType":"BECE","count":18,"price":"17.5…
+6:43:34 PM [express] GET /api/card-types 304 in 13ms :: [{"examType":"BECE","count":18,"price":"17.5…
+6:43:49 PM [express] POST /api/purchase/initialize 200 in 568ms :: {"authorizationUrl":"https://chec…
+Webhook error: Error: Dynamic require of "crypto" is not supported
+    at file:///opt/render/project/src/dist/index.js:6:9
+    at file:///opt/render/project/src/dist/index.js:836:22
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+    at file:///opt/render/project/src/dist/index.js:1941:3
+6:45:59 PM [express] POST /api/webhook/paystack 200 in 5ms
