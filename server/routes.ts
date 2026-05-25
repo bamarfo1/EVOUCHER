@@ -936,35 +936,51 @@ ${allUrls
   );
 
   // ─── USSD Callback ─────────────────────────────────────────────────────────
-  // Endpoint registered with Nalo Solutions: https://api.allteksevoucher.store/ussd/callback
-  // Shortcode: *920*919#
+  // Nalo Solutions format: JSON in, JSON out
+  // Endpoint: https://api.allteksevoucher.store/ussd/callback
+  // Shortcode: *920*919#  USERID: ALLTEKSE
   app.post("/ussd/callback", async (req: Request, res: Response) => {
     try {
       const body = req.body as any;
 
-      // Nalo USSD sends form-encoded POST — normalise field names
-      const sessionId =
-        body.sessionId || body.SESSIONID || body.session_id || body.SessionID || "";
-      const msisdn =
-        body.msisdn || body.MSISDN || body.phoneNumber || body.phone || body.Mobile || "";
-      const userdata =
-        body.userdata || body.USERDATA || body.userData || body.text || body.Message || "";
-      const msgtype =
-        body.msgtype ?? body.MSGTYPE ?? body.msgType ?? body.newRequest ?? "2";
+      // Nalo sends ALL-CAPS field names in JSON
+      const userid: string = body.USERID || body.userid || "ALLTEKSE";
+      const msisdn: string = body.MSISDN || body.msisdn || "";
+      const userdata: string = body.USERDATA || body.userdata || "";
+      // MSGTYPE: true = new/initial dial, false = subsequent response
+      const msgtype: boolean =
+        body.MSGTYPE === true || body.MSGTYPE === "true" ||
+        body.msgtype === true || body.msgtype === "true";
 
-      if (!sessionId || !msisdn) {
-        res.set("Content-Type", "text/plain");
-        return res.send("END Service error. Please try again.");
+      if (!msisdn) {
+        return res.json({
+          USERID: userid,
+          MSISDN: msisdn,
+          USERDATA: userdata,
+          MSG: "Service error. Please try again.",
+          MSGTYPE: false,
+        });
       }
 
-      const reply = await handleUssdRequest(sessionId, msisdn, userdata, msgtype);
+      const result = await handleUssdRequest(msisdn, userdata, msgtype);
 
-      res.set("Content-Type", "text/plain");
-      res.send(reply);
+      // MSGTYPE: true = show input (continue), false = end session
+      return res.json({
+        USERID: userid,
+        MSISDN: msisdn,
+        USERDATA: userdata,
+        MSG: result.msg,
+        MSGTYPE: !result.isEnd,
+      });
     } catch (error: any) {
       console.error("[USSD] Callback error:", error);
-      res.set("Content-Type", "text/plain");
-      res.send("END Service temporarily unavailable. Please try again.");
+      return res.json({
+        USERID: "ALLTEKSE",
+        MSISDN: (req.body as any)?.MSISDN || "",
+        USERDATA: "",
+        MSG: "Service temporarily unavailable. Please try again.",
+        MSGTYPE: false,
+      });
     }
   });
 

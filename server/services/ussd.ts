@@ -2,6 +2,11 @@ import { storage } from "../storage";
 import { chargeDirectMobileMoney } from "./paystack";
 import { randomBytes } from "crypto";
 
+export interface UssdResult {
+  msg: string;
+  isEnd: boolean; // false = END (MSGTYPE: false), true = CON (MSGTYPE: true)
+}
+
 interface UssdSession {
   step: string;
   examType: string | null;
@@ -9,13 +14,13 @@ interface UssdSession {
   price: number | null;
   msisdn: string;
   payPhone: string | null;
-  reference: string | null;
-  transactionId: string | null;
   createdAt: number;
 }
 
+// Session keyed by MSISDN — Nalo uses the phone number to track sessions
 const sessions = new Map<string, UssdSession>();
 
+// Clean up sessions older than 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [id, session] of sessions.entries()) {
@@ -25,19 +30,18 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
+// card option 1→BECE, 2-5→WASSCE stock
 const CARD_OPTIONS = [
-  { label: "BECE Checker", examType: "BECE", displayName: "BECE" },
-  { label: "WASSCE Checker", examType: "WASSCE", displayName: "WASSCE" },
-  { label: "NOVDEC Checker", examType: "WASSCE", displayName: "NOVDEC" },
-  { label: "ABCE Checker", examType: "WASSCE", displayName: "ABCE" },
-  { label: "GBCE Checker", examType: "WASSCE", displayName: "GBCE" },
+  { examType: "BECE", displayName: "BECE" },
+  { examType: "WASSCE", displayName: "WASSCE" },
+  { examType: "WASSCE", displayName: "NOVDEC" },
+  { examType: "WASSCE", displayName: "ABCE" },
+  { examType: "WASSCE", displayName: "GBCE" },
 ];
 
 function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("233") && digits.length === 12) {
-    return "0" + digits.slice(3);
-  }
+  if (digits.startsWith("233") && digits.length === 12) return "0" + digits.slice(3);
   if (digits.startsWith("0") && digits.length === 10) return digits;
   return raw;
 }
@@ -66,16 +70,21 @@ function isValidGhanaPhone(phone: string): boolean {
   return false;
 }
 
+function con(msg: string): UssdResult { return { msg, isEnd: false }; }
+function end(msg: string): UssdResult { return { msg, isEnd: true }; }
+
 export async function handleUssdRequest(
-  sessionId: string,
   msisdn: string,
   userdata: string,
-  msgtype: string | number,
-): Promise<string> {
-  const isNew = String(msgtype) === "1" || !sessions.has(sessionId);
-  let session = sessions.get(sessionId);
+  msgtype: boolean, // true = new/initial, false = subsequent response
+): Promise<UssdResult> {
+  const isNew = msgtype === true;
+  let session = sessions.get(msisdn);
 
+  // ── New session ─────────────────────────────────────────────────────────────
   if (isNew || !session) {
+    // Clear any existing session for this number on a fresh dial
+    sessions.delete(msisdn);
     session = {
       step: "main",
       examType: null,
@@ -83,12 +92,10 @@ export async function handleUssdRequest(
       price: null,
       msisdn,
       payPhone: null,
-      reference: null,
-      transactionId: null,
       createdAt: Date.now(),
     };
-    sessions.set(sessionId, session);
-    return `CON ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote`;
+    sessions.set(msisdn, session);
+    return con("ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote");
   }
 
   const input = userdata.trim();
@@ -102,21 +109,21 @@ export async function handleUssdRequest(
 
       session.step = "card";
       session.createdAt = Date.now();
-      sessions.set(sessionId, session);
+      sessions.set(msisdn, session);
 
-      return (
-        `CON Buy Voucher\n` +
+      return con(
+        "Buy Voucher\n" +
         `1. BECE Checker-GHC${becePrice}\n` +
         `2. WASSCE-GHC${wasscePrice}\n` +
         `3. NOVDEC-GHC${wasscePrice}\n` +
         `4. ABCE-GHC${wasscePrice}\n` +
-        `5. GBCE-GHC${wasscePrice}`
+        `5. GBCE-GHC${wasscePrice}`,
       );
     } else if (input === "2" || input === "3") {
-      sessions.delete(sessionId);
-      return `END This service is coming soon.`;
+      sessions.delete(msisdn);
+      return end("This service is coming soon.\nDial *920*919# to try again.");
     } else {
-      return `CON ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote\n\nInvalid choice.`;
+      return con("ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote\n\nInvalid choice.");
     }
   }
 
@@ -128,8 +135,8 @@ export async function handleUssdRequest(
 
       const count = await storage.getAvailableVoucherCount(selected.examType);
       if (count === 0) {
-        sessions.delete(sessionId);
-        return `END ${selected.displayName} vouchers are out of stock. Try again later.`;
+        sessions.delete(msisdn);
+        return end(`${selected.displayName} vouchers are out of stock.\nTry again later.`);
       }
 
       const cardTypes = await storage.getAvailableCardTypes();
@@ -140,17 +147,17 @@ export async function handleUssdRequest(
       session.price = price;
       session.step = "phone_choice";
       session.createdAt = Date.now();
-      sessions.set(sessionId, session);
+      sessions.set(msisdn, session);
 
       const displayMsisdn = formatPhone(msisdn);
-      return (
-        `CON ${selected.displayName}-GHC${price}\n` +
+      return con(
+        `${selected.displayName}-GHC${price}\n` +
         `Charge number:\n${displayMsisdn}\n` +
         `1. Use this number\n` +
-        `2. Enter different number`
+        `2. Enter different number`,
       );
     } else {
-      return `CON Buy Voucher\n1. BECE\n2. WASSCE\n3. NOVDEC\n4. ABCE\n5. GBCE\n\nInvalid choice.`;
+      return con("Buy Voucher\n1. BECE\n2. WASSCE\n3. NOVDEC\n4. ABCE\n5. GBCE\n\nInvalid choice.");
     }
   }
 
@@ -160,25 +167,25 @@ export async function handleUssdRequest(
       session.payPhone = formatPhone(msisdn);
       session.step = "confirm";
       session.createdAt = Date.now();
-      sessions.set(sessionId, session);
-      return (
-        `CON Confirm Payment\n` +
+      sessions.set(msisdn, session);
+      return con(
+        "Confirm Payment\n" +
         `${session.displayName}: GHC${session.price}\n` +
         `MoMo: ${session.payPhone}\n` +
         `1. Confirm & Pay\n` +
-        `2. Cancel`
+        `2. Cancel`,
       );
     } else if (input === "2") {
       session.step = "enter_phone";
       session.createdAt = Date.now();
-      sessions.set(sessionId, session);
-      return `CON Enter your MoMo number:`;
+      sessions.set(msisdn, session);
+      return con("Enter your MoMo number:");
     } else {
       const displayMsisdn = formatPhone(msisdn);
-      return (
-        `CON Charge number:\n${displayMsisdn}\n` +
+      return con(
+        `Charge number:\n${displayMsisdn}\n` +
         `1. Use this number\n` +
-        `2. Enter different number\n\nInvalid choice.`
+        `2. Enter different number\n\nInvalid choice.`,
       );
     }
   }
@@ -186,25 +193,25 @@ export async function handleUssdRequest(
   // ── Enter Phone ─────────────────────────────────────────────────────────────
   if (session.step === "enter_phone") {
     if (!isValidGhanaPhone(input)) {
-      return `CON Invalid number.\nEnter MoMo number (e.g. 0244000000):`;
+      return con("Invalid number.\nEnter MoMo number (e.g. 0244000000):");
     }
     session.payPhone = formatPhone(input);
     session.step = "confirm";
     session.createdAt = Date.now();
-    sessions.set(sessionId, session);
-    return (
-      `CON Confirm Payment\n` +
+    sessions.set(msisdn, session);
+    return con(
+      "Confirm Payment\n" +
       `${session.displayName}: GHC${session.price}\n` +
       `MoMo: ${session.payPhone}\n` +
       `1. Confirm & Pay\n` +
-      `2. Cancel`
+      `2. Cancel`,
     );
   }
 
   // ── Confirm ─────────────────────────────────────────────────────────────────
   if (session.step === "confirm") {
     if (input === "1") {
-      sessions.delete(sessionId);
+      sessions.delete(msisdn);
       try {
         const reference = `USSD-${Date.now()}-${randomBytes(3).toString("hex")}`;
         const intlPhone = toInternational(session.payPhone!);
@@ -236,25 +243,25 @@ export async function handleUssdRequest(
           provider,
         );
 
-        return `END Payment initiated!\nEnter your MoMo PIN when prompted.\nYour voucher will be sent via SMS.`;
+        return end("Payment initiated!\nEnter your MoMo PIN when prompted.\nVoucher sent via SMS on success.");
       } catch (error: any) {
         console.error("[USSD] Payment error:", error?.response?.data || error?.message || error);
-        return `END Could not process payment. Please try again or visit allteksevoucher.store`;
+        return end("Payment failed. Please try again\nor visit allteksevoucher.store");
       }
     } else if (input === "2") {
-      sessions.delete(sessionId);
-      return `END Purchase cancelled.\nDial *920*919# to try again.`;
+      sessions.delete(msisdn);
+      return end("Purchase cancelled.\nDial *920*919# to try again.");
     } else {
-      return (
-        `CON Confirm Payment\n` +
+      return con(
+        "Confirm Payment\n" +
         `${session.displayName}: GHC${session.price}\n` +
         `MoMo: ${session.payPhone}\n` +
         `1. Confirm & Pay\n` +
-        `2. Cancel\n\nInvalid choice.`
+        `2. Cancel\n\nInvalid choice.`,
       );
     }
   }
 
-  sessions.delete(sessionId);
-  return `END Session expired. Dial *920*919# to start again.`;
+  sessions.delete(msisdn);
+  return end("Session expired.\nDial *920*919# to start again.");
 }
