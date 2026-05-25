@@ -286,7 +286,7 @@ export class DbStorage implements IStorage {
     await db.update(vendors).set({ storeName }).where(eq(vendors.id, vendorId));
   }
 
-  async adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]> {
+  async adminGetAllVendors(): Promise<{ vendor: Vendor; prices: VendorPrice[]; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]> {
     const allVendors = await db.select().from(vendors).orderBy(desc(vendors.createdAt));
     const results = await Promise.all(allVendors.map(async (vendor) => {
       // Get last PAID payout — this is the cutoff for "new" profit
@@ -299,7 +299,7 @@ export class DbStorage implements IStorage {
       // Get sales stats for all time
       const [totals] = await db.select({
         totalSales: sql<number>`count(*)::int`,
-        totalRevenue: sql<number>`coalesce(sum(${transactions.amount}::numeric), 0)::int`,
+        totalRevenue: sql<number>`coalesce(sum(${transactions.amount}::numeric), 0)::numeric`,
       }).from(transactions)
         .where(and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed")));
 
@@ -308,14 +308,18 @@ export class DbStorage implements IStorage {
         ? and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"), sql`${transactions.createdAt} > ${lastPaidPayout.paidAt}`)
         : and(eq(transactions.vendorId, vendor.id), eq(transactions.status, "completed"));
       const [pending] = await db.select({
-        pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::int`,
+        pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::numeric`,
       }).from(transactions).where(pendingCondition);
+
+      // Get vendor's custom prices
+      const prices = await db.select().from(vendorPrices).where(eq(vendorPrices.vendorId, vendor.id)).orderBy(vendorPrices.examType);
 
       return {
         vendor,
+        prices,
         totalSales: totals?.totalSales ?? 0,
-        totalRevenue: totals?.totalRevenue ?? 0,
-        pendingProfit: pending?.pendingProfit ?? 0,
+        totalRevenue: Number(totals?.totalRevenue ?? 0),
+        pendingProfit: Number(pending?.pendingProfit ?? 0),
         lastPayoutAt: lastPaidPayout?.paidAt ?? null,
       };
     }));
@@ -346,10 +350,10 @@ export class DbStorage implements IStorage {
       : and(eq(transactions.vendorId, vendorId), eq(transactions.status, "completed"));
 
     const [pending] = await db.select({
-      pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::int`,
+      pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::numeric`,
     }).from(transactions).where(pendingCondition);
 
-    const amount = pending?.pendingProfit ?? 0;
+    const amount = Number(pending?.pendingProfit ?? 0);
 
     // Close vendor
     await db.update(vendors).set({ status: "closed_for_payout" }).where(eq(vendors.id, vendorId));

@@ -21,11 +21,14 @@ interface SalesSummary { totalSales: number; totalRevenue: number; byType: Sales
 interface AdminSummary { sales: SalesSummary; cards: CardSummary[]; }
 interface Transaction { id: string; phone: string; email: string | null; examType: string; amount: number; status: string; createdAt: string; paystackReference: string; }
 
+interface VendorPrice { id: string; vendorId: string; examType: string; price: number; }
+
 interface VendorRow {
   vendor: {
     id: string; phone: string; storeName: string | null; momoName: string; momoNumber: string;
     contactNumber: string; slug: string; status: string; createdAt: string;
   };
+  prices: VendorPrice[];
   totalSales: number;
   totalRevenue: number;
   pendingProfit: number;
@@ -112,7 +115,7 @@ function AddVouchersForm({ onAdded }: { onAdded: () => void }) {
     const lines = bulkText.trim().split("\n").filter(Boolean);
     const vouchers = lines.map(line => {
       const [serial, pin] = line.split(",").map(s => s.trim());
-      return { serial, pin, examType: examType.trim(), price: parseInt(price) || 20 };
+      return { serial, pin, examType: examType.trim(), price: parseFloat(price) || 20 };
     }).filter(v => v.serial && v.pin && v.examType);
     if (vouchers.length === 0) {
       toast({ title: "No valid vouchers", description: "Check format: SERIAL, PIN (one per line)", variant: "destructive" });
@@ -372,53 +375,86 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
           </div>
         </div>
 
-        {/* Expanded: payout history */}
+        {/* Expanded: details + payout history */}
         {expanded && (
-          <div className="mt-4 border-t border-slate-100 pt-4 space-y-3">
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Payout History</p>
-            {!payoutHistory || payoutHistory.length === 0 ? (
-              <p className="text-xs text-slate-400">No payouts recorded yet.</p>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {payoutHistory.map(p => (
-                  <div key={p.id} className="flex items-center justify-between py-2 gap-2" data-testid={`payout-row-${p.id}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-slate-800">GHC {p.amount}</span>
-                        <Badge
-                          variant={p.status === "paid" ? "default" : "destructive"}
-                          className="text-[10px]"
-                          data-testid={`badge-payout-status-${p.id}`}
-                        >
-                          {p.status === "paid" ? "Paid" : "Unpaid"}
-                        </Badge>
+          <div className="mt-4 border-t border-slate-100 pt-4 space-y-4">
+            {/* Store URL */}
+            <div>
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Store Link</p>
+              <a
+                href={`/v/${row.vendor.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline break-all"
+                data-testid={`link-vendor-store-${row.vendor.id}`}
+              >
+                {`${window.location.origin}/v/${row.vendor.slug}`}
+              </a>
+            </div>
+
+            {/* Current pricing */}
+            <div>
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Custom Pricing</p>
+              {!row.prices || row.prices.length === 0 ? (
+                <p className="text-xs text-slate-400">Using base prices (no overrides set)</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {row.prices.map(p => (
+                    <span key={p.id} className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-[11px] font-medium px-2 py-1 rounded-md" data-testid={`price-${row.vendor.id}-${p.examType}`}>
+                      <span className="font-bold">{p.examType}</span>
+                      <span className="text-slate-500">GHC {p.price % 1 === 0 ? p.price : p.price.toFixed(2)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Payout History</p>
+              {!payoutHistory || payoutHistory.length === 0 ? (
+                <p className="text-xs text-slate-400">No payouts recorded yet.</p>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {payoutHistory.map(p => (
+                    <div key={p.id} className="flex items-center justify-between py-2 gap-2" data-testid={`payout-row-${p.id}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-slate-800">GHC {p.amount}</span>
+                          <Badge
+                            variant={p.status === "paid" ? "default" : "destructive"}
+                            className="text-[10px]"
+                            data-testid={`badge-payout-status-${p.id}`}
+                          >
+                            {p.status === "paid" ? "Paid" : "Unpaid"}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {p.status === "paid" && p.paidAt
+                            ? `Paid on ${new Date(p.paidAt).toLocaleDateString()}`
+                            : `Closed on ${new Date(p.createdAt).toLocaleDateString()}`}
+                          {p.notes && ` · ${p.notes}`}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {p.status === "paid" && p.paidAt
-                          ? `Paid on ${new Date(p.paidAt).toLocaleDateString()}`
-                          : `Closed on ${new Date(p.createdAt).toLocaleDateString()}`}
-                        {p.notes && ` · ${p.notes}`}
-                      </p>
+                      {p.status === "unpaid" && (
+                        <Button
+                          size="sm"
+                          onClick={() => markPaidMutation.mutate(p.id)}
+                          disabled={markPaidMutation.isPending}
+                          data-testid={`button-mark-paid-${p.id}`}
+                        >
+                          {markPaidMutation.isPending ? "..." : "Mark as Paid"}
+                        </Button>
+                      )}
                     </div>
-                    {p.status === "unpaid" && (
-                      <Button
-                        size="sm"
-                        onClick={() => markPaidMutation.mutate(p.id)}
-                        disabled={markPaidMutation.isPending}
-                        data-testid={`button-mark-paid-${p.id}`}
-                      >
-                        {markPaidMutation.isPending ? "..." : "Mark as Paid"}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            {unpaidPayouts.length > 0 && (
-              <p className="text-xs text-amber-600 font-medium">
-                {unpaidPayouts.length} unpaid payout{unpaidPayouts.length > 1 ? "s" : ""} · Total: GHC {unpaidPayouts.reduce((s, p) => s + p.amount, 0)}
-              </p>
-            )}
+                  ))}
+                </div>
+              )}
+              {unpaidPayouts.length > 0 && (
+                <p className="text-xs text-amber-600 font-medium">
+                  {unpaidPayouts.length} unpaid payout{unpaidPayouts.length > 1 ? "s" : ""} · Total: GHC {unpaidPayouts.reduce((s, p) => s + p.amount, 0)}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

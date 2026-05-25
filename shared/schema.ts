@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, uuid, integer, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, uuid, integer, doublePrecision, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,7 +17,7 @@ export const voucherCards = pgTable("voucher_cards", {
   purchaserEmail: text("purchaser_email"),
 
   examType: text("exam_type"),
-  price: integer("price").notNull().default(20),
+  price: doublePrecision("price").notNull().default(20),
   imageUrl: text("image_url"),
 
   usedAt: timestamp("used_at"),
@@ -46,7 +46,7 @@ export const vendorPrices = pgTable("vendor_prices", {
   id: uuid("id").defaultRandom().primaryKey(),
   vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
   examType: text("exam_type").notNull(),
-  price: integer("price").notNull(),
+  price: doublePrecision("price").notNull(),
 }, (t) => ({
   vendorExamTypeUnique: unique().on(t.vendorId, t.examType),
 }));
@@ -62,7 +62,7 @@ export const transactions = pgTable("transactions", {
 
   examType: text("exam_type").notNull(),
 
-  amount: integer("amount").notNull(),
+  amount: doublePrecision("amount").notNull(),
   quantity: integer("quantity").notNull().default(1),
 
   paystackReference: text("paystack_reference").unique(),
@@ -73,7 +73,7 @@ export const transactions = pgTable("transactions", {
   voucherCardIds: text("voucher_card_ids").array(),
 
   vendorId: uuid("vendor_id").references(() => vendors.id),
-  vendorProfit: integer("vendor_profit"),
+  vendorProfit: doublePrecision("vendor_profit"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -85,7 +85,7 @@ export const transactions = pgTable("transactions", {
 export const payouts = pgTable("payouts", {
   id: uuid("id").defaultRandom().primaryKey(),
   vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
-  amount: integer("amount").notNull(),
+  amount: doublePrecision("amount").notNull(),
   notes: text("notes"),
   status: text("status").notNull().default("unpaid"),
   paidAt: timestamp("paid_at"),

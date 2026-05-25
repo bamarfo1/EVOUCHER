@@ -228,7 +228,7 @@ export async function handleUssdRequest(
         });
 
         const provider = detectNetwork(session.payPhone!);
-        await chargeDirectMobileMoney(
+        const chargeResp = await chargeDirectMobileMoney(
           intlPhone,
           session.price! * 100,
           emailPlaceholder,
@@ -243,10 +243,21 @@ export async function handleUssdRequest(
           provider,
         );
 
-        return end("Payment initiated!\nEnter your MoMo PIN when prompted.\nVoucher sent via SMS on success.");
+        // Paystack returns data.status = "pay_offline"|"pending"|"success"|"failed"
+        const chargeStatus = chargeResp?.data?.status;
+        console.log("[USSD] Paystack charge response:", JSON.stringify({ chargeStatus, chargeResp }));
+
+        if (chargeStatus === "failed") {
+          const reason = chargeResp?.data?.gateway_response || "Payment declined by network";
+          console.error("[USSD] Charge failed:", reason);
+          return end(`Payment failed: ${reason}\nTry again or visit allteksevoucher.store`);
+        }
+
+        return end("Payment initiated!\nCheck your phone for MoMo prompt.\nApprove to get voucher via SMS.");
       } catch (error: any) {
-        console.error("[USSD] Payment error:", error?.response?.data || error?.message || error);
-        return end("Payment failed. Please try again\nor visit allteksevoucher.store");
+        const psError = error?.response?.data?.message || error?.response?.data?.data?.message || error?.message || "Unknown error";
+        console.error("[USSD] Payment error:", psError, JSON.stringify(error?.response?.data || {}));
+        return end(`Payment failed: ${psError}\nVisit allteksevoucher.store`);
       }
     } else if (input === "2") {
       sessions.delete(msisdn);

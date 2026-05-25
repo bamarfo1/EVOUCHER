@@ -93,15 +93,5 @@ app.use((req, res, next) => {
       runAllFetchers();
     });
 
-    // Every Friday at 11:59 PM — close all active vendor accounts for payout
-    cron.schedule("59 23 * * 5", async () => {
-      log("[Payout] Friday: closing all active vendor accounts for weekly payout...");
-      try {
-        await storage.adminCloseAllVendorsForPayout();
-        log("[Payout] All vendor accounts closed for payout.");
-      } catch (e) {
-        console.error("[Payout] Failed to close vendor accounts:", e);
-      }
-    });
   });
 })();
