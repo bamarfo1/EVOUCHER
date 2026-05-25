@@ -1,10 +1,13 @@
 import axios from "axios";
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACKSECRETKEYbright || process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 
-if (!PAYSTACK_SECRET_KEY) {
-  throw new Error("PAYSTACK_SECRET_KEY is not set");
+function getPaystackKey(): string {
+  const key = process.env.PAYSTACKSECRETKEYbright || process.env.PAYSTACK_SECRET_KEY;
+  if (!key) {
+    throw new Error("PAYSTACK_SECRET_KEY is not set");
+  }
+  return key;
 }
 
 export interface PaystackInitializeResponse {
@@ -48,7 +51,7 @@ export async function initializePayment(
     },
     {
       headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${getPaystackKey()}`,
         "Content-Type": "application/json",
       },
     }
@@ -64,7 +67,7 @@ export async function verifyPayment(
     `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
     {
       headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${getPaystackKey()}`,
       },
     }
   );
