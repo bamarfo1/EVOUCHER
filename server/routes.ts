@@ -938,6 +938,7 @@ ${allUrls
   // ─── USSD Callback ─────────────────────────────────────────────────────────
   // Nalo Solutions — JSON in, JSON out
   // Shortcode: *920*919#  |  USERID: ALLTEKSE
+  // Endpoint: https://www.allteksevoucher.store/ussd/callback
   // express.raw catches bodies that arrive without Content-Type: application/json
   app.post(
     "/ussd/callback",
