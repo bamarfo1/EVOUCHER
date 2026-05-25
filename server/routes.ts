@@ -936,53 +936,94 @@ ${allUrls
   );
 
   // ─── USSD Callback ─────────────────────────────────────────────────────────
-  // Nalo Solutions format: JSON in, JSON out
-  // Endpoint: https://api.allteksevoucher.store/ussd/callback
-  // Shortcode: *920*919#  USERID: ALLTEKSE
-  app.post("/ussd/callback", async (req: Request, res: Response) => {
-    try {
-      const body = req.body as any;
+  // Nalo Solutions — JSON in, JSON out
+  // Shortcode: *920*919#  |  USERID: ALLTEKSE
+  // express.raw catches bodies that arrive without Content-Type: application/json
+  app.post(
+    "/ussd/callback",
+    (req: Request, _res, next) => {
+      // Only skip raw reading if body was actually parsed with USSD fields present
+      const b = req.body as any;
+      const alreadyParsed =
+        b && typeof b === "object" && !Buffer.isBuffer(b) &&
+        (b.MSISDN || b.msisdn || b.USERID || b.userid);
+      if (alreadyParsed) return next();
+      // Read raw stream (runs when Content-Type wasn't application/json or body was empty)
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => {
+        (req as any)._rawUssdText = Buffer.concat(chunks).toString("utf8");
+        next();
+      });
+      req.on("error", next);
+    },
+    async (req: Request, res: Response) => {
+      let body: Record<string, any> = {};
+      try {
+        const b = req.body as any;
+        const alreadyParsed =
+          b && typeof b === "object" && !Buffer.isBuffer(b) &&
+          (b.MSISDN || b.msisdn || b.USERID || b.userid);
+        if (alreadyParsed) {
+          // Parsed by global express.json()
+          body = b as Record<string, any>;
+        } else {
+          // Fallback: parse whatever we captured
+          const raw: string = (req as any)._rawUssdText || "";
+          try {
+            body = JSON.parse(raw);
+          } catch {
+            // Try URL-encoded as last resort
+            const p = new URLSearchParams(raw);
+            p.forEach((v, k) => { body[k] = v; });
+          }
+        }
+      } catch {
+        body = {};
+      }
 
-      // Nalo sends ALL-CAPS field names in JSON
-      const userid: string = body.USERID || body.userid || "ALLTEKSE";
-      const msisdn: string = body.MSISDN || body.msisdn || "";
-      const userdata: string = body.USERDATA || body.userdata || "";
+      // Log every USSD request for diagnostics
+      console.log("[USSD] Incoming:", JSON.stringify({
+        headers: {
+          "content-type": req.headers["content-type"],
+          "user-agent": req.headers["user-agent"],
+        },
+        body,
+      }));
+
+      // Normalise field names (docs use ALL-CAPS)
+      const userid: string = body.USERID ?? body.userid ?? "ALLTEKSE";
+      const msisdn: string = body.MSISDN ?? body.msisdn ?? "";
+      const userdata: string = body.USERDATA ?? body.userdata ?? "";
       // MSGTYPE: true = new/initial dial, false = subsequent response
       const msgtype: boolean =
         body.MSGTYPE === true || body.MSGTYPE === "true" ||
         body.msgtype === true || body.msgtype === "true";
 
+      const ussdError = (msg: string) =>
+        res.json({ USERID: userid, MSISDN: msisdn, USERDATA: userdata, MSG: msg, MSGTYPE: false });
+
       if (!msisdn) {
+        console.warn("[USSD] Missing MSISDN in request");
+        return ussdError("Service error. Please try again.");
+      }
+
+      try {
+        const result = await handleUssdRequest(msisdn, userdata, msgtype);
+        console.log("[USSD] Response:", JSON.stringify({ msisdn, msg: result.msg, isEnd: result.isEnd }));
         return res.json({
           USERID: userid,
           MSISDN: msisdn,
           USERDATA: userdata,
-          MSG: "Service error. Please try again.",
-          MSGTYPE: false,
+          MSG: result.msg,
+          MSGTYPE: !result.isEnd,  // true = continue, false = end session
         });
+      } catch (error: any) {
+        console.error("[USSD] Handler error:", error?.message || error);
+        return ussdError("Service temporarily unavailable. Please try again.");
       }
-
-      const result = await handleUssdRequest(msisdn, userdata, msgtype);
-
-      // MSGTYPE: true = show input (continue), false = end session
-      return res.json({
-        USERID: userid,
-        MSISDN: msisdn,
-        USERDATA: userdata,
-        MSG: result.msg,
-        MSGTYPE: !result.isEnd,
-      });
-    } catch (error: any) {
-      console.error("[USSD] Callback error:", error);
-      return res.json({
-        USERID: "ALLTEKSE",
-        MSISDN: (req.body as any)?.MSISDN || "",
-        USERDATA: "",
-        MSG: "Service temporarily unavailable. Please try again.",
-        MSGTYPE: false,
-      });
-    }
-  });
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;
