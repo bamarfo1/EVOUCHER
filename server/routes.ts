@@ -11,6 +11,7 @@ import {
   sendVoucherSMS,
   type VoucherItem,
 } from "./services/notifications";
+import { handleUssdRequest } from "./services/ussd";
 import crypto from "crypto";
 import { randomBytes, createHmac } from "crypto";
 
@@ -933,6 +934,39 @@ ${allUrls
       }
     },
   );
+
+  // ─── USSD Callback ─────────────────────────────────────────────────────────
+  // Endpoint registered with Nalo Solutions: https://api.allteksevoucher.store/ussd/callback
+  // Shortcode: *920*919#
+  app.post("/ussd/callback", async (req: Request, res: Response) => {
+    try {
+      const body = req.body as any;
+
+      // Nalo USSD sends form-encoded POST — normalise field names
+      const sessionId =
+        body.sessionId || body.SESSIONID || body.session_id || body.SessionID || "";
+      const msisdn =
+        body.msisdn || body.MSISDN || body.phoneNumber || body.phone || body.Mobile || "";
+      const userdata =
+        body.userdata || body.USERDATA || body.userData || body.text || body.Message || "";
+      const msgtype =
+        body.msgtype ?? body.MSGTYPE ?? body.msgType ?? body.newRequest ?? "2";
+
+      if (!sessionId || !msisdn) {
+        res.set("Content-Type", "text/plain");
+        return res.send("END Service error. Please try again.");
+      }
+
+      const reply = await handleUssdRequest(sessionId, msisdn, userdata, msgtype);
+
+      res.set("Content-Type", "text/plain");
+      res.send(reply);
+    } catch (error: any) {
+      console.error("[USSD] Callback error:", error);
+      res.set("Content-Type", "text/plain");
+      res.send("END Service temporarily unavailable. Please try again.");
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

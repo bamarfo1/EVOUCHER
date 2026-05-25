@@ -74,3 +74,31 @@ export async function verifyPayment(
 
   return response.data;
 }
+
+export async function chargeDirectMobileMoney(
+  phone: string,
+  amountInPesewas: number,
+  email: string,
+  reference: string,
+  metadata: any,
+  provider: string,
+): Promise<any> {
+  const response = await axios.post(
+    `${PAYSTACK_BASE_URL}/charge`,
+    {
+      email,
+      amount: amountInPesewas,
+      currency: "GHS",
+      reference,
+      mobile_money: { phone, provider },
+      metadata,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${getPaystackKey()}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  return response.data;
+}
