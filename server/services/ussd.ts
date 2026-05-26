@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 
 export interface UssdResult {
   msg: string;
-  isEnd: boolean; // false = END (MSGTYPE: false), true = CON (MSGTYPE: true)
+  isEnd: boolean; // true = CON (continue), false = END
 }
 
 interface UssdSession {
@@ -18,16 +18,22 @@ interface UssdSession {
   createdAt: number;
 }
 
-// Session keyed by MSISDN — Nalo uses the phone number to track sessions
+// Active USSD sessions (keyed by MSISDN)
 const sessions = new Map<string, UssdSession>();
 
-// Clean up sessions older than 5 minutes
+// Pending OTP references — stored when Paystack returns send_otp.
+// The user ends the USSD, gets an SMS code, then re-dials *920*919*[code]#
+// and we auto-submit it here. Keyed by both local and international phone format.
+const pendingOtps = new Map<string, { reference: string; createdAt: number }>();
+
+// Clean up stale sessions (5 min) and pending OTPs (10 min)
 setInterval(() => {
   const now = Date.now();
-  for (const [id, session] of sessions.entries()) {
-    if (now - session.createdAt > 5 * 60 * 1000) {
-      sessions.delete(id);
-    }
+  for (const [id, s] of sessions.entries()) {
+    if (now - s.createdAt > 5 * 60 * 1000) sessions.delete(id);
+  }
+  for (const [phone, p] of pendingOtps.entries()) {
+    if (now - p.createdAt > 10 * 60 * 1000) pendingOtps.delete(phone);
   }
 }, 60 * 1000);
 
@@ -77,14 +83,51 @@ function end(msg: string): UssdResult { return { msg, isEnd: true }; }
 export async function handleUssdRequest(
   msisdn: string,
   userdata: string,
-  msgtype: boolean, // true = new/initial, false = subsequent response
+  msgtype: boolean, // true = new/initial session
 ): Promise<UssdResult> {
   const isNew = msgtype === true;
   let session = sessions.get(msisdn);
 
+  // ── OTP Redial Intercept ─────────────────────────────────────────────────────
+  // When a user dials *920*919*[code]# the USERDATA arrives as the code on a
+  // fresh session (MSGTYPE=true). Detect this and auto-submit the OTP.
+  if (isNew) {
+    const input = userdata.trim();
+    const intlMsisdn = toInternational(msisdn);
+    const pending = pendingOtps.get(msisdn) || pendingOtps.get(intlMsisdn);
+
+    if (/^\d{4,8}$/.test(input) && pending) {
+      // Remove the pending entry so it can't be reused
+      pendingOtps.delete(msisdn);
+      pendingOtps.delete(intlMsisdn);
+      sessions.delete(msisdn);
+
+      try {
+        const otpResp = await submitOtp(input, pending.reference);
+        const otpStatus = otpResp?.data?.status;
+        console.log("[USSD] submit_otp (redial) response:", JSON.stringify({ otpStatus, otpResp }));
+
+        if (otpStatus === "failed") {
+          const reason = otpResp?.data?.gateway_response || "Code rejected";
+          return end(`Payment failed: ${reason}\nTry again: *920*919#`);
+        }
+
+        return end(
+          "Code accepted!\n" +
+          "Payment processing.\n" +
+          "Voucher sent via SMS\n" +
+          "once payment confirms.",
+        );
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "OTP failed";
+        console.error("[USSD] OTP redial error:", msg);
+        return end(`Failed: ${msg}\nTry again: *920*919#`);
+      }
+    }
+  }
+
   // ── New session ─────────────────────────────────────────────────────────────
   if (isNew || !session) {
-    // Clear any existing session for this number on a fresh dial
     sessions.delete(msisdn);
     session = {
       step: "main",
@@ -123,7 +166,7 @@ export async function handleUssdRequest(
       );
     } else if (input === "2" || input === "3") {
       sessions.delete(msisdn);
-      return end("This service is coming soon.\nDial *920*919# to try again.\nWeb: allteksevoucher.store");
+      return end("Coming soon.\nDial *920*919# to try again.\nWeb: allteksevoucher.store");
     } else {
       return con("ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote\n\nInvalid choice.");
     }
@@ -213,6 +256,7 @@ export async function handleUssdRequest(
   // ── Confirm ─────────────────────────────────────────────────────────────────
   if (session.step === "confirm") {
     if (input === "1") {
+      sessions.delete(msisdn);
       try {
         const reference = `USSD-${Date.now()}-${randomBytes(3).toString("hex")}`;
         const intlPhone = toInternational(session.payPhone!);
@@ -249,43 +293,43 @@ export async function handleUssdRequest(
         console.log("[USSD] Paystack charge response:", JSON.stringify({ chargeStatus, chargeResp }));
 
         if (chargeStatus === "failed") {
-          sessions.delete(msisdn);
           const reason = chargeResp?.data?.gateway_response || "Payment declined by network";
           console.error("[USSD] Charge failed:", reason);
           return end(`Payment failed: ${reason}\nTry again: *920*919#`);
         }
 
-        // send_otp → Paystack sent an SMS code that MUST be entered to authorise
         if (chargeStatus === "send_otp") {
-          session.step = "otp";
-          session.reference = reference;
-          session.createdAt = Date.now();
-          sessions.set(msisdn, session);
-          return con(
-            "Enter the code sent to your\n" +
-            "phone via SMS to complete\n" +
-            "payment:",
+          // Store the reference so the user can re-dial with the code
+          const localPhone = session.payPhone!;
+          pendingOtps.set(localPhone, { reference, createdAt: Date.now() });
+          pendingOtps.set(intlPhone, { reference, createdAt: Date.now() });
+
+          return end(
+            "A code will be sent to\n" +
+            "your phone via SMS.\n" +
+            "To pay, redial:\n" +
+            "*920*919*[code]#\n" +
+            "e.g. code 974558:\n" +
+            "dial *920*919*974558#",
           );
         }
 
-        // pay_offline / pending / success → push notification or auto-complete
-        // No action needed from the user — end the session now.
-        sessions.delete(msisdn);
+        // pay_offline / pending / success — push notification sent to MoMo app
         return end(
           "Request sent!\n" +
-          "Check your MoMo app and\n" +
-          "approve the payment prompt.\n" +
-          "Voucher sent via SMS on approval.",
+          "Open your MoMo app and\n" +
+          "approve under My Approvals.\n" +
+          "Voucher sent via SMS\n" +
+          "once payment confirms.",
         );
       } catch (error: any) {
-        sessions.delete(msisdn);
         const psError = error?.response?.data?.message || error?.response?.data?.data?.message || error?.message || "Unknown error";
         console.error("[USSD] Payment error:", psError, JSON.stringify(error?.response?.data || {}));
-        return end(`Payment failed: ${psError}\nWeb: allteksevoucher.store`);
+        return end(`Payment failed: ${psError}\nTry again: *920*919#`);
       }
     } else if (input === "2") {
       sessions.delete(msisdn);
-      return end("Purchase cancelled.\nDial *920*919# to try again.\nWeb: allteksevoucher.store");
+      return end("Cancelled.\nDial *920*919# to try again.");
     } else {
       return con(
         "Confirm Payment\n" +
@@ -297,47 +341,6 @@ export async function handleUssdRequest(
     }
   }
 
-  // ── OTP Entry ────────────────────────────────────────────────────────────────
-  if (session.step === "otp") {
-    sessions.delete(msisdn);
-
-    // "0" means the user got a MoMo push notification — no OTP needed
-    if (input === "0" || input === "") {
-      return end(
-        "Payment pending approval.\n" +
-        "Approve the MoMo prompt on your phone.\n" +
-        "Your voucher will be sent via SMS\n" +
-        "once payment is confirmed.\n" +
-        "Web: allteksevoucher.store",
-      );
-    }
-
-    // Otherwise treat the input as the OTP code
-    const otp = input.trim();
-    try {
-      const otpResp = await submitOtp(otp, session.reference!);
-      const otpStatus = otpResp?.data?.status;
-      console.log("[USSD] submit_otp response:", JSON.stringify({ otpStatus, otpResp }));
-
-      if (otpStatus === "failed") {
-        const reason = otpResp?.data?.gateway_response || "OTP rejected";
-        return end(`Payment failed: ${reason}\nDial *920*919# to try again.\nWeb: allteksevoucher.store`);
-      }
-
-      return end(
-        "Code accepted!\n" +
-        "Payment is being processed.\n" +
-        "Your voucher will be sent via SMS\n" +
-        "once payment is confirmed.\n" +
-        "Web: allteksevoucher.store",
-      );
-    } catch (error: any) {
-      const psError = error?.response?.data?.message || error?.message || "OTP submission failed";
-      console.error("[USSD] OTP submit error:", psError);
-      return end(`OTP failed: ${psError}\nDial *920*919# to try again.\nWeb: allteksevoucher.store`);
-    }
-  }
-
   sessions.delete(msisdn);
-  return end("Session expired.\nDial *920*919# to start again.\nWeb: allteksevoucher.store");
+  return end("Session expired.\nDial *920*919# to start again.");
 }
