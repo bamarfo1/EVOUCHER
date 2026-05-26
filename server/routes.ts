@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const paystackResponse = await initializePayment(
         emailForPaystack,
-        totalAmount * 100,
+        Math.round(Number(totalAmount) * 100),
         reference,
         {
           transactionId: transaction.id,

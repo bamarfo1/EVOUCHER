@@ -104,8 +104,8 @@ export async function handleUssdRequest(
   if (session.step === "main") {
     if (input === "1") {
       const cardTypes = await storage.getAvailableCardTypes();
-      const becePrice = cardTypes.find((c) => c.examType === "BECE")?.price ?? 20;
-      const wasscePrice = cardTypes.find((c) => c.examType === "WASSCE")?.price ?? 20;
+      const becePrice = Number(cardTypes.find((c) => c.examType === "BECE")?.price ?? 20);
+      const wasscePrice = Number(cardTypes.find((c) => c.examType === "WASSCE")?.price ?? 20);
 
       session.step = "card";
       session.createdAt = Date.now();
@@ -121,7 +121,7 @@ export async function handleUssdRequest(
       );
     } else if (input === "2" || input === "3") {
       sessions.delete(msisdn);
-      return end("This service is coming soon.\nDial *920*919# to try again.");
+      return end("This service is coming soon.\nDial *920*919# to try again.\nWeb: allteksevoucher.store");
     } else {
       return con("ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote\n\nInvalid choice.");
     }
@@ -140,7 +140,7 @@ export async function handleUssdRequest(
       }
 
       const cardTypes = await storage.getAvailableCardTypes();
-      const price = cardTypes.find((c) => c.examType === selected.examType)?.price ?? 20;
+      const price = Number(cardTypes.find((c) => c.examType === selected.examType)?.price ?? 20);
 
       session.examType = selected.examType;
       session.displayName = selected.displayName;
@@ -217,11 +217,12 @@ export async function handleUssdRequest(
         const intlPhone = toInternational(session.payPhone!);
         const emailPlaceholder = `${intlPhone}@noemail.alltekse.com`;
 
+        const price = Number(session.price!);
         const transaction = await storage.createTransaction({
           email: null,
           phone: session.payPhone!,
           examType: session.examType!,
-          amount: String(session.price!),
+          amount: String(price),
           paystackReference: reference,
           quantity: 1,
           vendorId: null,
@@ -230,7 +231,7 @@ export async function handleUssdRequest(
         const provider = detectNetwork(session.payPhone!);
         const chargeResp = await chargeDirectMobileMoney(
           intlPhone,
-          session.price! * 100,
+          Math.round(price * 100),
           emailPlaceholder,
           reference,
           {
@@ -253,15 +254,15 @@ export async function handleUssdRequest(
           return end(`Payment failed: ${reason}\nTry again or visit allteksevoucher.store`);
         }
 
-        return end("Payment initiated!\nCheck your phone for MoMo prompt.\nApprove to get voucher via SMS.");
+        return end("Payment initiated!\nCheck your phone for MoMo prompt.\nApprove to get voucher via SMS.\nWeb: allteksevoucher.store");
       } catch (error: any) {
         const psError = error?.response?.data?.message || error?.response?.data?.data?.message || error?.message || "Unknown error";
         console.error("[USSD] Payment error:", psError, JSON.stringify(error?.response?.data || {}));
-        return end(`Payment failed: ${psError}\nVisit allteksevoucher.store`);
+        return end(`Payment failed: ${psError}\nWeb: allteksevoucher.store`);
       }
     } else if (input === "2") {
       sessions.delete(msisdn);
-      return end("Purchase cancelled.\nDial *920*919# to try again.");
+      return end("Purchase cancelled.\nDial *920*919# to try again.\nWeb: allteksevoucher.store");
     } else {
       return con(
         "Confirm Payment\n" +
@@ -274,5 +275,5 @@ export async function handleUssdRequest(
   }
 
   sessions.delete(msisdn);
-  return end("Session expired.\nDial *920*919# to start again.");
+  return end("Session expired.\nDial *920*919# to start again.\nWeb: allteksevoucher.store");
 }

@@ -183,6 +183,17 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
         </div>
       </section>
 
+      {/* ── USSD BANNER ── */}
+      <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 py-3 px-4 shadow-sm">
+        <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-2 text-center">
+          <span className="text-amber-900 font-bold text-sm">No internet? No problem!</span>
+          <span className="bg-amber-900/15 text-amber-900 font-mono font-extrabold text-sm px-3 py-0.5 rounded-full border border-amber-700/30 tracking-wide">
+            Dial *920*919#
+          </span>
+          <span className="text-amber-900 font-semibold text-sm">to buy your voucher via USSD from any phone.</span>
+        </div>
+      </div>
+
       {/* ── VOUCHER CARDS ── */}
       <main className="flex-1 px-4 py-8 md:py-12">
         <div className="max-w-3xl mx-auto space-y-6">

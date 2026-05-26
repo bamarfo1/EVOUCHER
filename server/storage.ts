@@ -208,7 +208,7 @@ export class DbStorage implements IStorage {
       .select({
         examType: voucherCards.examType,
         count: sql<number>`count(*)::int`,
-        price: sql<number>`min(${voucherCards.price})`,
+        price: sql<number>`min(${voucherCards.price})::float8`,
         imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
       })
       .from(voucherCards)
@@ -438,7 +438,7 @@ export class DbStorage implements IStorage {
         total: sql<number>`count(*)::int`,
         used: sql<number>`sum(case when ${voucherCards.used} then 1 else 0 end)::int`,
         available: sql<number>`sum(case when not ${voucherCards.used} then 1 else 0 end)::int`,
-        price: sql<number>`min(${voucherCards.price})`,
+        price: sql<number>`min(${voucherCards.price})::float8`,
         imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
       })
       .from(voucherCards)
