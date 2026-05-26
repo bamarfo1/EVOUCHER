@@ -252,23 +252,30 @@ export async function handleUssdRequest(
           sessions.delete(msisdn);
           const reason = chargeResp?.data?.gateway_response || "Payment declined by network";
           console.error("[USSD] Charge failed:", reason);
-          return end(`Payment failed: ${reason}\nTry again or visit allteksevoucher.store`);
+          return end(`Payment failed: ${reason}\nTry again: *920*919#`);
         }
 
-        // Keep session alive for OTP entry — Paystack may send an SMS code
-        // that the user must enter to authorise the payment (especially for
-        // Telecel/AirtelTigo). MTN users who got a push notification enter 0.
-        session.step = "otp";
-        session.reference = reference;
-        session.createdAt = Date.now();
-        sessions.set(msisdn, session);
+        // send_otp → Paystack sent an SMS code that MUST be entered to authorise
+        if (chargeStatus === "send_otp") {
+          session.step = "otp";
+          session.reference = reference;
+          session.createdAt = Date.now();
+          sessions.set(msisdn, session);
+          return con(
+            "Enter the code sent to your\n" +
+            "phone via SMS to complete\n" +
+            "payment:",
+          );
+        }
 
-        return con(
-          "Payment request sent!\n" +
-          "Check your phone for an SMS code.\n" +
-          "Enter the code below, or\n" +
-          "enter 0 if you got a MoMo\n" +
-          "push notification instead.",
+        // pay_offline / pending / success → push notification or auto-complete
+        // No action needed from the user — end the session now.
+        sessions.delete(msisdn);
+        return end(
+          "Request sent!\n" +
+          "Check your MoMo app and\n" +
+          "approve the payment prompt.\n" +
+          "Voucher sent via SMS on approval.",
         );
       } catch (error: any) {
         sessions.delete(msisdn);
