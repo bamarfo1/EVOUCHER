@@ -75,6 +75,20 @@ export async function verifyPayment(
   return response.data;
 }
 
+export async function submitOtp(otp: string, reference: string): Promise<any> {
+  const response = await axios.post(
+    `${PAYSTACK_BASE_URL}/charge/submit_otp`,
+    { otp, reference },
+    {
+      headers: {
+        Authorization: `Bearer ${getPaystackKey()}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  return response.data;
+}
+
 export async function chargeDirectMobileMoney(
   phone: string,
   amountInPesewas: number,

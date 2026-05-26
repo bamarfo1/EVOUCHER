@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import { chargeDirectMobileMoney } from "./paystack";
+import { chargeDirectMobileMoney, submitOtp } from "./paystack";
 import { randomBytes } from "crypto";
 
 export interface UssdResult {
@@ -14,6 +14,7 @@ interface UssdSession {
   price: number | null;
   msisdn: string;
   payPhone: string | null;
+  reference: string | null;
   createdAt: number;
 }
 
@@ -92,6 +93,7 @@ export async function handleUssdRequest(
       price: null,
       msisdn,
       payPhone: null,
+      reference: null,
       createdAt: Date.now(),
     };
     sessions.set(msisdn, session);
@@ -211,7 +213,6 @@ export async function handleUssdRequest(
   // ── Confirm ─────────────────────────────────────────────────────────────────
   if (session.step === "confirm") {
     if (input === "1") {
-      sessions.delete(msisdn);
       try {
         const reference = `USSD-${Date.now()}-${randomBytes(3).toString("hex")}`;
         const intlPhone = toInternational(session.payPhone!);
@@ -244,18 +245,33 @@ export async function handleUssdRequest(
           provider,
         );
 
-        // Paystack returns data.status = "pay_offline"|"pending"|"success"|"failed"
         const chargeStatus = chargeResp?.data?.status;
         console.log("[USSD] Paystack charge response:", JSON.stringify({ chargeStatus, chargeResp }));
 
         if (chargeStatus === "failed") {
+          sessions.delete(msisdn);
           const reason = chargeResp?.data?.gateway_response || "Payment declined by network";
           console.error("[USSD] Charge failed:", reason);
           return end(`Payment failed: ${reason}\nTry again or visit allteksevoucher.store`);
         }
 
-        return end("Payment initiated!\nCheck your phone for MoMo prompt.\nApprove to get voucher via SMS.\nWeb: allteksevoucher.store");
+        // Keep session alive for OTP entry — Paystack may send an SMS code
+        // that the user must enter to authorise the payment (especially for
+        // Telecel/AirtelTigo). MTN users who got a push notification enter 0.
+        session.step = "otp";
+        session.reference = reference;
+        session.createdAt = Date.now();
+        sessions.set(msisdn, session);
+
+        return con(
+          "Payment request sent!\n" +
+          "Check your phone for an SMS code.\n" +
+          "Enter the code below, or\n" +
+          "enter 0 if you got a MoMo\n" +
+          "push notification instead.",
+        );
       } catch (error: any) {
+        sessions.delete(msisdn);
         const psError = error?.response?.data?.message || error?.response?.data?.data?.message || error?.message || "Unknown error";
         console.error("[USSD] Payment error:", psError, JSON.stringify(error?.response?.data || {}));
         return end(`Payment failed: ${psError}\nWeb: allteksevoucher.store`);
@@ -271,6 +287,47 @@ export async function handleUssdRequest(
         `1. Confirm & Pay\n` +
         `2. Cancel\n\nInvalid choice.`,
       );
+    }
+  }
+
+  // ── OTP Entry ────────────────────────────────────────────────────────────────
+  if (session.step === "otp") {
+    sessions.delete(msisdn);
+
+    // "0" means the user got a MoMo push notification — no OTP needed
+    if (input === "0" || input === "") {
+      return end(
+        "Payment pending approval.\n" +
+        "Approve the MoMo prompt on your phone.\n" +
+        "Your voucher will be sent via SMS\n" +
+        "once payment is confirmed.\n" +
+        "Web: allteksevoucher.store",
+      );
+    }
+
+    // Otherwise treat the input as the OTP code
+    const otp = input.trim();
+    try {
+      const otpResp = await submitOtp(otp, session.reference!);
+      const otpStatus = otpResp?.data?.status;
+      console.log("[USSD] submit_otp response:", JSON.stringify({ otpStatus, otpResp }));
+
+      if (otpStatus === "failed") {
+        const reason = otpResp?.data?.gateway_response || "OTP rejected";
+        return end(`Payment failed: ${reason}\nDial *920*919# to try again.\nWeb: allteksevoucher.store`);
+      }
+
+      return end(
+        "Code accepted!\n" +
+        "Payment is being processed.\n" +
+        "Your voucher will be sent via SMS\n" +
+        "once payment is confirmed.\n" +
+        "Web: allteksevoucher.store",
+      );
+    } catch (error: any) {
+      const psError = error?.response?.data?.message || error?.message || "OTP submission failed";
+      console.error("[USSD] OTP submit error:", psError);
+      return end(`OTP failed: ${psError}\nDial *920*919# to try again.\nWeb: allteksevoucher.store`);
     }
   }
 
