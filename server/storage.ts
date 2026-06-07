@@ -9,6 +9,7 @@ import {
   type Vendor,
   type VendorPrice,
   type Payout,
+  type WithdrawalRequest,
   voucherCards,
   transactions,
   blogPosts,
@@ -16,6 +17,7 @@ import {
   vendorPrices,
   vendorBasePrices,
   payouts,
+  withdrawalRequests,
 } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 
@@ -65,6 +67,13 @@ export interface IStorage {
   getVendorBasePrices(): Promise<{ examType: string; price: number }[]>;
   getVendorBasePrice(examType: string): Promise<number | null>;
   setVendorBasePrice(examType: string, price: number): Promise<void>;
+  // Withdrawal request methods
+  createWithdrawalRequest(vendorId: string, amount: number, momoNumber: string, momoName: string): Promise<WithdrawalRequest>;
+  getVendorWithdrawalRequests(vendorId: string): Promise<WithdrawalRequest[]>;
+  getVendorPendingWithdrawalRequest(vendorId: string): Promise<WithdrawalRequest | null>;
+  adminGetAllWithdrawalRequests(): Promise<(WithdrawalRequest & { vendor: Vendor })[]>;
+  adminApproveWithdrawalRequest(requestId: string): Promise<void>;
+  adminRejectWithdrawalRequest(requestId: string, note?: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -527,6 +536,71 @@ export class DbStorage implements IStorage {
        ON CONFLICT (exam_type) DO UPDATE SET price = EXCLUDED.price`,
       [examType, price]
     );
+  }
+
+  // ── Withdrawal Requests ───────────────────────────────────────────────────
+  async createWithdrawalRequest(vendorId: string, amount: number, momoNumber: string, momoName: string): Promise<WithdrawalRequest> {
+    const [req] = await db
+      .insert(withdrawalRequests)
+      .values({ vendorId, amount, momoNumber, momoName, status: "pending" })
+      .returning();
+    return req;
+  }
+
+  async getVendorWithdrawalRequests(vendorId: string): Promise<WithdrawalRequest[]> {
+    return await db
+      .select()
+      .from(withdrawalRequests)
+      .where(eq(withdrawalRequests.vendorId, vendorId))
+      .orderBy(desc(withdrawalRequests.createdAt));
+  }
+
+  async getVendorPendingWithdrawalRequest(vendorId: string): Promise<WithdrawalRequest | null> {
+    const [req] = await db
+      .select()
+      .from(withdrawalRequests)
+      .where(and(eq(withdrawalRequests.vendorId, vendorId), eq(withdrawalRequests.status, "pending")))
+      .limit(1);
+    return req ?? null;
+  }
+
+  async adminGetAllWithdrawalRequests(): Promise<(WithdrawalRequest & { vendor: Vendor })[]> {
+    const rows = await db
+      .select()
+      .from(withdrawalRequests)
+      .orderBy(desc(withdrawalRequests.createdAt));
+    const results: (WithdrawalRequest & { vendor: Vendor })[] = [];
+    for (const row of rows) {
+      const [vendor] = await db.select().from(vendors).where(eq(vendors.id, row.vendorId));
+      if (vendor) results.push({ ...row, vendor });
+    }
+    return results;
+  }
+
+  async adminApproveWithdrawalRequest(requestId: string): Promise<void> {
+    const now = new Date();
+    const [req] = await db
+      .update(withdrawalRequests)
+      .set({ status: "approved", resolvedAt: now })
+      .where(eq(withdrawalRequests.id, requestId))
+      .returning();
+    if (!req) throw new Error("Withdrawal request not found");
+    // Record as a paid payout so pending profit resets
+    await db.insert(payouts).values({
+      vendorId: req.vendorId,
+      amount: req.amount,
+      status: "paid",
+      paidAt: now,
+      notes: `Withdrawal request approved`,
+    });
+  }
+
+  async adminRejectWithdrawalRequest(requestId: string, note?: string): Promise<void> {
+    const now = new Date();
+    await db
+      .update(withdrawalRequests)
+      .set({ status: "rejected", resolvedAt: now, note: note ?? null })
+      .where(eq(withdrawalRequests.id, requestId));
   }
 
   private normalizePhone(phone: string): string {

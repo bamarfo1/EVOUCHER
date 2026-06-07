@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   ShoppingBag, CreditCard, TrendingUp, LogOut, Plus, Image, Trash2,
-  ChevronDown, ChevronUp, Package, Users, Wallet, RefreshCw, Check, X, Pencil
+  ChevronDown, ChevronUp, Package, Users, Wallet, RefreshCw, Check, X, Pencil,
+  ArrowDownToLine, Clock, CheckCircle, XCircle
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,6 +37,11 @@ interface VendorRow {
 }
 
 interface Payout { id: string; vendorId: string; amount: number; notes: string | null; status: string; paidAt: string | null; createdAt: string; }
+interface WithdrawalRequestRow {
+  id: string; vendorId: string; amount: number; momoNumber: string; momoName: string;
+  status: string; note: string | null; createdAt: string; resolvedAt: string | null;
+  vendor: { id: string; phone: string; storeName: string | null; momoName: string; momoNumber: string; slug: string; };
+}
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }: { onLogin: () => void }) {
@@ -241,24 +247,6 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
     enabled: expanded,
   });
 
-  const closeForPayoutMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/admin/vendors/${row.vendor.id}/close-for-payout`, { method: "POST" });
-      if (!res.ok) throw new Error((await res.json()).error || "Failed");
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      const name = row.vendor.storeName || row.vendor.momoName;
-      const msg = data.payout
-        ? `${name} closed. Unpaid payout of GHC ${data.payout.amount} recorded.`
-        : `${name} closed for payout. No profit due at this time.`;
-      toast({ title: "Closed for payout", description: msg });
-      refetchHistory();
-      onRefresh();
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
-  });
-
   const markPaidMutation = useMutation({
     mutationFn: async (payoutId: string) => {
       const res = await fetch(`/api/admin/payouts/${payoutId}/mark-paid`, { method: "POST" });
@@ -266,7 +254,7 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Payout marked as paid", description: `${row.vendor.storeName || row.vendor.momoName}'s account has been reopened.` });
+      toast({ title: "Payout marked as paid" });
       refetchHistory();
       onRefresh();
     },
@@ -291,7 +279,6 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const statusColor = row.vendor.status === "active" ? "default" : "destructive";
   const unpaidPayouts = payoutHistory?.filter(p => p.status === "unpaid") ?? [];
 
   return (
@@ -325,38 +312,13 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
                   </button>
                 </div>
               )}
-              <Badge variant={statusColor} className="text-[10px]" data-testid={`badge-vendor-status-${row.vendor.id}`}>
-                {row.vendor.status === "active" ? "Active" : "Closed for Payout"}
-              </Badge>
+              <Badge variant="default" className="text-[10px]" data-testid={`badge-vendor-status-${row.vendor.id}`}>Active</Badge>
             </div>
             <p className="text-xs text-slate-500">{row.vendor.phone} · MoMo: {row.vendor.momoNumber} ({row.vendor.momoName})</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {row.vendor.status === "active" ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => closeForPayoutMutation.mutate()}
-                disabled={closeForPayoutMutation.isPending}
-                data-testid={`button-close-vendor-${row.vendor.id}`}
-              >
-                {closeForPayoutMutation.isPending ? "Closing..." : "Close for Payout"}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => updateVendorMutation.mutate({ status: "active" })}
-                disabled={updateVendorMutation.isPending}
-                data-testid={`button-reopen-vendor-${row.vendor.id}`}
-              >
-                Reopen
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={() => setExpanded(e => !e)} data-testid={`button-expand-vendor-${row.vendor.id}`}>
-              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
-          </div>
+          <Button size="sm" variant="ghost" onClick={() => setExpanded(e => !e)} data-testid={`button-expand-vendor-${row.vendor.id}`}>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
         </div>
 
         {/* Stats row */}
@@ -632,7 +594,7 @@ function VendorsTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: vendors, isLoading, refetch } = useQuery<VendorRow[]>({
+  const { data: vendors, isLoading: vendorsLoading, refetch: refetchVendors } = useQuery<VendorRow[]>({
     queryKey: ["/api/admin/vendors"],
     queryFn: async () => {
       const res = await fetch("/api/admin/vendors");
@@ -641,25 +603,54 @@ function VendorsTab() {
     },
   });
 
-  const closeAllMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/admin/close-vendors-for-payout", { method: "POST" });
-      if (!res.ok) throw new Error((await res.json()).error);
+  const { data: withdrawalRequests, isLoading: wrLoading, refetch: refetchWR } = useQuery<WithdrawalRequestRow[]>({
+    queryKey: ["/api/admin/withdrawal-requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/withdrawal-requests");
+      if (!res.ok) throw new Error("Failed to load withdrawal requests");
+      return res.json();
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/withdrawal-requests/${id}/approve`, { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Done", description: "All active vendor accounts closed for payout." });
-      refetch();
+      toast({ title: "Withdrawal approved", description: "Payment has been recorded and profit reset." });
+      refetchWR();
+      refetchVendors();
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const activeCount = vendors?.filter(v => v.vendor.status === "active").length ?? 0;
-  const closedCount = vendors?.filter(v => v.vendor.status === "closed_for_payout").length ?? 0;
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, note }: { id: string; note?: string }) => {
+      const res = await fetch(`/api/admin/withdrawal-requests/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Withdrawal rejected" });
+      refetchWR();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const totalProfit = vendors?.reduce((s, v) => s + v.pendingProfit, 0) ?? 0;
+  const pendingRequests = withdrawalRequests?.filter(r => r.status === "pending") ?? [];
+  const recentResolved = withdrawalRequests?.filter(r => r.status !== "pending").slice(0, 10) ?? [];
+
+  const refresh = () => { refetchVendors(); refetchWR(); qc.invalidateQueries({ queryKey: ["/api/admin/vendors"] }); };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         <Card>
@@ -670,51 +661,148 @@ function VendorsTab() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500 mb-1">Active / Closed</p>
-            <p className="text-2xl font-bold text-slate-900">{activeCount} / {closedCount}</p>
+            <p className="text-xs text-amber-600 mb-1 font-medium">Pending Requests</p>
+            <p className="text-2xl font-bold text-amber-700">{pendingRequests.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-amber-600 mb-1 font-medium">Total Profit Due</p>
-            <p className="text-2xl font-bold text-amber-700" data-testid="stat-total-profit-due">GHC {totalProfit}</p>
+            <p className="text-xs text-slate-500 mb-1">Total Profit Due</p>
+            <p className="text-2xl font-bold text-slate-900" data-testid="stat-total-profit-due">GHC {totalProfit}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button size="sm" variant="outline" onClick={() => refetch()}>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" onClick={refresh}>
           <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
           Refresh
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="border-amber-300 text-amber-700 hover:bg-amber-50"
-          onClick={() => closeAllMutation.mutate()}
-          disabled={closeAllMutation.isPending || activeCount === 0}
-          data-testid="button-close-all-vendors"
-        >
-          <Wallet className="w-3.5 h-3.5 mr-1.5" />
-          {closeAllMutation.isPending ? "Closing..." : "Close All for Payout"}
-        </Button>
       </div>
 
+      {/* Pending Withdrawal Requests */}
+      <Card className="border-amber-200">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <ArrowDownToLine className="w-4 h-4 text-amber-600" />
+            <CardTitle className="text-base">Withdrawal Requests</CardTitle>
+            {pendingRequests.length > 0 && (
+              <Badge className="bg-amber-100 text-amber-700 text-[10px]">{pendingRequests.length} pending</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {wrLoading ? (
+            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+          ) : pendingRequests.length === 0 ? (
+            <div className="flex items-center gap-2 px-4 py-6 text-slate-400">
+              <Clock className="w-4 h-4 flex-shrink-0" />
+              <p className="text-sm">No pending withdrawal requests.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {pendingRequests.map(req => (
+                <div key={req.id} className="px-4 py-4" data-testid={`wr-row-${req.id}`}>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-bold text-slate-800">{req.vendor.storeName || req.vendor.momoName}</p>
+                        <Badge variant="secondary" className="text-[10px]">Pending</Badge>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">{req.vendor.phone}</p>
+                      <div className="mt-2 bg-amber-50 border border-amber-100 rounded-lg p-2.5 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500">Amount</span>
+                          <span className="text-sm font-black text-amber-700">GHC {req.amount}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500">MoMo Number</span>
+                          <span className="text-xs font-bold text-slate-800">{req.momoNumber}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500">MoMo Name</span>
+                          <span className="text-xs font-bold text-slate-800">{req.momoName}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500">Requested</span>
+                          <span className="text-xs text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => approveMutation.mutate(req.id)}
+                        disabled={approveMutation.isPending}
+                        data-testid={`button-approve-wr-${req.id}`}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        onClick={() => rejectMutation.mutate({ id: req.id })}
+                        disabled={rejectMutation.isPending}
+                        data-testid={`button-reject-wr-${req.id}`}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recent resolved */}
+          {recentResolved.length > 0 && (
+            <div className="border-t border-slate-100 px-4 py-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recent History</p>
+              <div className="space-y-2">
+                {recentResolved.map(req => (
+                  <div key={req.id} className="flex items-center justify-between gap-2 text-xs" data-testid={`wr-history-${req.id}`}>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {req.status === "approved"
+                        ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        : <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
+                      <span className="font-semibold text-slate-700 truncate">{req.vendor.storeName || req.vendor.momoName}</span>
+                      <span className="text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <span className={`font-bold flex-shrink-0 ${req.status === "approved" ? "text-emerald-600" : "text-slate-400"}`}>GHC {req.amount}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Vendor list */}
-      {isLoading ? (
-        <div className="text-center py-8 text-slate-400 text-sm">Loading vendors...</div>
-      ) : !vendors || vendors.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-slate-400 text-sm">No vendors registered yet.</CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {vendors.map(row => (
-            <VendorPayoutCard key={row.vendor.id} row={row} onRefresh={() => { refetch(); qc.invalidateQueries({ queryKey: ["/api/admin/vendors"] }); }} />
-          ))}
-        </div>
-      )}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-600" />
+            <CardTitle className="text-base">All Vendors</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {vendorsLoading ? (
+            <div className="text-center py-8 text-slate-400 text-sm">Loading vendors...</div>
+          ) : !vendors || vendors.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-8">No vendors registered yet.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {vendors.map(row => (
+                <VendorPayoutCard key={row.vendor.id} row={row} onRefresh={refresh} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

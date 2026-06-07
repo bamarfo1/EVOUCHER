@@ -955,6 +955,90 @@ ${allUrls
     },
   );
 
+  // ─── Vendor Withdrawal Requests ────────────────────────────────────────────
+
+  app.post(
+    "/api/vendor/withdrawal/request",
+    requireVendor,
+    async (req: Request, res: Response) => {
+      try {
+        const vendorId = (req.session as any).vendorId;
+        // Check for existing pending request
+        const existing = await storage.getVendorPendingWithdrawalRequest(vendorId);
+        if (existing) {
+          return res.status(400).json({ error: "You already have a pending withdrawal request." });
+        }
+        // Calculate current pending profit
+        const vendorRows = await storage.adminGetAllVendors();
+        const me = vendorRows.find((r) => r.vendor.id === vendorId);
+        const amount = me?.pendingProfit ?? 0;
+        if (amount <= 0) {
+          return res.status(400).json({ error: "No profit available to withdraw." });
+        }
+        const vendor = await storage.getVendorById(vendorId);
+        if (!vendor) return res.status(404).json({ error: "Vendor not found" });
+        const request = await storage.createWithdrawalRequest(vendorId, amount, vendor.momoNumber, vendor.momoName);
+        res.json({ success: true, request });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.get(
+    "/api/vendor/me/withdrawals",
+    requireVendor,
+    async (req: Request, res: Response) => {
+      try {
+        const vendorId = (req.session as any).vendorId;
+        const requests = await storage.getVendorWithdrawalRequests(vendorId);
+        res.json(requests);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.get(
+    "/api/admin/withdrawal-requests",
+    requireAdmin,
+    async (_req: Request, res: Response) => {
+      try {
+        const requests = await storage.adminGetAllWithdrawalRequests();
+        res.json(requests);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/withdrawal-requests/:id/approve",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        await storage.adminApproveWithdrawalRequest(req.params.id);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/withdrawal-requests/:id/reject",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { note } = req.body;
+        await storage.adminRejectWithdrawalRequest(req.params.id, note);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
   // ─── Vendor Self-Update ────────────────────────────────────────────────────
 
   app.patch(

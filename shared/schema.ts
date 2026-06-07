@@ -117,6 +117,21 @@ export const vendorBasePrices = pgTable("vendor_base_prices", {
 });
 
 /* =========================
+   Withdrawal Requests (vendor-initiated)
+========================= */
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id),
+  amount: doublePrecision("amount").notNull(),
+  momoNumber: text("momo_number").notNull(),
+  momoName: text("momo_name").notNull(),
+  status: text("status").notNull().default("pending"), // pending | approved | rejected
+  note: text("note"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+/* =========================
    Zod Insert Schemas
 ========================= */
 export const insertVoucherCardSchema = createInsertSchema(voucherCards).omit({
@@ -174,3 +189,5 @@ export type Payout = typeof payouts.$inferSelect;
 
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type BlogPost = typeof blogPosts.$inferSelect;
+
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
