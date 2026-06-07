@@ -594,25 +594,25 @@ function CardTypeRow({ card, onDeleted }: { card: CardSummary; onDeleted: () => 
           <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
           <p className="text-xs text-slate-500">{card.total} total · {card.available} left · {card.used} sold</p>
         </div>
-        <div className="flex items-center gap-1">
-          {confirming ? (
-            <>
-              <span className="text-xs text-red-500 mr-1">
-                {card.available > 0 ? `Delete ${card.available} unused vouchers?` : "Delete card type?"}
-              </span>
-              <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} data-testid={`button-confirm-delete-${card.examType}`}>
-                {deleteMutation.isPending ? "Deleting..." : "Yes, delete"}
+        {card.available === 0 && (
+          <div className="flex items-center gap-1">
+            {confirming ? (
+              <>
+                <span className="text-xs text-red-500 mr-1">Delete card type?</span>
+                <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} data-testid={`button-confirm-delete-${card.examType}`}>
+                  {deleteMutation.isPending ? "Deleting..." : "Yes, delete"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} data-testid={`button-cancel-delete-${card.examType}`}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button size="icon" variant="ghost" onClick={() => setConfirming(true)} className="text-red-400" data-testid={`button-delete-${card.examType}`}>
+                <Trash2 className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} data-testid={`button-cancel-delete-${card.examType}`}>
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button size="icon" variant="ghost" onClick={() => setConfirming(true)} className="text-red-400" data-testid={`button-delete-${card.examType}`}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Price editor */}
