@@ -828,6 +828,23 @@ ${allUrls
     },
   );
 
+  app.patch(
+    "/api/admin/card-type-registry/:examType",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { examType } = req.params;
+        const { price } = req.body;
+        if (typeof price !== "number" || price < 1)
+          return res.status(400).json({ error: "Price must be at least GHC 1" });
+        await storage.updateCardTypeRegistryPrice(examType, price);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
   app.delete(
     "/api/admin/card-type-registry/:examType",
     requireAdmin,

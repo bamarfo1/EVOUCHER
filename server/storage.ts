@@ -68,6 +68,7 @@ export interface IStorage {
   // Card type registry methods
   getCardTypeRegistry(): Promise<{ examType: string; price: number }[]>;
   addCardTypeToRegistry(examType: string, price: number): Promise<void>;
+  updateCardTypeRegistryPrice(examType: string, price: number): Promise<void>;
   deleteCardTypeFromRegistry(examType: string): Promise<void>;
   // Vendor base price methods (admin-configurable, separate from public price)
   getVendorBasePrices(): Promise<{ examType: string; price: number }[]>;
@@ -247,7 +248,7 @@ export class DbStorage implements IStorage {
     for (const reg of registryEntries) {
       seen.add(reg.examType);
       const stats = statsMap.get(reg.examType);
-      result.push({ examType: reg.examType, count: stats?.count ?? 0, price: stats?.price ?? reg.price, imageUrl: stats?.imageUrl ?? null });
+      result.push({ examType: reg.examType, count: stats?.count ?? 0, price: reg.price, imageUrl: stats?.imageUrl ?? null });
     }
     // Include any voucher types not in the registry
     for (const stats of voucherStats) {
@@ -578,6 +579,10 @@ export class DbStorage implements IStorage {
     await db.insert(cardTypeRegistry)
       .values({ examType, price })
       .onConflictDoUpdate({ target: cardTypeRegistry.examType, set: { price } });
+  }
+
+  async updateCardTypeRegistryPrice(examType: string, price: number): Promise<void> {
+    await db.update(cardTypeRegistry).set({ price }).where(eq(cardTypeRegistry.examType, examType));
   }
 
   async deleteCardTypeFromRegistry(examType: string): Promise<void> {
