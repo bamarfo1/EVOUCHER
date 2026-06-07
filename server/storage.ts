@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db, pool } from "./db";
 import { 
   type VoucherCard, 
   type InsertVoucherCard,
@@ -522,10 +522,11 @@ export class DbStorage implements IStorage {
   }
 
   async setVendorBasePrice(examType: string, price: number): Promise<void> {
-    await db
-      .insert(vendorBasePrices)
-      .values({ examType, price })
-      .onConflictDoUpdate({ target: vendorBasePrices.examType, set: { price } });
+    await pool.query(
+      `INSERT INTO vendor_base_prices (exam_type, price) VALUES ($1, $2)
+       ON CONFLICT (exam_type) DO UPDATE SET price = EXCLUDED.price`,
+      [examType, price]
+    );
   }
 
   private normalizePhone(phone: string): string {

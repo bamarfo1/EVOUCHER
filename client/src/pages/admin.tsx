@@ -476,7 +476,7 @@ function VendorBasePricesForm({ cards, onUpdated }: { cards: CardSummary[]; onUp
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    enabled: open,
+    staleTime: 0,
   });
 
   const saveMutation = useMutation({
