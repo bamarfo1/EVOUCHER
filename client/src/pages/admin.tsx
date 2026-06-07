@@ -97,20 +97,155 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-// ─── Add Vouchers Form ────────────────────────────────────────────────────────
+// ─── Manage Card Types Form ────────────────────────────────────────────────────
+function ManageCardTypesForm({ onUpdated }: { onUpdated: () => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("20");
+
+  const { data: registry = [], refetch } = useQuery<{ examType: string; price: number }[]>({
+    queryKey: ["/api/admin/card-type-registry"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/card-type-registry");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/card-type-registry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examType: newName.trim().toUpperCase(), price: parseFloat(newPrice) }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Card type added", description: `${newName.trim().toUpperCase()} registered at GHC ${newPrice}.` });
+      setNewName(""); setNewPrice("20");
+      refetch();
+      qc.invalidateQueries({ queryKey: ["/api/admin/card-type-registry"] });
+      onUpdated();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (examType: string) => {
+      const res = await fetch(`/api/admin/card-type-registry/${encodeURIComponent(examType)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Card type removed from registry" });
+      refetch();
+      qc.invalidateQueries({ queryKey: ["/api/admin/card-type-registry"] });
+      onUpdated();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 cursor-pointer" onClick={() => setOpen(!open)}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-purple-600" />
+            <CardTitle className="text-base">Manage Card Types</CardTitle>
+          </div>
+          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent className="space-y-4">
+          {/* Add new card type */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Label>Card Type Name</Label>
+              <Input
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="e.g. BECE, WASSCE"
+                data-testid="input-registry-name"
+              />
+            </div>
+            <div className="w-28">
+              <Label>Price (GHC)</Label>
+              <Input
+                type="number"
+                min="1"
+                value={newPrice}
+                onChange={e => setNewPrice(e.target.value)}
+                data-testid="input-registry-price"
+              />
+            </div>
+            <Button
+              onClick={() => addMutation.mutate()}
+              disabled={addMutation.isPending || !newName.trim()}
+              className="shrink-0"
+              data-testid="button-add-registry"
+            >
+              {addMutation.isPending ? "Adding..." : "Add"}
+            </Button>
+          </div>
+
+          {/* Existing card types */}
+          {registry.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-3">No card types registered yet</p>
+          ) : (
+            <div className="divide-y border rounded-md">
+              {registry.map(r => (
+                <div key={r.examType} className="flex items-center justify-between px-3 py-2">
+                  <div>
+                    <span className="text-sm font-semibold text-slate-800">{r.examType}</span>
+                    <span className="text-xs text-slate-500 ml-2">GHC {r.price}</span>
+                  </div>
+                  <Button
+                    size="icon" variant="ghost"
+                    className="h-7 w-7 text-red-400"
+                    onClick={() => deleteMutation.mutate(r.examType)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-registry-${r.examType}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-slate-400">Registered card types appear in the voucher upload dropdown.</p>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 function AddVouchersForm({ onAdded }: { onAdded: () => void }) {
   const { toast } = useToast();
   const [examType, setExamType] = useState("");
-  const [price, setPrice] = useState("20");
   const [bulkText, setBulkText] = useState("");
   const [open, setOpen] = useState(false);
+
+  const { data: registry = [] } = useQuery<{ examType: string; price: number }[]>({
+    queryKey: ["/api/admin/card-type-registry"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/card-type-registry");
+      return res.json();
+    },
+  });
+
+  const selectedPrice = registry.find(r => r.examType === examType)?.price ?? 20;
 
   const addMutation = useMutation({
     mutationFn: async (vouchers: { serial: string; pin: string; examType: string; price: number }[]) =>
       apiRequest("POST", "/api/admin/vouchers", { vouchers }),
     onSuccess: (data: any) => {
       toast({ title: "Vouchers added", description: `${data.added} voucher(s) added successfully.` });
-      setBulkText(""); setExamType(""); setPrice("20");
+      setBulkText(""); setExamType("");
       onAdded();
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -118,11 +253,15 @@ function AddVouchersForm({ onAdded }: { onAdded: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!examType) {
+      toast({ title: "Select a card type", variant: "destructive" });
+      return;
+    }
     const lines = bulkText.trim().split("\n").filter(Boolean);
     const vouchers = lines.map(line => {
       const [serial, pin] = line.split(",").map(s => s.trim());
-      return { serial, pin, examType: examType.trim(), price: parseFloat(price) || 20 };
-    }).filter(v => v.serial && v.pin && v.examType);
+      return { serial, pin, examType, price: selectedPrice };
+    }).filter(v => v.serial && v.pin);
     if (vouchers.length === 0) {
       toast({ title: "No valid vouchers", description: "Check format: SERIAL, PIN (one per line)", variant: "destructive" });
       return;
@@ -144,16 +283,34 @@ function AddVouchersForm({ onAdded }: { onAdded: () => void }) {
       {open && (
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Card Type</Label>
-                <Input value={examType} onChange={e => setExamType(e.target.value)} placeholder="e.g. BECE, WASSCE" required data-testid="input-exam-type" />
-              </div>
-              <div>
-                <Label>Price (GHC)</Label>
-                <Input type="number" value={price} onChange={e => setPrice(e.target.value)} min="1" required data-testid="input-price" />
-              </div>
+            <div>
+              <Label>Card Type</Label>
+              {registry.length === 0 ? (
+                <p className="text-xs text-amber-600 mt-1 p-2 bg-amber-50 rounded-md">
+                  No card types registered yet. Add card types using "Manage Card Types" above first.
+                </p>
+              ) : (
+                <select
+                  className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  value={examType}
+                  onChange={e => setExamType(e.target.value)}
+                  required
+                  data-testid="select-exam-type"
+                >
+                  <option value="">Select card type...</option>
+                  {registry.map(r => (
+                    <option key={r.examType} value={r.examType}>
+                      {r.examType} — GHC {r.price}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+            {examType && (
+              <p className="text-xs text-slate-500">
+                Price: <span className="font-semibold text-purple-700">GHC {selectedPrice}</span> per voucher (from registry)
+              </p>
+            )}
             <div>
               <Label>Vouchers (SERIAL, PIN — one per line)</Label>
               <textarea
@@ -164,7 +321,7 @@ function AddVouchersForm({ onAdded }: { onAdded: () => void }) {
                 data-testid="input-bulk-vouchers"
               />
             </div>
-            <Button type="submit" disabled={addMutation.isPending} className="w-full" data-testid="button-add-vouchers">
+            <Button type="submit" disabled={addMutation.isPending || !examType} className="w-full" data-testid="button-add-vouchers">
               {addMutation.isPending ? "Adding..." : "Add Vouchers"}
             </Button>
           </form>
@@ -1021,6 +1178,9 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Manage Card Types */}
+            <ManageCardTypesForm onUpdated={handleRefresh} />
 
             {/* Add Vouchers */}
             <AddVouchersForm onAdded={handleRefresh} />

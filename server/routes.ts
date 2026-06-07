@@ -796,6 +796,52 @@ ${allUrls
     },
   );
 
+  // ── Card Type Registry (admin) ────────────────────────────────────────────
+  app.get(
+    "/api/admin/card-type-registry",
+    requireAdmin,
+    async (_req: Request, res: Response) => {
+      try {
+        const types = await storage.getCardTypeRegistry();
+        res.json(types);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/card-type-registry",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { examType, price } = req.body;
+        if (!examType || typeof examType !== "string" || examType.trim() === "")
+          return res.status(400).json({ error: "Card type name is required" });
+        if (typeof price !== "number" || price < 1)
+          return res.status(400).json({ error: "Price must be at least GHC 1" });
+        await storage.addCardTypeToRegistry(examType.trim().toUpperCase(), price);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.delete(
+    "/api/admin/card-type-registry/:examType",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { examType } = req.params;
+        await storage.deleteCardTypeFromRegistry(examType);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
   // ── Vendor Base Prices (admin) ────────────────────────────────────────────
   app.get(
     "/api/admin/vendor-base-prices",

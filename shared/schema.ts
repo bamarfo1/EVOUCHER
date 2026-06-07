@@ -109,6 +109,15 @@ export const blogPosts = pgTable("blog_posts", {
 });
 
 /* =========================
+   Card Type Registry (admin-managed list of available card types)
+========================= */
+export const cardTypeRegistry = pgTable("card_type_registry", {
+  examType: text("exam_type").primaryKey(),
+  price: doublePrecision("price").notNull().default(20),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/* =========================
    Vendor Base Prices (per card type, admin-configurable)
 ========================= */
 export const vendorBasePrices = pgTable("vendor_base_prices", {

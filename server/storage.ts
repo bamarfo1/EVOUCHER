@@ -18,6 +18,7 @@ import {
   vendorBasePrices,
   payouts,
   withdrawalRequests,
+  cardTypeRegistry,
 } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 
@@ -64,6 +65,10 @@ export interface IStorage {
   adminDeleteVoucher(id: string): Promise<void>;
   adminDeleteCardType(examType: string): Promise<{ deleted: number }>;
   adminUpdateCardTypePrice(examType: string, price: number): Promise<void>;
+  // Card type registry methods
+  getCardTypeRegistry(): Promise<{ examType: string; price: number }[]>;
+  addCardTypeToRegistry(examType: string, price: number): Promise<void>;
+  deleteCardTypeFromRegistry(examType: string): Promise<void>;
   // Vendor base price methods (admin-configurable, separate from public price)
   getVendorBasePrices(): Promise<{ examType: string; price: number }[]>;
   getVendorBasePrice(examType: string): Promise<number | null>;
@@ -527,6 +532,23 @@ export class DbStorage implements IStorage {
 
   async adminUpdateCardTypePrice(examType: string, price: number): Promise<void> {
     await db.update(voucherCards).set({ price }).where(eq(voucherCards.examType, examType));
+  }
+
+  // ── Card Type Registry ────────────────────────────────────────────────────
+  async getCardTypeRegistry(): Promise<{ examType: string; price: number }[]> {
+    return await db.select({ examType: cardTypeRegistry.examType, price: cardTypeRegistry.price })
+      .from(cardTypeRegistry)
+      .orderBy(cardTypeRegistry.createdAt);
+  }
+
+  async addCardTypeToRegistry(examType: string, price: number): Promise<void> {
+    await db.insert(cardTypeRegistry)
+      .values({ examType, price })
+      .onConflictDoUpdate({ target: cardTypeRegistry.examType, set: { price } });
+  }
+
+  async deleteCardTypeFromRegistry(examType: string): Promise<void> {
+    await db.delete(cardTypeRegistry).where(eq(cardTypeRegistry.examType, examType));
   }
 
   // ── Vendor Base Prices ────────────────────────────────────────────────────
