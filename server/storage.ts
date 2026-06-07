@@ -224,21 +224,38 @@ export class DbStorage implements IStorage {
   }
 
   async getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]> {
-    const results = await db
-      .select({
-        examType: voucherCards.examType,
-        count: sql<number>`count(*)::int`,
-        price: sql<number>`min(${voucherCards.price})::float8`,
-        imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
-      })
-      .from(voucherCards)
-      .where(eq(voucherCards.used, false))
-      .groupBy(voucherCards.examType)
-      .orderBy(voucherCards.examType);
+    const [registryEntries, voucherStats] = await Promise.all([
+      db.select().from(cardTypeRegistry).orderBy(cardTypeRegistry.createdAt),
+      db
+        .select({
+          examType: voucherCards.examType,
+          count: sql<number>`count(*)::int`,
+          price: sql<number>`min(${voucherCards.price})::float8`,
+          imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
+        })
+        .from(voucherCards)
+        .where(eq(voucherCards.used, false))
+        .groupBy(voucherCards.examType),
+    ]);
 
-    return results
-      .filter((r) => r.examType !== null)
-      .map((r) => ({ examType: r.examType!, count: r.count, price: r.price, imageUrl: r.imageUrl }));
+    const statsMap = new Map(voucherStats.filter(r => r.examType).map(r => [r.examType!, r]));
+
+    // Registry entries first (in order), then any voucher types not in the registry
+    const seen = new Set<string>();
+    const result: { examType: string; count: number; price: number; imageUrl: string | null }[] = [];
+
+    for (const reg of registryEntries) {
+      seen.add(reg.examType);
+      const stats = statsMap.get(reg.examType);
+      result.push({ examType: reg.examType, count: stats?.count ?? 0, price: stats?.price ?? reg.price, imageUrl: stats?.imageUrl ?? null });
+    }
+    // Include any voucher types not in the registry
+    for (const stats of voucherStats) {
+      if (stats.examType && !seen.has(stats.examType)) {
+        result.push({ examType: stats.examType!, count: stats.count, price: stats.price, imageUrl: stats.imageUrl });
+      }
+    }
+    return result;
   }
 
   // ── Vendor ────────────────────────────────────────────────────────────────
@@ -452,21 +469,37 @@ export class DbStorage implements IStorage {
   // ── Admin ─────────────────────────────────────────────────────────────────
 
   async adminGetCardSummary(): Promise<{ examType: string; total: number; used: number; available: number; price: number; imageUrl: string | null }[]> {
-    const results = await db
-      .select({
-        examType: voucherCards.examType,
-        total: sql<number>`count(*)::int`,
-        used: sql<number>`sum(case when ${voucherCards.used} then 1 else 0 end)::int`,
-        available: sql<number>`sum(case when not ${voucherCards.used} then 1 else 0 end)::int`,
-        price: sql<number>`min(${voucherCards.price})::float8`,
-        imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
-      })
-      .from(voucherCards)
-      .groupBy(voucherCards.examType)
-      .orderBy(voucherCards.examType);
-    return results.filter(r => r.examType !== null).map(r => ({
-      examType: r.examType!, total: r.total, used: r.used, available: r.available, price: r.price, imageUrl: r.imageUrl,
-    }));
+    const [registryEntries, results] = await Promise.all([
+      db.select().from(cardTypeRegistry).orderBy(cardTypeRegistry.createdAt),
+      db
+        .select({
+          examType: voucherCards.examType,
+          total: sql<number>`count(*)::int`,
+          used: sql<number>`sum(case when ${voucherCards.used} then 1 else 0 end)::int`,
+          available: sql<number>`sum(case when not ${voucherCards.used} then 1 else 0 end)::int`,
+          price: sql<number>`min(${voucherCards.price})::float8`,
+          imageUrl: sql<string | null>`max(${voucherCards.imageUrl})`,
+        })
+        .from(voucherCards)
+        .groupBy(voucherCards.examType)
+        .orderBy(voucherCards.examType),
+    ]);
+
+    const statsMap = new Map(results.filter(r => r.examType).map(r => [r.examType!, r]));
+    const seen = new Set<string>();
+    const merged: { examType: string; total: number; used: number; available: number; price: number; imageUrl: string | null }[] = [];
+
+    for (const reg of registryEntries) {
+      seen.add(reg.examType);
+      const s = statsMap.get(reg.examType);
+      merged.push({ examType: reg.examType, total: s?.total ?? 0, used: s?.used ?? 0, available: s?.available ?? 0, price: s?.price ?? reg.price, imageUrl: s?.imageUrl ?? null });
+    }
+    for (const r of results) {
+      if (r.examType && !seen.has(r.examType)) {
+        merged.push({ examType: r.examType!, total: r.total, used: r.used, available: r.available, price: r.price, imageUrl: r.imageUrl });
+      }
+    }
+    return merged;
   }
 
   async adminGetSalesSummary(): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }> {

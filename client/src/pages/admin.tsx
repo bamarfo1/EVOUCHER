@@ -108,7 +108,7 @@ function ManageCardTypesForm({ onUpdated }: { onUpdated: () => void }) {
   const { data: registry = [], refetch } = useQuery<{ examType: string; price: number }[]>({
     queryKey: ["/api/admin/card-type-registry"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/card-type-registry");
+      const res = await apiRequest("GET", "/api/admin/card-type-registry");
       return res.json();
     },
     enabled: open,
@@ -116,12 +116,10 @@ function ManageCardTypesForm({ onUpdated }: { onUpdated: () => void }) {
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/admin/card-type-registry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ examType: newName.trim().toUpperCase(), price: parseFloat(newPrice) }),
+      const res = await apiRequest("POST", "/api/admin/card-type-registry", {
+        examType: newName.trim().toUpperCase(),
+        price: parseFloat(newPrice),
       });
-      if (!res.ok) throw new Error((await res.json()).error || "Failed");
       return res.json();
     },
     onSuccess: () => {
@@ -136,8 +134,7 @@ function ManageCardTypesForm({ onUpdated }: { onUpdated: () => void }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (examType: string) => {
-      const res = await fetch(`/api/admin/card-type-registry/${encodeURIComponent(examType)}`, { method: "DELETE" });
-      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      const res = await apiRequest("DELETE", `/api/admin/card-type-registry/${encodeURIComponent(examType)}`);
       return res.json();
     },
     onSuccess: () => {
@@ -233,7 +230,7 @@ function AddVouchersForm({ onAdded }: { onAdded: () => void }) {
   const { data: registry = [] } = useQuery<{ examType: string; price: number }[]>({
     queryKey: ["/api/admin/card-type-registry"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/card-type-registry");
+      const res = await apiRequest("GET", "/api/admin/card-type-registry");
       return res.json();
     },
   });
