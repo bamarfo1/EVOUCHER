@@ -510,12 +510,16 @@ export class DbStorage implements IStorage {
   }
 
   async adminDeleteCardType(examType: string): Promise<{ deleted: number }> {
-    // Delete only unused vouchers — used ones stay to preserve transaction history
+    // NULL out the FK on transactions first so we can delete used vouchers too
+    await db.update(transactions)
+      .set({ voucherCardId: null })
+      .where(eq(transactions.examType, examType));
+    // Delete ALL vouchers (used + unused) — transaction history is preserved via examType on transactions
     const deleted = await db
       .delete(voucherCards)
-      .where(and(eq(voucherCards.examType, examType), eq(voucherCards.used, false)))
+      .where(eq(voucherCards.examType, examType))
       .returning();
-    // Also remove vendor pricing entries and vendor base price for this card type
+    // Remove vendor pricing entries and vendor base price for this card type
     await db.delete(vendorPrices).where(eq(vendorPrices.examType, examType));
     await db.delete(vendorBasePrices).where(eq(vendorBasePrices.examType, examType));
     return { deleted: deleted.length };
