@@ -109,6 +109,14 @@ export const blogPosts = pgTable("blog_posts", {
 });
 
 /* =========================
+   Vendor Base Prices (per card type, admin-configurable)
+========================= */
+export const vendorBasePrices = pgTable("vendor_base_prices", {
+  examType: text("exam_type").primaryKey(),
+  price: doublePrecision("price").notNull(),
+});
+
+/* =========================
    Zod Insert Schemas
 ========================= */
 export const insertVoucherCardSchema = createInsertSchema(voucherCards).omit({

@@ -242,10 +242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Calculate and store vendor profit if applicable
-        // Use the base price from the assigned vouchers themselves — always correct even when stock hits 0
+        // Use vendor base price (admin-set per card type) as cost; fall back to voucher card price
         if (updatedTransaction.vendorId && updatedVouchers.length > 0) {
           try {
-            const basePrice = updatedVouchers[0].price;
+            const vendorBasePrice = await storage.getVendorBasePrice(updatedTransaction.examType);
+            const basePrice = vendorBasePrice ?? updatedVouchers[0].price;
             const vp = await storage.getVendorPrice(
               updatedTransaction.vendorId!,
               updatedTransaction.examType,
@@ -336,10 +337,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Webhook notification error:", notificationError);
         }
 
-        // Calculate and store vendor profit — use voucher base price, not stock lookup
+        // Calculate and store vendor profit — use vendor base price (admin-set), fall back to voucher price
         if (updatedTransaction.vendorId && updatedVouchers.length > 0) {
           try {
-            const basePrice = updatedVouchers[0].price;
+            const vendorBasePrice = await storage.getVendorBasePrice(updatedTransaction.examType);
+            const basePrice = vendorBasePrice ?? updatedVouchers[0].price;
             const vp = await storage.getVendorPrice(updatedTransaction.vendorId!, updatedTransaction.examType);
             if (vp && vp.price > basePrice) {
               const profit = (vp.price - basePrice) * updatedVouchers.length;
@@ -509,18 +511,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: Request, res: Response) => {
       try {
         const vendorId = (req.session as any).vendorId;
-        const [baseTypes, myPrices] = await Promise.all([
+        const [baseTypes, myPrices, vendorBasePriceList] = await Promise.all([
           storage.getAvailableCardTypes(),
           storage.getVendorPrices(vendorId),
+          storage.getVendorBasePrices(),
         ]);
-        const priceMap = Object.fromEntries(
-          myPrices.map((p) => [p.examType, p.price]),
-        );
+        const priceMap = Object.fromEntries(myPrices.map((p) => [p.examType, p.price]));
+        const vendorBasePriceMap = Object.fromEntries(vendorBasePriceList.map((p) => [p.examType, p.price]));
         res.json(
           baseTypes.map((ct) => ({
             examType: ct.examType,
             count: ct.count,
-            basePrice: ct.price,
+            publicPrice: ct.price,
+            basePrice: vendorBasePriceMap[ct.examType] ?? ct.price,
             vendorPrice: priceMap[ct.examType] ?? null,
             imageUrl: ct.imageUrl,
           })),
@@ -555,14 +558,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!examType || typeof price !== "number")
           return res.status(400).json({ error: "examType and price required" });
 
-        // Validate price >= base price
-        const baseTypes = await storage.getAvailableCardTypes();
+        // Validate price >= vendor base price (admin-set); fall back to public price
+        const [baseTypes, vendorBasePriceList] = await Promise.all([
+          storage.getAvailableCardTypes(),
+          storage.getVendorBasePrices(),
+        ]);
+        const vendorBasePriceMap = Object.fromEntries(vendorBasePriceList.map((p) => [p.examType, p.price]));
         const base = baseTypes.find((b) => b.examType === examType);
-        if (base && price < base.price) {
+        const effectiveBasePrice = base ? (vendorBasePriceMap[examType] ?? base.price) : null;
+        if (effectiveBasePrice !== null && price < effectiveBasePrice) {
           return res
             .status(400)
             .json({
-              error: `Price cannot be lower than base price (GHC ${base.price})`,
+              error: `Price cannot be lower than vendor base price (GHC ${effectiveBasePrice})`,
             });
         }
 
@@ -581,13 +589,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!vendor || vendor.status !== "active")
         return res.status(404).json({ error: "Vendor not found" });
 
-      const [baseTypes, myPrices] = await Promise.all([
+      const [baseTypes, myPrices, vendorBasePriceList] = await Promise.all([
         storage.getAvailableCardTypes(),
         storage.getVendorPrices(vendor.id),
+        storage.getVendorBasePrices(),
       ]);
-      const priceMap = Object.fromEntries(
-        myPrices.map((p) => [p.examType, p.price]),
-      );
+      const priceMap = Object.fromEntries(myPrices.map((p) => [p.examType, p.price]));
+      const vendorBasePriceMap = Object.fromEntries(vendorBasePriceList.map((p) => [p.examType, p.price]));
 
       res.json({
         name: vendor.storeName || vendor.momoName,
@@ -598,7 +606,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prices: baseTypes.map((ct) => ({
           examType: ct.examType,
           price: priceMap[ct.examType] ?? ct.price,
-          basePrice: ct.price,
+          basePrice: vendorBasePriceMap[ct.examType] ?? ct.price,
+          publicPrice: ct.price,
           count: ct.count,
           imageUrl: ct.imageUrl,
         })),
@@ -780,6 +789,36 @@ ${allUrls
     async (req: Request, res: Response) => {
       try {
         await storage.adminDeleteVoucher(req.params.id);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  // ── Vendor Base Prices (admin) ────────────────────────────────────────────
+  app.get(
+    "/api/admin/vendor-base-prices",
+    requireAdmin,
+    async (_req: Request, res: Response) => {
+      try {
+        const prices = await storage.getVendorBasePrices();
+        res.json(prices);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.put(
+    "/api/admin/vendor-base-price",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { examType, price } = req.body;
+        if (!examType || typeof price !== "number" || price < 0)
+          return res.status(400).json({ error: "examType and valid price required" });
+        await storage.setVendorBasePrice(examType, price);
         res.json({ success: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });

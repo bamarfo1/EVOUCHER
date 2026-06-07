@@ -462,6 +462,113 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
   );
 }
 
+// ─── Vendor Base Prices Form ──────────────────────────────────────────────────
+function VendorBasePricesForm({ cards, onUpdated }: { cards: CardSummary[]; onUpdated: () => void }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [editingPrices, setEditingPrices] = useState<Record<string, string>>({});
+  const [savedField, setSavedField] = useState<string | null>(null);
+
+  const { data: vendorBasePrices, refetch } = useQuery<{ examType: string; price: number }[]>({
+    queryKey: ["/api/admin/vendor-base-prices"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/vendor-base-prices");
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ examType, price }: { examType: string; price: number }) => {
+      const res = await fetch("/api/admin/vendor-base-price", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examType, price }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      return { examType };
+    },
+    onSuccess: ({ examType }) => {
+      setSavedField(examType);
+      setTimeout(() => setSavedField(null), 2000);
+      refetch();
+      onUpdated();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const basePriceMap = Object.fromEntries((vendorBasePrices || []).map(p => [p.examType, p.price]));
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 cursor-pointer" onClick={() => setOpen(!open)}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-amber-600" />
+            <CardTitle className="text-base">Vendor Base Prices</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Set prices given to vendors (separate from website price)</span>
+            {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </div>
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent className="space-y-3">
+          {cards.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">No card types in inventory.</p>
+          ) : (
+            cards.map((card) => {
+              const currentVendorBase = basePriceMap[card.examType];
+              const inputVal = editingPrices[card.examType] ?? String(currentVendorBase ?? card.price);
+              const inputNum = parseFloat(inputVal) || 0;
+              return (
+                <div key={card.examType} className="flex items-center gap-3 flex-wrap border border-slate-100 rounded-lg p-3 bg-slate-50" data-testid={`vendor-base-price-row-${card.examType}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800">{card.examType}</p>
+                    <div className="flex flex-wrap gap-3 mt-0.5">
+                      <span className="text-[11px] text-slate-500">Website price: <strong className="text-slate-700">GHC {card.price}</strong></span>
+                      {currentVendorBase !== undefined && (
+                        <span className="text-[11px] text-amber-600 font-semibold">Current vendor base: GHC {currentVendorBase}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">GHC</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={inputVal}
+                        onChange={(e) => setEditingPrices(p => ({ ...p, [card.examType]: e.target.value }))}
+                        className="pl-12 w-28 font-bold"
+                        data-testid={`input-vendor-base-price-${card.examType}`}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => saveMutation.mutate({ examType: card.examType, price: inputNum })}
+                      disabled={saveMutation.isPending}
+                      data-testid={`button-save-vendor-base-price-${card.examType}`}
+                    >
+                      {savedField === card.examType ? (
+                        <span className="flex items-center gap-1.5 text-emerald-600"><Check className="w-3.5 h-3.5" />Saved</span>
+                      ) : saveMutation.isPending ? "..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          <p className="text-xs text-slate-400 mt-1">Vendors must set their selling price ≥ vendor base price. Their profit = (selling price − vendor base price) × quantity.</p>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 // ─── Card Type Row ─────────────────────────────────────────────────────────────
 function CardTypeRow({ card, onDeleted }: { card: CardSummary; onDeleted: () => void }) {
   const { toast } = useToast();
@@ -765,6 +872,9 @@ export default function AdminPage() {
 
             {/* Add Vouchers */}
             <AddVouchersForm onAdded={handleRefresh} />
+
+            {/* Vendor Base Prices */}
+            <VendorBasePricesForm cards={cards} onUpdated={handleRefresh} />
 
             {/* Update Image */}
             <UpdateImageForm examTypes={examTypes} onUpdated={handleRefresh} />

@@ -14,6 +14,7 @@ import {
   blogPosts,
   vendors,
   vendorPrices,
+  vendorBasePrices,
   payouts,
 } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -60,6 +61,10 @@ export interface IStorage {
   adminUpdateCardImage(examType: string, imageUrl: string): Promise<void>;
   adminDeleteVoucher(id: string): Promise<void>;
   adminDeleteCardType(examType: string): Promise<{ deleted: number }>;
+  // Vendor base price methods (admin-configurable, separate from public price)
+  getVendorBasePrices(): Promise<{ examType: string; price: number }[]>;
+  getVendorBasePrice(examType: string): Promise<number | null>;
+  setVendorBasePrice(examType: string, price: number): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -500,9 +505,27 @@ export class DbStorage implements IStorage {
       .delete(voucherCards)
       .where(and(eq(voucherCards.examType, examType), eq(voucherCards.used, false)))
       .returning();
-    // Also remove vendor pricing entries for this card type
+    // Also remove vendor pricing entries and vendor base price for this card type
     await db.delete(vendorPrices).where(eq(vendorPrices.examType, examType));
+    await db.delete(vendorBasePrices).where(eq(vendorBasePrices.examType, examType));
     return { deleted: deleted.length };
+  }
+
+  // ── Vendor Base Prices ────────────────────────────────────────────────────
+  async getVendorBasePrices(): Promise<{ examType: string; price: number }[]> {
+    return await db.select({ examType: vendorBasePrices.examType, price: vendorBasePrices.price }).from(vendorBasePrices);
+  }
+
+  async getVendorBasePrice(examType: string): Promise<number | null> {
+    const [row] = await db.select().from(vendorBasePrices).where(eq(vendorBasePrices.examType, examType));
+    return row?.price ?? null;
+  }
+
+  async setVendorBasePrice(examType: string, price: number): Promise<void> {
+    await db
+      .insert(vendorBasePrices)
+      .values({ examType, price })
+      .onConflictDoUpdate({ target: vendorBasePrices.examType, set: { price } });
   }
 
   private normalizePhone(phone: string): string {
