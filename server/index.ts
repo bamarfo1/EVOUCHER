@@ -9,8 +9,12 @@ import { storage } from "./storage";
 
 const app = express();
 
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required");
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || "alltekse-admin-secret-key",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 },
