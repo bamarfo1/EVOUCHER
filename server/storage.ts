@@ -493,7 +493,7 @@ export class DbStorage implements IStorage {
     for (const reg of registryEntries) {
       seen.add(reg.examType);
       const s = statsMap.get(reg.examType);
-      merged.push({ examType: reg.examType, total: s?.total ?? 0, used: s?.used ?? 0, available: s?.available ?? 0, price: s?.price ?? reg.price, imageUrl: s?.imageUrl ?? null });
+      merged.push({ examType: reg.examType, total: s?.total ?? 0, used: s?.used ?? 0, available: s?.available ?? 0, price: reg.price, imageUrl: s?.imageUrl ?? null });
     }
     for (const r of results) {
       if (r.examType && !seen.has(r.examType)) {
