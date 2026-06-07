@@ -582,7 +582,12 @@ export class DbStorage implements IStorage {
   }
 
   async updateCardTypeRegistryPrice(examType: string, price: number): Promise<void> {
-    await db.update(cardTypeRegistry).set({ price }).where(eq(cardTypeRegistry.examType, examType));
+    await Promise.all([
+      db.update(cardTypeRegistry).set({ price }).where(eq(cardTypeRegistry.examType, examType)),
+      db.update(voucherCards).set({ price }).where(
+        and(eq(voucherCards.examType, examType), eq(voucherCards.used, false))
+      ),
+    ]);
   }
 
   async deleteCardTypeFromRegistry(examType: string): Promise<void> {
