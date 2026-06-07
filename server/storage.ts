@@ -63,6 +63,7 @@ export interface IStorage {
   adminUpdateCardImage(examType: string, imageUrl: string): Promise<void>;
   adminDeleteVoucher(id: string): Promise<void>;
   adminDeleteCardType(examType: string): Promise<{ deleted: number }>;
+  adminUpdateCardTypePrice(examType: string, price: number): Promise<void>;
   // Vendor base price methods (admin-configurable, separate from public price)
   getVendorBasePrices(): Promise<{ examType: string; price: number }[]>;
   getVendorBasePrice(examType: string): Promise<number | null>;
@@ -518,6 +519,10 @@ export class DbStorage implements IStorage {
     await db.delete(vendorPrices).where(eq(vendorPrices.examType, examType));
     await db.delete(vendorBasePrices).where(eq(vendorBasePrices.examType, examType));
     return { deleted: deleted.length };
+  }
+
+  async adminUpdateCardTypePrice(examType: string, price: number): Promise<void> {
+    await db.update(voucherCards).set({ price }).where(eq(voucherCards.examType, examType));
   }
 
   // ── Vendor Base Prices ────────────────────────────────────────────────────

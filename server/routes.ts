@@ -826,6 +826,23 @@ ${allUrls
     },
   );
 
+  app.patch(
+    "/api/admin/card-types/:examType/price",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { examType } = req.params;
+        const { price } = req.body;
+        if (!examType || typeof price !== "number" || price < 1)
+          return res.status(400).json({ error: "Valid examType and price (≥ 1) required" });
+        await storage.adminUpdateCardTypePrice(examType, price);
+        res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
   app.delete(
     "/api/admin/card-types/:examType",
     requireAdmin,

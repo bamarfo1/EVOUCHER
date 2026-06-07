@@ -534,7 +534,10 @@ function VendorBasePricesForm({ cards, onUpdated }: { cards: CardSummary[]; onUp
 // ─── Card Type Row ─────────────────────────────────────────────────────────────
 function CardTypeRow({ card, onDeleted }: { card: CardSummary; onDeleted: () => void }) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceInput, setPriceInput] = useState(String(card.price));
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -550,39 +553,100 @@ function CardTypeRow({ card, onDeleted }: { card: CardSummary; onDeleted: () => 
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const priceMutation = useMutation({
+    mutationFn: async (price: number) => {
+      const res = await fetch(`/api/admin/card-types/${encodeURIComponent(card.examType)}/price`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to update price");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Price updated", description: `${card.examType} is now GHC ${priceInput}.` });
+      setEditingPrice(false);
+      qc.invalidateQueries({ queryKey: ["/api/admin/summary"] });
+      qc.invalidateQueries({ queryKey: ["/api/card-types"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const savePrice = () => {
+    const val = parseInt(priceInput, 10);
+    if (!val || val < 1) return toast({ title: "Invalid price", description: "Price must be at least GHC 1.", variant: "destructive" });
+    priceMutation.mutate(val);
+  };
+
   return (
-    <div className="flex items-center gap-3 px-4 py-3" data-testid={`card-row-${card.examType}`}>
-      <div className="w-10 h-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
-        {card.imageUrl ? (
-          <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-teal-400">
-            <CreditCard className="w-4 h-4 text-white" />
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
-        <p className="text-xs text-slate-500">GHC {card.price} · {card.total} total</p>
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="secondary" className="text-xs">{card.available} left</Badge>
-        <Badge variant={card.used > 0 ? "default" : "outline"} className="text-xs">{card.used} sold</Badge>
-        {card.available === 0 && (
-          confirming ? (
-            <div className="flex items-center gap-1">
+    <div className="px-4 py-3 space-y-2" data-testid={`card-row-${card.examType}`}>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
+          {card.imageUrl ? (
+            <img src={card.imageUrl} alt={card.examType} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-teal-400">
+              <CreditCard className="w-4 h-4 text-white" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-800 truncate">{card.examType}</p>
+          <p className="text-xs text-slate-500">{card.total} total · {card.available} left · {card.used} sold</p>
+        </div>
+        <div className="flex items-center gap-1">
+          {confirming ? (
+            <>
+              <span className="text-xs text-red-500 mr-1">
+                {card.available > 0 ? `Delete ${card.available} unused vouchers?` : "Delete card type?"}
+              </span>
               <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} data-testid={`button-confirm-delete-${card.examType}`}>
-                {deleteMutation.isPending ? "Deleting..." : "Confirm"}
+                {deleteMutation.isPending ? "Deleting..." : "Yes, delete"}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} data-testid={`button-cancel-delete-${card.examType}`}>
                 Cancel
               </Button>
-            </div>
+            </>
           ) : (
-            <Button size="icon" variant="ghost" onClick={() => setConfirming(true)} className="text-red-400 hover-elevate" data-testid={`button-delete-${card.examType}`}>
+            <Button size="icon" variant="ghost" onClick={() => setConfirming(true)} className="text-red-400" data-testid={`button-delete-${card.examType}`}>
               <Trash2 className="w-4 h-4" />
             </Button>
-          )
+          )}
+        </div>
+      </div>
+
+      {/* Price editor */}
+      <div className="flex items-center gap-2 pl-13">
+        {editingPrice ? (
+          <div className="flex items-center gap-2 ml-13">
+            <span className="text-xs text-slate-500">GHC</span>
+            <Input
+              type="number"
+              min={1}
+              value={priceInput}
+              onChange={e => setPriceInput(e.target.value)}
+              className="h-7 w-24 text-sm"
+              data-testid={`input-price-${card.examType}`}
+              onKeyDown={e => { if (e.key === "Enter") savePrice(); if (e.key === "Escape") setEditingPrice(false); }}
+              autoFocus
+            />
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-teal-600" onClick={savePrice} disabled={priceMutation.isPending} data-testid={`button-save-price-${card.examType}`}>
+              <Check className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400" onClick={() => { setEditingPrice(false); setPriceInput(String(card.price)); }} data-testid={`button-cancel-price-${card.examType}`}>
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <button
+            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-purple-600 transition-colors group"
+            onClick={() => setEditingPrice(true)}
+            data-testid={`button-edit-price-${card.examType}`}
+          >
+            <span className="font-semibold">GHC {card.price}</span>
+            <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <span className="text-slate-400 text-xs">(website price)</span>
+          </button>
         )}
       </div>
     </div>
