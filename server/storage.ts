@@ -349,14 +349,16 @@ export class DbStorage implements IStorage {
         pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::numeric`,
       }).from(transactions).where(pendingCondition);
 
-      // Subtract any outstanding (pending or approved) withdrawal requests so the
-      // balance immediately reflects what the vendor has already requested.
+      // Subtract only *pending* withdrawal requests — those submitted but not yet
+      // approved. Once approved, adminApproveWithdrawalRequest inserts a paid payout
+      // which already resets the profit clock, so approved amounts must NOT be
+      // subtracted again (that would double-deduct).
       const [inflightWithdrawals] = await db.select({
         total: sql<number>`coalesce(sum(${withdrawalRequests.amount}::numeric), 0)::numeric`,
       }).from(withdrawalRequests).where(
         and(
           eq(withdrawalRequests.vendorId, vendor.id),
-          sql`${withdrawalRequests.status} in ('pending', 'approved')`,
+          eq(withdrawalRequests.status, "pending"),
         ),
       );
       const rawProfit = Number(pending?.pendingProfit ?? 0);
