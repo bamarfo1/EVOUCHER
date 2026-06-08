@@ -607,6 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contactNumber: vendor.contactNumber,
         slug: vendor.slug,
         status: vendor.status,
+        template: vendor.template ?? "classic-purple",
         prices: baseTypes.map((ct) => ({
           examType: ct.examType,
           price: priceMap[ct.examType] ?? ct.price,
@@ -1131,10 +1132,11 @@ ${allUrls
     async (req: Request, res: Response) => {
       try {
         const vendorId = (req.session as any).vendorId;
-        const { storeName } = req.body;
-        if (storeName === undefined)
-          return res.status(400).json({ error: "storeName required" });
-        await storage.updateVendorStoreName(vendorId, storeName);
+        const { storeName, template } = req.body;
+        if (storeName === undefined && template === undefined)
+          return res.status(400).json({ error: "storeName or template required" });
+        if (storeName !== undefined) await storage.updateVendorStoreName(vendorId, storeName);
+        if (template !== undefined) await storage.updateVendorTemplate(vendorId, template);
         res.json({ success: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });

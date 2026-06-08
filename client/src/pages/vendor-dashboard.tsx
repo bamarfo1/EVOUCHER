@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Store, LogOut, Copy, ExternalLink, TrendingUp, Package,
-  DollarSign, Phone, CreditCard, Loader2, Check, Settings, Pencil, X, Wallet, Clock, ArrowDownToLine, AlertCircle
+  DollarSign, Phone, CreditCard, Loader2, Check, Settings, Pencil, X, Wallet, Clock, ArrowDownToLine, AlertCircle, Palette,
 } from "lucide-react";
+import { TEMPLATE_GROUPS } from "@/lib/vendor-templates";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
 interface VendorMe {
@@ -22,6 +23,7 @@ interface VendorMe {
   contactNumber: string;
   slug: string;
   status: string;
+  template?: string;
 }
 
 interface VendorStats {
@@ -159,6 +161,23 @@ export default function VendorDashboard() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const res = await fetch("/api/vendor/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: templateId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to save theme");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Theme saved!", description: "Your store page now uses the new theme." });
+      queryClient.invalidateQueries({ queryKey: ["/api/vendor/me"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await fetch("/api/vendor/logout", { method: "POST" });
@@ -260,6 +279,66 @@ export default function VendorDashboard() {
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Page Theme Picker */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-purple-600" />
+              <CardTitle className="text-base font-bold">Page Theme</CardTitle>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Customise the look of your public store page. Click a theme to apply instantly.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {TEMPLATE_GROUPS.map((group) => {
+              const activeId = vendor.template ?? "classic-purple";
+              return (
+                <div key={group.layout}>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">{group.label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.templates.map((t) => {
+                      const isActive = t.id === activeId;
+                      const isSaving = saveTemplateMutation.isPending && saveTemplateMutation.variables === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => !isActive && saveTemplateMutation.mutate(t.id)}
+                          disabled={saveTemplateMutation.isPending}
+                          title={t.name}
+                          data-testid={`theme-swatch-${t.id}`}
+                          style={{ outline: isActive ? `2.5px solid #7c3aed` : "none", outlineOffset: 2 }}
+                          className={`relative flex flex-col items-center gap-1 rounded-lg overflow-hidden border transition-all duration-150 ${
+                            isActive ? "border-purple-400 shadow-md" : "border-transparent hover:border-slate-300"
+                          } ${saveTemplateMutation.isPending && !isSaving ? "opacity-50" : ""}`}
+                        >
+                          <div
+                            style={{ background: t.swatchGradient, width: 72, height: 44, borderRadius: "6px 6px 0 0", position: "relative" }}
+                          >
+                            {isActive && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-t-md">
+                                <Check className="w-4 h-4 text-white drop-shadow" />
+                              </div>
+                            )}
+                            {isSaving && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-t-md">
+                                <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[9px] font-semibold text-slate-500 pb-1 leading-none max-w-[72px] truncate px-0.5">
+                            {t.colors.accent === t.colors.primary
+                              ? t.name.split(" ").slice(1).join(" ")
+                              : t.name.split(" ").slice(1).join(" ")}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
 

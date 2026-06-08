@@ -45,6 +45,7 @@ export interface IStorage {
   getVendorPrice(vendorId: string, examType: string): Promise<VendorPrice | undefined>;
   getVendorStats(vendorId: string): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }>;
   updateVendorStoreName(vendorId: string, storeName: string): Promise<void>;
+  updateVendorTemplate(vendorId: string, template: string): Promise<void>;
   // Admin vendor methods
   adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]>;
   adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string }): Promise<Vendor>;
@@ -364,6 +365,10 @@ export class DbStorage implements IStorage {
 
   async updateVendorStoreName(vendorId: string, storeName: string): Promise<void> {
     await db.update(vendors).set({ storeName }).where(eq(vendors.id, vendorId));
+  }
+
+  async updateVendorTemplate(vendorId: string, template: string): Promise<void> {
+    await db.update(vendors).set({ template }).where(eq(vendors.id, vendorId));
   }
 
   async adminGetAllVendors(): Promise<{ vendor: Vendor; prices: VendorPrice[]; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]> {

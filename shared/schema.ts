@@ -36,6 +36,7 @@ export const vendors = pgTable("vendors", {
   contactNumber: text("contact_number").notNull(),
   slug: text("slug").unique().notNull(),
   status: text("status").notNull().default("active"),
+  template: text("template").notNull().default("classic-purple"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
