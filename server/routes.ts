@@ -105,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: validatedData.phone,
           quantity,
         },
-        `${baseUrl}/payment-callback?reference=${reference}`,
+        `${baseUrl}/payment-callback?reference=${reference}${vendorSlug ? `&vendor=${encodeURIComponent(vendorSlug)}` : ""}`,
       );
 
       res.json({

@@ -30,7 +30,10 @@ export default function PaymentCallback() {
       const data = await response.json();
 
       if (data.status === "success" && data.vouchers) {
-        const vendorSlug = sessionStorage.getItem("purchase_vendor_slug") || "";
+        // URL param is the authoritative source — it travels with the Paystack
+        // redirect and is not affected by sessionStorage clearing.
+        const urlParams2 = new URLSearchParams(window.location.search);
+        const vendorSlug = urlParams2.get("vendor") || sessionStorage.getItem("purchase_vendor_slug") || "";
         setVoucherData({
           vouchers: data.vouchers,
           email: sessionStorage.getItem("purchase_email") || "",

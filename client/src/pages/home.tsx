@@ -28,6 +28,7 @@ export default function Home() {
         // Store phone & email so we can show them on the success page after redirect
         sessionStorage.setItem("purchase_phone", data.phone);
         sessionStorage.setItem("purchase_email", data.email || "");
+        sessionStorage.removeItem("purchase_vendor_slug");
         window.location.href = response.authorizationUrl;
       } else {
         setErrorMessage("Failed to initialize payment. Please try again.");
