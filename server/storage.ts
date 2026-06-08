@@ -349,6 +349,20 @@ export class DbStorage implements IStorage {
         pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::numeric`,
       }).from(transactions).where(pendingCondition);
 
+      // Subtract any outstanding (pending or approved) withdrawal requests so the
+      // balance immediately reflects what the vendor has already requested.
+      const [inflightWithdrawals] = await db.select({
+        total: sql<number>`coalesce(sum(${withdrawalRequests.amount}::numeric), 0)::numeric`,
+      }).from(withdrawalRequests).where(
+        and(
+          eq(withdrawalRequests.vendorId, vendor.id),
+          sql`${withdrawalRequests.status} in ('pending', 'approved')`,
+        ),
+      );
+      const rawProfit = Number(pending?.pendingProfit ?? 0);
+      const inflightAmount = Number(inflightWithdrawals?.total ?? 0);
+      const pendingProfit = Math.max(0, rawProfit - inflightAmount);
+
       // Get vendor's custom prices
       const prices = await db.select().from(vendorPrices).where(eq(vendorPrices.vendorId, vendor.id)).orderBy(vendorPrices.examType);
 
@@ -357,7 +371,7 @@ export class DbStorage implements IStorage {
         prices,
         totalSales: totals?.totalSales ?? 0,
         totalRevenue: Number(totals?.totalRevenue ?? 0),
-        pendingProfit: Number(pending?.pendingProfit ?? 0),
+        pendingProfit,
         lastPayoutAt: lastPaidPayout?.paidAt ?? null,
       };
     }));
