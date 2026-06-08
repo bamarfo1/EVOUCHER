@@ -675,12 +675,15 @@ export class DbStorage implements IStorage {
       .where(eq(withdrawalRequests.id, requestId))
       .returning();
     if (!req) throw new Error("Withdrawal request not found");
-    // Record as a paid payout so pending profit resets
+    // Record as a paid payout — use the request's createdAt as paidAt so the
+    // profit clock resets to when the vendor submitted the request, not when
+    // admin approved it. Any sales after the request submission correctly
+    // show as new pending profit.
     await db.insert(payouts).values({
       vendorId: req.vendorId,
       amount: req.amount,
       status: "paid",
-      paidAt: now,
+      paidAt: req.createdAt,
       notes: `Withdrawal request approved`,
     });
   }
