@@ -94,6 +94,31 @@ export async function sendVoucherEmail(
   await transporter.sendMail(mailOptions);
 }
 
+export async function sendWelcomeSms(phone: string): Promise<void> {
+  const message = `Welcome to AllTekSE e-Voucher! Your vendor account is ready. Stay updated — follow our WhatsApp channel: https://whatsapp.com/channel/0029VbCUcjaJP20xcXlPOt2L`;
+
+  if (!NALO_API_KEY) {
+    console.log("Nalo SMS API not configured. Would send welcome SMS to:", phone);
+    return;
+  }
+
+  try {
+    const response = await axios.get(NALO_API_URL, {
+      params: {
+        key: NALO_API_KEY,
+        type: 0,
+        destination: phone,
+        dlr: 1,
+        source: NALO_SENDER_ID,
+        message,
+      },
+    });
+    console.log("Welcome SMS sent to", phone, response.data);
+  } catch (error) {
+    console.error("Failed to send welcome SMS:", error);
+  }
+}
+
 export async function sendVoucherSMS(
   phone: string,
   vouchers: VoucherItem[],

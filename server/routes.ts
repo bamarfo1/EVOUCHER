@@ -9,6 +9,7 @@ import { initializePayment, verifyPayment } from "./services/paystack";
 import {
   sendVoucherEmail,
   sendVoucherSMS,
+  sendWelcomeSms,
   type VoucherItem,
 } from "./services/notifications";
 import { handleUssdRequest } from "./services/ussd";
@@ -441,6 +442,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         slug,
       });
       (req.session as any).vendorId = vendor.id;
+      sendWelcomeSms(phone).catch((err) =>
+        console.error("Welcome SMS failed:", err)
+      );
       res.json({ success: true, slug: vendor.slug });
     } catch (error: any) {
       console.error("Vendor register error:", error);
