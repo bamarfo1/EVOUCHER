@@ -445,7 +445,6 @@ export default function VendorDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-bold text-slate-800">{card.examType}</p>
-                        <Badge variant="outline" className="text-[10px] px-1.5">{card.count} in stock</Badge>
                         <span className="text-[11px] text-slate-400">Base: GHC {card.basePrice}</span>
                       </div>
                       {profit > 0 && (

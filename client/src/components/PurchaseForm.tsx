@@ -276,14 +276,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                         </span>
                         {soldOut ? (
                           <Badge variant="destructive" className="text-[10px] px-1.5">Sold Out</Badge>
-                        ) : (
-                          <span
-                            className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                            style={{ background: `${colors.accentColor}18`, color: colors.accentColor }}
-                          >
-                            {card.count} left
-                          </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </button>

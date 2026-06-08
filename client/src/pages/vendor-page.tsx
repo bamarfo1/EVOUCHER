@@ -294,8 +294,7 @@ export default function VendorPage() {
                         <p style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", marginBottom: 6 }}>{card.examType}</p>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span style={{ fontSize: 20, fontWeight: 900, color: disabled ? "#94a3b8" : colors.accentColor }}>GHC {card.price}</span>
-                          {card.count === 0 ? <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>
-                            : <span style={{ fontSize: 11, background: `${colors.accentColor}18`, color: colors.accentColor, padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>{card.count} left</span>}
+                          {card.count === 0 && <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>}
                         </div>
                       </div>
                     </button>
@@ -390,8 +389,7 @@ export default function VendorPage() {
                         <p style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.examType}</p>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 18, fontWeight: 900, color: disabled ? "#94a3b8" : T.primary }}>GHC {card.price}</span>
-                          {card.count === 0 ? <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", padding: "2px 7px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>
-                            : <span style={{ fontSize: 11, color: T.primary, fontWeight: 600 }}>{card.count} left</span>}
+                          {card.count === 0 && <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", padding: "2px 7px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>}
                         </div>
                       </div>
                     </button>
@@ -475,8 +473,7 @@ export default function VendorPage() {
                       </div>
                       <div style={{ padding: "0 20px", textAlign: "right", flexShrink: 0 }}>
                         <p style={{ fontSize: 22, fontWeight: 900, color: disabled ? "#94a3b8" : T.primary }}>GHC {card.price}</p>
-                        {card.count === 0 ? <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>
-                          : <span style={{ fontSize: 11, color: T.primary, fontWeight: 600 }}>{card.count} in stock</span>}
+                        {card.count === 0 && <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>}
                       </div>
                     </button>
                   );
@@ -653,8 +650,7 @@ export default function VendorPage() {
                       <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 6 }}>{card.examType}</p>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontSize: 19, fontWeight: 900, color: disabled ? T.cardBorder : T.primary }}>GHC {card.price}</span>
-                        {card.count === 0 ? <span style={{ fontSize: 10, background: "#dc262630", color: "#f87171", padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>
-                          : <span style={{ fontSize: 11, background: T.primary + "22", color: T.primary, padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>{card.count} left</span>}
+                        {card.count === 0 && <span style={{ fontSize: 10, background: "#dc262630", color: "#f87171", padding: "2px 8px", borderRadius: 999, fontWeight: 700 }}>Sold Out</span>}
                       </div>
                     </div>
                   </button>
