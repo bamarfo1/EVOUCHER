@@ -20,7 +20,7 @@ import {
   withdrawalRequests,
   cardTypeRegistry,
 } from "@shared/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined>;
@@ -195,14 +195,14 @@ export class DbStorage implements IStorage {
     const normalizedPhone = this.normalizePhone(phone);
     console.log('[Voucher Retrieval] Normalized search phone:', normalizedPhone, 'Date:', date);
 
-    const results = await db
+    // Step 1: fetch matching completed transactions for this phone + date
+    const matchingTxns = await db
       .select({
-        serial: voucherCards.serial,
-        pin: voucherCards.pin,
+        voucherCardId: transactions.voucherCardId,
+        voucherCardIds: transactions.voucherCardIds,
         examType: transactions.examType,
       })
       .from(transactions)
-      .innerJoin(voucherCards, eq(transactions.voucherCardId, voucherCards.id))
       .where(
         and(
           eq(transactions.status, "completed"),
@@ -219,6 +219,48 @@ export class DbStorage implements IStorage {
         )
       )
       .orderBy(sql`${transactions.createdAt} DESC`);
+
+    if (matchingTxns.length === 0) {
+      console.log('[Voucher Retrieval] No matching transactions found');
+      return [];
+    }
+
+    // Step 2: collect all voucher IDs — each transaction may have one (voucherCardId)
+    // or many (voucherCardIds array) for bulk purchases
+    const examTypeById = new Map<string, string>();
+    const allVoucherIds: string[] = [];
+
+    for (const txn of matchingTxns) {
+      const ids: string[] = txn.voucherCardIds && txn.voucherCardIds.length > 0
+        ? txn.voucherCardIds
+        : txn.voucherCardId
+          ? [txn.voucherCardId]
+          : [];
+      for (const id of ids) {
+        if (!allVoucherIds.includes(id)) {
+          allVoucherIds.push(id);
+          examTypeById.set(id, txn.examType);
+        }
+      }
+    }
+
+    if (allVoucherIds.length === 0) return [];
+
+    // Step 3: fetch all voucher cards in one query
+    const cards = await db
+      .select({ id: voucherCards.id, serial: voucherCards.serial, pin: voucherCards.pin })
+      .from(voucherCards)
+      .where(inArray(voucherCards.id, allVoucherIds));
+
+    // Preserve order: return in same order as IDs were collected
+    const cardMap = new Map(cards.map(c => [c.id, c]));
+    const results = allVoucherIds
+      .map(id => {
+        const card = cardMap.get(id);
+        if (!card) return null;
+        return { serial: card.serial, pin: card.pin, examType: examTypeById.get(id) ?? "" };
+      })
+      .filter((r): r is { serial: string; pin: string; examType: string } => r !== null);
 
     console.log('[Voucher Retrieval] Found results:', results.length);
     return results;
