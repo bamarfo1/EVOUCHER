@@ -5,7 +5,7 @@ import {
   insertTransactionSchema,
   transactions as transactionsTable,
 } from "@shared/schema";
-import { initializePayment, verifyPayment, getPaystackTransactionId, sendTerminalEvent, TERMINAL_ID } from "./services/paystack";
+import { verifyPayment, createPaystackCustomer, createPaymentRequest, sendTerminalEvent, TERMINAL_ID } from "./services/paystack";
 import {
   sendVoucherEmail,
   sendVoucherSMS,
@@ -73,48 +73,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const totalAmount = unitPrice * quantity;
-      const reference = `TXN-${Date.now()}-${randomBytes(4).toString("hex")}`;
 
+      const emailForPaystack =
+        validatedData.email && validatedData.email.trim() !== ""
+          ? validatedData.email
+          : `${validatedData.phone.replace(/[^0-9]/g, "")}@noemail.alltekse.com`;
+
+      // Step 1: Create Paystack customer
+      const customerCode = await createPaystackCustomer(emailForPaystack, validatedData.phone);
+
+      // Step 2: Create Paystack payment request (invoice)
+      const paymentRequest = await createPaymentRequest(
+        customerCode,
+        `${validatedData.examType} Voucher × ${quantity}`,
+        Math.round(Number(totalAmount) * 100),
+        {
+          examType: validatedData.examType,
+          phone: validatedData.phone,
+          quantity,
+          vendorSlug: vendorSlug ?? null,
+        },
+      );
+
+      // Step 3: Store offline_reference as paystackReference so charge.success webhook matches
       const emailToStore =
         validatedData.email && validatedData.email.trim() !== ""
           ? validatedData.email
           : null;
 
       const transaction = await storage.createTransaction({
-        email: emailToStore,
+        email: (emailToStore as string | null),
         phone: validatedData.phone,
         examType: validatedData.examType,
         amount: String(totalAmount),
         quantity,
-        paystackReference: reference,
+        paystackReference: paymentRequest.offline_reference,
         vendorId,
       });
 
-      const baseUrl = process.env.BASE_URL || `http://localhost:5000`;
-      const emailForPaystack =
-        validatedData.email && validatedData.email.trim() !== ""
-          ? validatedData.email
-          : `${validatedData.phone.replace(/[^0-9]/g, "")}@noemail.alltekse.com`;
-
-      await initializePayment(
-        emailForPaystack,
-        Math.round(Number(totalAmount) * 100),
-        reference,
-        {
-          transactionId: transaction.id,
-          examType: validatedData.examType,
-          phone: validatedData.phone,
-          quantity,
-        },
-        `${baseUrl}/payment-callback?reference=${reference}${vendorSlug ? `&vendor=${encodeURIComponent(vendorSlug)}` : ""}`,
+      // Step 4: Push invoice to terminal
+      const { eventId } = await sendTerminalEvent(
+        TERMINAL_ID,
+        paymentRequest.id,
+        paymentRequest.offline_reference,
       );
 
-      // Push payment to Paystack Terminal (bypasses USSD PIN confirmation)
-      const paystackTxId = await getPaystackTransactionId(reference);
-      const { eventId } = await sendTerminalEvent(TERMINAL_ID, paystackTxId);
+      console.log(`[Terminal] Invoice ${paymentRequest.id} pushed to ${TERMINAL_ID} (event ${eventId})`);
 
       res.json({
-        reference,
+        reference: paymentRequest.offline_reference,
         transactionId: transaction.id,
         terminalEventId: eventId,
       });
@@ -329,8 +336,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transaction = await storage.getTransactionByReference(reference);
         if (!transaction) return res.status(404).send("Transaction not found");
 
-        const expectedAmount = transaction.amount * 100;
-        if (amount !== expectedAmount) return res.status(400).send("Amount mismatch");
+        const expectedAmount = Number(transaction.amount) * 100;
+        if (Number(amount) !== expectedAmount) return res.status(400).send("Amount mismatch");
         if (transaction.status === "completed") return res.status(200).send("Already processed");
         if (transaction.status === "processing") return res.status(409).send("Already processing");
 

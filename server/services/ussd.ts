@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import { initializePayment, getPaystackTransactionId, sendTerminalEvent, TERMINAL_ID, submitOtp } from "./paystack";
+import { createPaystackCustomer, createPaymentRequest, sendTerminalEvent, TERMINAL_ID, submitOtp } from "./paystack";
 import { randomBytes } from "crypto";
 
 export interface UssdResult {
@@ -258,43 +258,36 @@ export async function handleUssdRequest(
     if (input === "1") {
       sessions.delete(msisdn);
       try {
-        const reference = `USSD-${Date.now()}-${randomBytes(3).toString("hex")}`;
         const intlPhone = toInternational(session.payPhone!);
         const emailPlaceholder = `${intlPhone}@noemail.alltekse.com`;
-
         const price = Number(session.price!);
+
+        // Step 1: Create Paystack customer
+        const customerCode = await createPaystackCustomer(emailPlaceholder, session.payPhone!);
+
+        // Step 2: Create Paystack payment request (invoice)
+        const paymentRequest = await createPaymentRequest(
+          customerCode,
+          `${session.displayName} Voucher`,
+          Math.round(price * 100),
+          { examType: session.examType, phone: session.payPhone, quantity: 1, channel: "ussd" },
+        );
+
+        // Step 3: Create local transaction using offline_reference so webhook matches
         const transaction = await storage.createTransaction({
-          email: null,
+          email: (null as string | null),
           phone: session.payPhone!,
           examType: session.examType!,
           amount: String(price),
-          paystackReference: reference,
+          paystackReference: paymentRequest.offline_reference,
           quantity: 1,
           vendorId: null,
         });
 
-        const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+        // Step 4: Push invoice to terminal
+        await sendTerminalEvent(TERMINAL_ID, paymentRequest.id, paymentRequest.offline_reference);
 
-        // Initialize Paystack transaction
-        await initializePayment(
-          emailPlaceholder,
-          Math.round(price * 100),
-          reference,
-          {
-            transactionId: transaction.id,
-            examType: session.examType,
-            phone: session.payPhone,
-            quantity: 1,
-            channel: "ussd",
-          },
-          `${baseUrl}/payment-callback?reference=${reference}`,
-        );
-
-        // Get Paystack numeric transaction ID and push to terminal
-        const paystackTxId = await getPaystackTransactionId(reference);
-        await sendTerminalEvent(TERMINAL_ID, paystackTxId);
-
-        console.log("[USSD] Payment pushed to terminal:", TERMINAL_ID, "for reference:", reference);
+        console.log("[USSD] Invoice", paymentRequest.id, "pushed to terminal", TERMINAL_ID);
 
         return end(
           "Payment sent to terminal!\n" +
