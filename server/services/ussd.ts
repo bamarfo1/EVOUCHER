@@ -1,6 +1,5 @@
 import { storage } from "../storage";
-import { initializePayment, submitOtp } from "./paystack";
-import { sendPaymentLinkSMS } from "./notifications";
+import { chargeMobileMoney, submitOtp } from "./paystack";
 import { randomBytes } from "crypto";
 
 export interface UssdResult {
@@ -15,6 +14,7 @@ interface UssdSession {
   price: number | null;
   msisdn: string;
   payPhone: string | null;
+  provider: string | null;
   reference: string | null;
   createdAt: number;
 }
@@ -81,6 +81,61 @@ function isValidGhanaPhone(phone: string): boolean {
 function con(msg: string): UssdResult { return { msg, isEnd: false }; }
 function end(msg: string): UssdResult { return { msg, isEnd: true }; }
 
+// ── Shared MoMo charge helper ────────────────────────────────────────────────
+async function doMomoCharge(
+  session: UssdSession,
+  provider: string,
+  voucher?: string,
+): Promise<UssdResult> {
+  try {
+    const intlPhone = toInternational(session.payPhone!);
+    const emailPlaceholder = `${intlPhone}@noemail.alltekse.com`;
+    const price = Number(session.price!);
+    const reference = `USSD-${Date.now()}-${randomBytes(3).toString("hex")}`;
+
+    const transaction = await storage.createTransaction({
+      email: null as string | null,
+      phone: session.payPhone!,
+      examType: session.examType!,
+      amount: String(price),
+      paystackReference: reference,
+      quantity: 1,
+      vendorId: null,
+    });
+
+    await chargeMobileMoney(
+      emailPlaceholder,
+      Math.round(price * 100),
+      reference,
+      intlPhone,
+      provider,
+      { transactionId: transaction.id, examType: session.examType, phone: session.payPhone, quantity: 1, channel: "ussd" },
+      voucher,
+    );
+
+    console.log(`[USSD] MoMo charge initiated — provider:${provider} phone:${intlPhone} ref:${reference}`);
+
+    if (provider === "atl") {
+      return end(
+        "Payment processing.\n" +
+        "Voucher sent via SMS\n" +
+        "once payment confirms.",
+      );
+    }
+    return end(
+      "Check your phone.\n" +
+      "Approve the prompt to\n" +
+      "complete payment.\n" +
+      "Voucher sent via SMS\n" +
+      "once approved.",
+    );
+  } catch (error: any) {
+    const psError = error?.response?.data?.message || error?.response?.data?.data?.message || error?.message || "Unknown error";
+    console.error("[USSD] MoMo charge error:", psError, JSON.stringify(error?.response?.data || {}));
+    return end(`Payment failed:\n${psError}\nTry: *920*919#`);
+  }
+}
+
 export async function handleUssdRequest(
   msisdn: string,
   userdata: string,
@@ -137,6 +192,7 @@ export async function handleUssdRequest(
       price: null,
       msisdn,
       payPhone: null,
+      provider: null,
       reference: null,
       createdAt: Date.now(),
     };
@@ -257,51 +313,26 @@ export async function handleUssdRequest(
   // ── Confirm ─────────────────────────────────────────────────────────────────
   if (session.step === "confirm") {
     if (input === "1") {
-      sessions.delete(msisdn);
-      try {
-        const intlPhone = toInternational(session.payPhone!);
-        const emailPlaceholder = `${intlPhone}@noemail.alltekse.com`;
-        const price = Number(session.price!);
-        const reference = `USSD-${Date.now()}-${randomBytes(3).toString("hex")}`;
+      const provider = detectNetwork(session.payPhone!);
+      session.provider = provider;
+      session.createdAt = Date.now();
 
-        const transaction = await storage.createTransaction({
-          email: (null as string | null),
-          phone: session.payPhone!,
-          examType: session.examType!,
-          amount: String(price),
-          paystackReference: reference,
-          quantity: 1,
-          vendorId: null,
-        });
-
-        const baseUrl = process.env.BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:5000"}`;
-        const callbackUrl = `${baseUrl}/payment-callback?reference=${reference}`;
-
-        const paystackData = await initializePayment(
-          emailPlaceholder,
-          Math.round(price * 100),
-          reference,
-          { transactionId: transaction.id, examType: session.examType, phone: session.payPhone, quantity: 1, channel: "ussd" },
-          callbackUrl,
+      // AirtelTigo requires a voucher the customer generates by dialing *110#
+      if (provider === "atl") {
+        session.step = "voucher";
+        sessions.set(msisdn, session);
+        return con(
+          "AirtelTigo detected.\n" +
+          "Dial *110# now to get\n" +
+          "a 6-digit voucher code.\n" +
+          "Enter the code below:",
         );
-
-        // Send payment link via SMS so the customer can tap and pay on their phone
-        await sendPaymentLinkSMS(intlPhone, paystackData.authorization_url, session.examType!);
-
-        console.log("[USSD] Payment link sent to", intlPhone, "ref:", reference);
-
-        return end(
-          "Payment link sent\n" +
-          "to your phone via SMS.\n" +
-          "Tap the link to pay.\n" +
-          "Voucher sent via SMS\n" +
-          "once payment confirms.",
-        );
-      } catch (error: any) {
-        const psError = error?.response?.data?.message || error?.response?.data?.data?.message || error?.message || "Unknown error";
-        console.error("[USSD] Payment error:", psError, JSON.stringify(error?.response?.data || {}));
-        return end(`Payment failed: ${psError}\nTry again: *920*919#`);
       }
+
+      // MTN & Telecel — direct STK push, no extra step needed
+      sessions.delete(msisdn);
+      return await doMomoCharge(session, provider);
+
     } else if (input === "2") {
       sessions.delete(msisdn);
       return end("Cancelled.\nDial *920*919# to try again.");
@@ -314,6 +345,20 @@ export async function handleUssdRequest(
         `2. Cancel\n\nInvalid choice.`,
       );
     }
+  }
+
+  // ── AirtelTigo Voucher ───────────────────────────────────────────────────────
+  if (session.step === "voucher") {
+    if (!/^\d{6}$/.test(input)) {
+      return con(
+        "Invalid code.\n" +
+        "Dial *110# to get your\n" +
+        "6-digit voucher code.\n" +
+        "Enter it below:",
+      );
+    }
+    sessions.delete(msisdn);
+    return await doMomoCharge(session, "atl", input);
   }
 
   sessions.delete(msisdn);

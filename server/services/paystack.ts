@@ -63,6 +63,45 @@ export async function verifyPayment(reference: string): Promise<PaystackVerifyRe
   return response.data;
 }
 
+// Direct mobile money charge for Ghana (triggers STK push / network prompt).
+// provider: "mtn" | "vod" | "atl"
+// voucher: required for AirtelTigo (customer dials *110# to generate it)
+export async function chargeMobileMoney(
+  email: string,
+  amountInPesewas: number,
+  reference: string,
+  phone: string,
+  provider: string,
+  metadata: any,
+  voucher?: string
+): Promise<{ status: string; displayText?: string }> {
+  const mobileMoneyPayload: any = { phone, provider };
+  if (voucher) mobileMoneyPayload.voucher = voucher;
+
+  const response = await axios.post(
+    `${PAYSTACK_BASE_URL}/charge`,
+    {
+      email,
+      amount: amountInPesewas,
+      currency: "GHS",
+      reference,
+      metadata,
+      mobile_money: mobileMoneyPayload,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${getPaystackKey()}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  const data = response.data?.data;
+  return {
+    status: data?.status ?? "pending",
+    displayText: data?.display_text ?? data?.message,
+  };
+}
+
 // Submit OTP for card charge flows.
 export async function submitOtp(otp: string, reference: string): Promise<any> {
   const response = await axios.post(
