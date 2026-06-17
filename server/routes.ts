@@ -5,7 +5,7 @@ import {
   insertTransactionSchema,
   transactions as transactionsTable,
 } from "@shared/schema";
-import { verifyPayment, createPaystackCustomer, createPaymentRequest, sendTerminalEvent, TERMINAL_ID } from "./services/paystack";
+import { initializePayment, verifyPayment } from "./services/paystack";
 import {
   sendVoucherEmail,
   sendVoucherSMS,
@@ -73,33 +73,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const totalAmount = unitPrice * quantity;
+      const reference = `TXN-${Date.now()}-${randomBytes(4).toString("hex")}`;
 
-      const emailForPaystack =
-        validatedData.email && validatedData.email.trim() !== ""
-          ? validatedData.email
-          : `${validatedData.phone.replace(/[^0-9]/g, "")}@noemail.alltekse.com`;
-
-      // Step 1: Create Paystack customer
-      const customerCode = await createPaystackCustomer(emailForPaystack, validatedData.phone);
-
-      // Step 2: Create Paystack payment request (invoice)
-      const paymentRequest = await createPaymentRequest(
-        customerCode,
-        `${validatedData.examType} Voucher × ${quantity}`,
-        Math.round(Number(totalAmount) * 100),
-        {
-          examType: validatedData.examType,
-          phone: validatedData.phone,
-          quantity,
-          vendorSlug: vendorSlug ?? null,
-        },
-      );
-
-      // Step 3: Store offline_reference as paystackReference so charge.success webhook matches
       const emailToStore =
         validatedData.email && validatedData.email.trim() !== ""
           ? validatedData.email
           : null;
+      const emailForPaystack = emailToStore ?? `${validatedData.phone.replace(/[^0-9]/g, "")}@noemail.alltekse.com`;
 
       const transaction = await storage.createTransaction({
         email: (emailToStore as string | null),
@@ -107,23 +87,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         examType: validatedData.examType,
         amount: String(totalAmount),
         quantity,
-        paystackReference: paymentRequest.offline_reference,
+        paystackReference: reference,
         vendorId,
       });
 
-      // Step 4: Push invoice to terminal
-      const { eventId } = await sendTerminalEvent(
-        TERMINAL_ID,
-        paymentRequest.id,
-        paymentRequest.offline_reference,
+      const baseUrl = process.env.BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:5000"}`;
+      const callbackUrl = `${baseUrl}/payment-callback?reference=${reference}${vendorSlug ? `&vendor=${encodeURIComponent(vendorSlug)}` : ""}`;
+
+      const paystackData = await initializePayment(
+        emailForPaystack,
+        Math.round(Number(totalAmount) * 100),
+        reference,
+        { transactionId: transaction.id, examType: validatedData.examType, phone: validatedData.phone, quantity },
+        callbackUrl,
       );
 
-      console.log(`[Terminal] Invoice ${paymentRequest.id} pushed to ${TERMINAL_ID} (event ${eventId})`);
-
       res.json({
-        reference: paymentRequest.offline_reference,
+        reference,
+        authorizationUrl: paystackData.authorization_url,
         transactionId: transaction.id,
-        terminalEventId: eventId,
       });
     } catch (error: any) {
       console.error("Purchase initialization error:", error);

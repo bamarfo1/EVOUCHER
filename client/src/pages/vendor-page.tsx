@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Phone, Mail, Lock, Loader2, Shield, CreditCard,
   Search, Minus, Plus, Zap, AlertCircle, MessageCircle, ArrowLeft,
-  MonitorSmartphone, CheckCircle2,
 } from "lucide-react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
@@ -63,17 +62,8 @@ export default function VendorPage() {
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [terminalWait, setTerminalWait] = useState(false);
-  const [terminalRef, setTerminalRef] = useState<string | null>(null);
-  const [terminalExamType, setTerminalExamType] = useState<string | null>(null);
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pollStart = useRef<number>(0);
 
-  const stopPolling = () => {
-    if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
-  };
-
-  useEffect(() => () => stopPolling(), []);
+  useEffect(() => {}, []);
 
   const { data: vendor, isLoading: vendorLoading, error } = useQuery<VendorInfo>({
     queryKey: [`/api/vendor/${slug}`],
@@ -108,35 +98,11 @@ export default function VendorPage() {
       const data = await res.json();
       if (!res.ok) {
         setErrorMsg(data.error || "Failed to initialize payment");
-      } else if (data.reference) {
-        setDialogOpen(false);
-        setTerminalRef(data.reference);
-        setTerminalExamType(selected.examType);
-        setTerminalWait(true);
-        // Poll for payment completion
-        pollStart.current = Date.now();
-        pollTimer.current = setInterval(async () => {
-          try {
-            const elapsed = Date.now() - pollStart.current;
-            if (elapsed > 5 * 60 * 1000) {
-              stopPolling();
-              setTerminalWait(false);
-              setErrorMsg("Payment timed out. Please try again at the counter.");
-              return;
-            }
-            const pr = await fetch(`/api/transaction/status/${data.reference}`);
-            if (!pr.ok) return;
-            const { status } = await pr.json();
-            if (status === "completed") {
-              stopPolling();
-              setTerminalWait(false);
-            } else if (status === "failed") {
-              stopPolling();
-              setTerminalWait(false);
-              setErrorMsg("Payment failed at the terminal. Please try again.");
-            }
-          } catch {}
-        }, 3000);
+      } else if (data.authorizationUrl) {
+        sessionStorage.setItem("purchase_phone", phone);
+        sessionStorage.setItem("purchase_email", email || "");
+        sessionStorage.setItem("purchase_vendor_slug", slug || "");
+        window.location.href = data.authorizationUrl;
       }
     } catch {
       setErrorMsg("Network error. Please try again.");
@@ -160,50 +126,6 @@ export default function VendorPage() {
         <h2 className="text-xl font-bold text-slate-700">Store Not Found</h2>
         <p className="text-sm text-slate-500 text-center">This vendor page does not exist or has been removed.</p>
         <Link href="/" className="text-sm font-semibold text-purple-700 underline">Go to Main Store</Link>
-      </div>
-    );
-  }
-
-  if (terminalWait) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-purple-50 p-4">
-        <div className="w-full max-w-sm text-center space-y-6">
-          <div className="flex justify-center">
-            <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center shadow-inner">
-              <MonitorSmartphone className="w-10 h-10 text-purple-600" />
-            </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-800">Complete Payment</h2>
-            <p className="text-slate-500 mt-2 text-sm leading-relaxed">
-              Your <span className="font-semibold text-purple-700">{terminalExamType}</span> voucher order has been sent to the POS terminal.<br />
-              Please pay at the counter to receive your voucher via SMS.
-            </p>
-          </div>
-          <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-5 space-y-3">
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-              Order created successfully
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <Loader2 className="w-4 h-4 text-purple-500 animate-spin flex-shrink-0" />
-              Waiting for terminal payment…
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-400">
-              <div className="w-4 h-4 rounded-full border-2 border-slate-200 flex-shrink-0" />
-              Voucher delivered via SMS
-            </div>
-          </div>
-          <p className="text-xs text-slate-400">Ref: <span className="font-mono">{terminalRef}</span></p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { stopPolling(); setTerminalWait(false); setTerminalRef(null); }}
-            className="text-slate-500 hover:text-slate-700"
-          >
-            Cancel and go back
-          </Button>
-        </div>
       </div>
     );
   }

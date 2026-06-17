@@ -179,3 +179,18 @@ export async function sendVoucherSMS(
     throw error;
   }
 }
+
+export async function sendPaymentLinkSMS(phone: string, paymentUrl: string, examType: string): Promise<void> {
+  const message = `AllTekSE: Tap to pay for your ${examType} voucher: ${paymentUrl}`;
+  if (!NALO_API_KEY) {
+    console.log("Nalo SMS not configured. Would send payment link to:", phone);
+    return;
+  }
+  try {
+    await axios.get(NALO_API_URL, {
+      params: { key: NALO_API_KEY, type: 0, destination: phone, dlr: 1, source: NALO_SENDER_ID, message },
+    });
+  } catch (error) {
+    console.error("Failed to send payment link SMS:", error);
+  }
+}
