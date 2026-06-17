@@ -27,7 +27,7 @@ export interface IStorage {
   getAvailableVoucherCount(examType: string): Promise<number>;
   getVoucherById(id: string): Promise<VoucherCard | undefined>;
   markVoucherAsUsed(id: string, phone: string, email: string | null, examType: string): Promise<VoucherCard>;
-  createTransaction(transaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string; quantity?: number; vendorId?: string | null }): Promise<Transaction>;
+  createTransaction(transaction: { email: string | null; phone: string; examType: string; amount: string; paystackReference: string; quantity?: number; vendorId?: string | null }): Promise<Transaction>;
   getTransactionByReference(reference: string): Promise<Transaction | undefined>;
   updateTransactionStatus(id: string, status: string, voucherCardId?: string): Promise<Transaction>;
   updateTransactionStatusConditional(id: string, fromStatus: string, toStatus: string): Promise<Transaction | null>;
@@ -114,7 +114,7 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
-  async createTransaction(insertTransaction: Partial<InsertTransaction> & { email: string | null; phone: string; examType: string; amount: string; paystackReference: string; quantity?: number; vendorId?: string | null }): Promise<Transaction> {
+  async createTransaction(insertTransaction: { email: string | null; phone: string; examType: string; amount: string; paystackReference: string; quantity?: number; vendorId?: string | null }): Promise<Transaction> {
     const [transaction] = await db.insert(transactions).values(insertTransaction as any).returning();
     return transaction;
   }
