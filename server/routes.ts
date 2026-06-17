@@ -5,7 +5,7 @@ import {
   insertTransactionSchema,
   transactions as transactionsTable,
 } from "@shared/schema";
-import { initializePayment, verifyPayment } from "./services/paystack";
+import { initializePayment, verifyPayment, getPaystackTransactionId, sendTerminalEvent, TERMINAL_ID } from "./services/paystack";
 import {
   sendVoucherEmail,
   sendVoucherSMS,
@@ -96,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? validatedData.email
           : `${validatedData.phone.replace(/[^0-9]/g, "")}@noemail.alltekse.com`;
 
-      const paystackResponse = await initializePayment(
+      await initializePayment(
         emailForPaystack,
         Math.round(Number(totalAmount) * 100),
         reference,
@@ -109,16 +109,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `${baseUrl}/payment-callback?reference=${reference}${vendorSlug ? `&vendor=${encodeURIComponent(vendorSlug)}` : ""}`,
       );
 
+      // Push payment to Paystack Terminal (bypasses USSD PIN confirmation)
+      const paystackTxId = await getPaystackTransactionId(reference);
+      const { eventId } = await sendTerminalEvent(TERMINAL_ID, paystackTxId);
+
       res.json({
-        authorizationUrl: paystackResponse.data.authorization_url,
         reference,
         transactionId: transaction.id,
+        terminalEventId: eventId,
       });
     } catch (error: any) {
       console.error("Purchase initialization error:", error);
       res
         .status(400)
         .json({ error: error.message || "Failed to initialize payment" });
+    }
+  });
+
+  // ─── Transaction Status (polling for terminal payments) ────────────────────
+  app.get("/api/transaction/status/:reference", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.params;
+      const transaction = await storage.getTransactionByReference(reference);
+      if (!transaction) return res.status(404).json({ error: "Transaction not found" });
+      res.json({ status: transaction.status, reference: transaction.paystackReference });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch transaction status" });
     }
   });
 

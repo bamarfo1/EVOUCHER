@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import { chargeDirectMobileMoney, submitOtp } from "./paystack";
+import { initializePayment, getPaystackTransactionId, sendTerminalEvent, TERMINAL_ID, submitOtp } from "./paystack";
 import { randomBytes } from "crypto";
 
 export interface UssdResult {
@@ -273,11 +273,12 @@ export async function handleUssdRequest(
           vendorId: null,
         });
 
-        const provider = detectNetwork(session.payPhone!);
-        const chargeResp = await chargeDirectMobileMoney(
-          intlPhone,
-          Math.round(price * 100),
+        const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+
+        // Initialize Paystack transaction
+        await initializePayment(
           emailPlaceholder,
+          Math.round(price * 100),
           reference,
           {
             transactionId: transaction.id,
@@ -286,39 +287,19 @@ export async function handleUssdRequest(
             quantity: 1,
             channel: "ussd",
           },
-          provider,
+          `${baseUrl}/payment-callback?reference=${reference}`,
         );
 
-        const chargeStatus = chargeResp?.data?.status;
-        console.log("[USSD] Paystack charge response:", JSON.stringify({ chargeStatus, chargeResp }));
+        // Get Paystack numeric transaction ID and push to terminal
+        const paystackTxId = await getPaystackTransactionId(reference);
+        await sendTerminalEvent(TERMINAL_ID, paystackTxId);
 
-        if (chargeStatus === "failed") {
-          const reason = chargeResp?.data?.gateway_response || "Payment declined by network";
-          console.error("[USSD] Charge failed:", reason);
-          return end(`Payment failed: ${reason}\nTry again: *920*919#`);
-        }
+        console.log("[USSD] Payment pushed to terminal:", TERMINAL_ID, "for reference:", reference);
 
-        if (chargeStatus === "send_otp") {
-          // Store the reference so the user can re-dial with the code
-          const localPhone = session.payPhone!;
-          pendingOtps.set(localPhone, { reference, createdAt: Date.now() });
-          pendingOtps.set(intlPhone, { reference, createdAt: Date.now() });
-
-          return end(
-            "A code will be sent to\n" +
-            "your phone via SMS.\n" +
-            "To pay, redial:\n" +
-            "*920*919*[code]#\n" +
-            "e.g. code 974558:\n" +
-            "dial *920*919*974558#",
-          );
-        }
-
-        // pay_offline / pending / success — push notification sent to MoMo app
         return end(
-          "Request sent!\n" +
-          "Open your MoMo app and\n" +
-          "approve under My Approvals.\n" +
+          "Payment sent to terminal!\n" +
+          "Proceed to the counter\n" +
+          "to complete payment.\n" +
           "Voucher sent via SMS\n" +
           "once payment confirms.",
         );

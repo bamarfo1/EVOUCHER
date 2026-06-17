@@ -2,6 +2,8 @@ import axios from "axios";
 
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 
+export const TERMINAL_ID = "vt_emuiojuu";
+
 function getPaystackKey(): string {
   const key = process.env.PAYSTACKSECRETKEYbright || process.env.PAYSTACK_SECRET_KEY;
   if (!key) {
@@ -24,6 +26,7 @@ export interface PaystackVerifyResponse {
   status: boolean;
   message: string;
   data: {
+    id: number;
     status: string;
     reference: string;
     amount: number;
@@ -115,4 +118,56 @@ export async function chargeDirectMobileMoney(
     },
   );
   return response.data;
+}
+
+// Fetch Paystack's internal numeric transaction ID for a given reference.
+// Works for pending (initialised but not yet paid) transactions.
+export async function getPaystackTransactionId(reference: string): Promise<number> {
+  const response = await axios.get(
+    `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
+    {
+      headers: { Authorization: `Bearer ${getPaystackKey()}` },
+    }
+  );
+  const id = response.data?.data?.id;
+  if (!id) throw new Error(`Cannot get Paystack transaction ID for reference: ${reference}`);
+  return id as number;
+}
+
+// Push a payment event to a Paystack Terminal device.
+export async function sendTerminalEvent(
+  terminalId: string,
+  paystackTransactionId: number
+): Promise<{ eventId: string }> {
+  const response = await axios.post(
+    `${PAYSTACK_BASE_URL}/terminal/${terminalId}/event`,
+    {
+      type: "transaction",
+      action: "process",
+      data: { id: paystackTransactionId },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${getPaystackKey()}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  const eventId = String(response.data?.data?.id ?? "");
+  return { eventId };
+}
+
+// Check the processing status of a terminal event.
+// Possible statuses: "pending" | "processing" | "processed"
+export async function getTerminalEventStatus(
+  terminalId: string,
+  eventId: string
+): Promise<{ status: string }> {
+  const response = await axios.get(
+    `${PAYSTACK_BASE_URL}/terminal/${terminalId}/event/${eventId}`,
+    {
+      headers: { Authorization: `Bearer ${getPaystackKey()}` },
+    }
+  );
+  return { status: response.data?.data?.status ?? "pending" };
 }
