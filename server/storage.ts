@@ -20,7 +20,7 @@ import {
   withdrawalRequests,
   cardTypeRegistry,
 } from "@shared/schema";
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, inArray, or } from "drizzle-orm";
 
 export interface IStorage {
   getAvailableVoucher(examType?: string): Promise<VoucherCard | undefined>;
@@ -319,7 +319,20 @@ export class DbStorage implements IStorage {
   }
 
   async getVendorByPhone(phone: string): Promise<Vendor | undefined> {
-    const [vendor] = await db.select().from(vendors).where(eq(vendors.phone, phone));
+    // Build all equivalent formats so existing vendors with un-normalized phones still match.
+    // phone is expected to already be normalized to 233XXXXXXXXX (12 digits).
+    const formats = new Set<string>([phone]);
+    if (/^233\d{9}$/.test(phone)) {
+      const base9 = phone.slice(3);          // e.g. 552497012
+      formats.add("0" + base9);              // 0552497012
+      formats.add(base9);                    // 552497012
+      formats.add("2330" + base9);           // 2330552497012  (double-prefix variant)
+      formats.add("+233" + base9);           // +233552497012
+      formats.add("+2330" + base9);          // +2330552497012
+    }
+    const [vendor] = await db.select().from(vendors).where(
+      or(...[...formats].map(f => eq(vendors.phone, f)))
+    );
     return vendor;
   }
 

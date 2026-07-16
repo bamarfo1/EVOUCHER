@@ -554,8 +554,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "http://localhost:5000");
       const resetUrl = `${baseUrl}/vendor/reset-password?token=${token}`;
 
+      // Always log the link so it's visible in server logs if SMS is unavailable
+      console.log(`[PASSWORD RESET] Link for ${normalized}: ${resetUrl}`);
+
+      const smsConfigured = !!process.env.NALO_SMS_API_KEY;
       await sendPasswordResetSms(normalized, resetUrl);
-      res.json({ success: true });
+      res.json({ success: true, ...(smsConfigured ? {} : { resetUrl }) });
     } catch (error: any) {
       console.error("Forgot password error:", error);
       res.status(500).json({ error: "Failed to send reset SMS. Please try again." });
