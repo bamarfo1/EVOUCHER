@@ -40,6 +40,7 @@ export interface IStorage {
   getVendorByPhone(phone: string): Promise<Vendor | undefined>;
   getVendorBySlug(slug: string): Promise<Vendor | undefined>;
   getVendorById(id: string): Promise<Vendor | undefined>;
+  updateVendorPassword(vendorId: string, passwordHash: string): Promise<void>;
   upsertVendorPrice(vendorId: string, examType: string, price: number): Promise<void>;
   getVendorPrices(vendorId: string): Promise<VendorPrice[]>;
   getVendorPrice(vendorId: string, examType: string): Promise<VendorPrice | undefined>;
@@ -320,6 +321,10 @@ export class DbStorage implements IStorage {
   async getVendorByPhone(phone: string): Promise<Vendor | undefined> {
     const [vendor] = await db.select().from(vendors).where(eq(vendors.phone, phone));
     return vendor;
+  }
+
+  async updateVendorPassword(vendorId: string, passwordHash: string): Promise<void> {
+    await db.update(vendors).set({ passwordHash }).where(eq(vendors.id, vendorId));
   }
 
   async getVendorBySlug(slug: string): Promise<Vendor | undefined> {

@@ -127,12 +127,17 @@ export default function VendorLogin() {
                   ) : "Sign In"}
                 </Button>
 
-                <p className="text-center text-sm text-slate-500">
-                  New vendor?{" "}
-                  <Link href="/vendor/signup" className="font-semibold text-purple-700 hover:underline" data-testid="link-vendor-signup">
-                    Create Account
+                <div className="flex flex-col gap-1.5 text-center text-sm text-slate-500">
+                  <Link href="/vendor/forgot-password" className="font-semibold text-purple-700 hover:underline">
+                    Forgot password?
                   </Link>
-                </p>
+                  <span>
+                    New vendor?{" "}
+                    <Link href="/vendor/signup" className="font-semibold text-purple-700 hover:underline" data-testid="link-vendor-signup">
+                      Create Account
+                    </Link>
+                  </span>
+                </div>
               </form>
             </CardContent>
           </Card>

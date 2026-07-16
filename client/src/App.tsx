@@ -11,6 +11,8 @@ import BlogPage from "@/pages/blog";
 import BlogPostPage from "@/pages/blog-post";
 import VendorSignup from "@/pages/vendor-signup";
 import VendorLogin from "@/pages/vendor-login";
+import VendorForgotPassword from "@/pages/vendor-forgot-password";
+import VendorResetPassword from "@/pages/vendor-reset-password";
 import VendorDashboard from "@/pages/vendor-dashboard";
 import VendorPage from "@/pages/vendor-page";
 import NotFound from "@/pages/not-found";
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/blog/:id" component={BlogPostPage} />
       <Route path="/vendor/signup" component={VendorSignup} />
       <Route path="/vendor/login" component={VendorLogin} />
+      <Route path="/vendor/forgot-password" component={VendorForgotPassword} />
+      <Route path="/vendor/reset-password" component={VendorResetPassword} />
       <Route path="/vendor/dashboard" component={VendorDashboard} />
       <Route path="/v/:slug" component={VendorPage} />
       <Route path="/admin" component={AdminPage} />

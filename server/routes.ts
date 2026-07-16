@@ -10,6 +10,7 @@ import {
   sendVoucherEmail,
   sendVoucherSMS,
   sendWelcomeSms,
+  sendPasswordResetSms,
   type VoucherItem,
 } from "./services/notifications";
 import { handleUssdRequest } from "./services/ussd";
@@ -401,12 +402,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(401).json({ error: "Unauthorized" });
   }
 
-  function generateSlug(phone: string): string {
-    return phone
-      .replace(/[\s\+\-\(\)]/g, "")
-      .replace(/^0/, "233")
-      .replace(/^(?!233)/, "233");
+  /**
+   * Normalize a Ghana phone number to the canonical 233XXXXXXXXX format.
+   * Handles: +2330XXXXXXXXX, 2330XXXXXXXXX, 0XXXXXXXXX, XXXXXXXXX (9 digits), 233XXXXXXXXX
+   */
+  function normalizePhone(raw: string): string {
+    let p = raw.replace(/[\s+\-()\s]/g, "");
+    if (/^2330\d{9}$/.test(p)) {
+      // e.g. 2330599188713 → 233599188713
+      p = "233" + p.slice(4);
+    } else if (/^0\d{9}$/.test(p)) {
+      // e.g. 0599188713 → 233599188713
+      p = "233" + p.slice(1);
+    } else if (/^\d{9}$/.test(p)) {
+      // e.g. 599188713 → 233599188713
+      p = "233" + p;
+    }
+    return p;
   }
+
+  function generateSlug(phone: string): string {
+    return normalizePhone(phone);
+  }
+
+  // ── In-memory password reset tokens (token → { vendorId, phone, expiresAt }) ──
+  const passwordResetTokens = new Map<string, { vendorId: string; phone: string; expiresAt: number }>();
+
+  // Purge expired tokens periodically
+  setInterval(() => {
+    const now = Date.now();
+    for (const [token, data] of passwordResetTokens.entries()) {
+      if (data.expiresAt < now) passwordResetTokens.delete(token);
+    }
+  }, 5 * 60 * 1000);
 
   app.post("/api/vendor/register", async (req: Request, res: Response) => {
     try {
@@ -426,7 +454,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .status(400)
           .json({ error: "Password must be at least 6 characters" });
 
-      const existing = await storage.getVendorByPhone(phone);
+      const normalizedPhone = normalizePhone(phone);
+      const existing = await storage.getVendorByPhone(normalizedPhone);
       if (existing)
         return res
           .status(400)
@@ -435,10 +464,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
       const passwordHash = await bcrypt.hash(password, 12);
-      const slug = generateSlug(phone);
+      const slug = generateSlug(normalizedPhone);
 
       const vendor = await storage.createVendor({
-        phone,
+        phone: normalizedPhone,
         passwordHash,
         storeName: storeName || null,
         momoNumber,
@@ -463,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!phone || !password)
         return res.status(400).json({ error: "Phone and password required" });
 
-      const vendor = await storage.getVendorByPhone(phone);
+      const vendor = await storage.getVendorByPhone(normalizePhone(phone));
       if (!vendor)
         return res
           .status(401)
@@ -495,6 +524,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     },
   );
+
+  // ─── Vendor Forgot Password ───────────────────────────────────────────────
+
+  app.post("/api/vendor/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ error: "Phone number is required" });
+
+      const normalized = normalizePhone(phone);
+      const vendor = await storage.getVendorByPhone(normalized);
+
+      // Always return success to avoid leaking whether the phone exists
+      if (!vendor) {
+        return res.json({ success: true });
+      }
+
+      // Generate a secure random token
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+      // Store any previous token for this vendor and replace it
+      for (const [t, data] of passwordResetTokens.entries()) {
+        if (data.vendorId === vendor.id) passwordResetTokens.delete(t);
+      }
+      passwordResetTokens.set(token, { vendorId: vendor.id, phone: normalized, expiresAt });
+
+      const baseUrl = process.env.BASE_URL ||
+        (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "http://localhost:5000");
+      const resetUrl = `${baseUrl}/vendor/reset-password?token=${token}`;
+
+      await sendPasswordResetSms(normalized, resetUrl);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: "Failed to send reset SMS. Please try again." });
+    }
+  });
+
+  app.post("/api/vendor/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword)
+        return res.status(400).json({ error: "Token and new password are required" });
+      if (newPassword.length < 6)
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+
+      const data = passwordResetTokens.get(token);
+      if (!data) return res.status(400).json({ error: "Invalid or expired reset link" });
+      if (data.expiresAt < Date.now()) {
+        passwordResetTokens.delete(token);
+        return res.status(400).json({ error: "Reset link has expired. Please request a new one." });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await storage.updateVendorPassword(data.vendorId, passwordHash);
+      passwordResetTokens.delete(token);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "Failed to reset password. Please try again." });
+    }
+  });
 
   // ─── Vendor Dashboard APIs ────────────────────────────────────────────────
 
