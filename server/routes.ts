@@ -11,6 +11,7 @@ import {
   sendVoucherSMS,
   sendWelcomeSms,
   sendPasswordResetSms,
+  sendSmsBroadcast,
   type VoucherItem,
 } from "./services/notifications";
 import { handleUssdRequest } from "./services/ussd";
@@ -1219,6 +1220,45 @@ ${allUrls
         const { note } = req.body;
         await storage.adminRejectWithdrawalRequest(req.params.id, note);
         res.json({ success: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  // ─── Admin Broadcast SMS ──────────────────────────────────────────────────
+
+  app.post(
+    "/api/admin/broadcast-sms",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { message } = req.body;
+        if (!message || typeof message !== "string" || message.trim().length === 0)
+          return res.status(400).json({ error: "Message is required" });
+        if (message.length > 500)
+          return res.status(400).json({ error: "Message must be 500 characters or fewer" });
+
+        const allVendors = await storage.adminGetAllVendors();
+        const phones = allVendors.map(v => v.vendor.phone);
+
+        let sent = 0;
+        let failed = 0;
+        const errors: string[] = [];
+
+        for (const phone of phones) {
+          try {
+            await sendSmsBroadcast(phone, message.trim());
+            sent++;
+          } catch (err: any) {
+            failed++;
+            errors.push(`${phone}: ${err.message}`);
+            console.error(`[BROADCAST] Failed to send to ${phone}:`, err.message);
+          }
+        }
+
+        console.log(`[BROADCAST] SMS sent: ${sent}, failed: ${failed}, total vendors: ${phones.length}`);
+        res.json({ success: true, total: phones.length, sent, failed, errors });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

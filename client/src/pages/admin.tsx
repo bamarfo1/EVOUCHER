@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ShoppingBag, CreditCard, TrendingUp, LogOut, Plus, Image, Trash2,
   ChevronDown, ChevronUp, Package, Users, Wallet, RefreshCw, Check, X, Pencil,
-  ArrowDownToLine, Clock, CheckCircle, XCircle
+  ArrowDownToLine, Clock, CheckCircle, XCircle, Send
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1093,11 +1093,97 @@ function VendorsTab() {
   );
 }
 
+// ─── Broadcast SMS Panel ──────────────────────────────────────────────────────
+function BroadcastSmsPanel() {
+  const { toast } = useToast();
+  const MAX = 500;
+  const [message, setMessage] = useState("");
+  const [result, setResult] = useState<{ total: number; sent: number; failed: number; errors: string[] } | null>(null);
+
+  const broadcastMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/broadcast-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      return data;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      toast({ title: `SMS sent to ${data.sent} of ${data.total} vendors` });
+    },
+    onError: (err: any) => {
+      toast({ title: "Broadcast failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const remaining = MAX - message.length;
+  const isOverLimit = remaining < 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <Send className="w-4 h-4 text-purple-600" />
+          <CardTitle className="text-base">Broadcast SMS to All Vendors</CardTitle>
+        </div>
+        <p className="text-xs text-slate-500 mt-0.5">Sends an SMS message to every registered vendor's phone number.</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold text-slate-700">Message</Label>
+            <span className={`text-xs font-medium ${isOverLimit ? "text-red-500" : remaining <= 50 ? "text-amber-500" : "text-slate-400"}`}>
+              {remaining} remaining
+            </span>
+          </div>
+          <textarea
+            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+            rows={5}
+            maxLength={MAX}
+            placeholder="Type your message to all vendors here…"
+            value={message}
+            onChange={(e) => { setMessage(e.target.value); setResult(null); }}
+          />
+        </div>
+
+        <Button
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 font-bold"
+          disabled={!message.trim() || isOverLimit || broadcastMutation.isPending}
+          onClick={() => broadcastMutation.mutate()}
+        >
+          {broadcastMutation.isPending
+            ? <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" />Sending…</span>
+            : <span className="flex items-center gap-2"><Send className="w-4 h-4" />Send to All Vendors</span>}
+        </Button>
+
+        {result && (
+          <div className={`rounded-lg px-4 py-3 text-sm space-y-1 ${result.failed === 0 ? "bg-green-50 border border-green-200 text-green-800" : "bg-amber-50 border border-amber-200 text-amber-800"}`}>
+            <p className="font-semibold">
+              {result.failed === 0
+                ? `✓ Delivered to all ${result.sent} vendor${result.sent !== 1 ? "s" : ""}`
+                : `Sent ${result.sent} / ${result.total} — ${result.failed} failed`}
+            </p>
+            {result.errors.length > 0 && (
+              <ul className="text-xs space-y-0.5 mt-1 list-disc list-inside opacity-80">
+                {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"overview" | "vendors">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "vendors" | "broadcast">("overview");
 
   const { data: authData } = useQuery<{ loggedIn: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -1156,6 +1242,7 @@ export default function AdminPage() {
           {[
             { key: "overview", label: "Overview", icon: ShoppingBag },
             { key: "vendors", label: "Vendors", icon: Users },
+            { key: "broadcast", label: "Broadcast", icon: Send },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -1285,8 +1372,10 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </>
-        ) : (
+        ) : activeTab === "vendors" ? (
           <VendorsTab />
+        ) : (
+          <BroadcastSmsPanel />
         )}
       </div>
     </div>

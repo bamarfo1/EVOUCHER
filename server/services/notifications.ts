@@ -180,6 +180,16 @@ export async function sendVoucherSMS(
   }
 }
 
+export async function sendSmsBroadcast(phone: string, message: string): Promise<void> {
+  if (!NALO_API_KEY) throw new Error("NALO_SMS_API_KEY not configured");
+  const response = await axios.get(NALO_API_URL, {
+    params: { key: NALO_API_KEY, type: 0, destination: phone, dlr: 1, source: NALO_SENDER_ID, message },
+  });
+  const status = response.data?.status || response.data;
+  if (status === 1703 || status === "1703") throw new Error("Invalid API key");
+  if (status === 1704 || status === "1704") throw new Error("Insufficient SMS credit");
+}
+
 export async function sendPasswordResetSms(phone: string, resetUrl: string): Promise<void> {
   const message = `AllTekSE: Reset your vendor password here: ${resetUrl} (expires in 15 mins). Ignore if you did not request this.`;
   if (!NALO_API_KEY) {
