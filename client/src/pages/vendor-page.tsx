@@ -32,6 +32,7 @@ interface VendorInfo {
   storeName: string;
   contactNumber: string;
   slug: string;
+  subdomain?: string | null;
   status?: string;
   template?: string;
   prices: { examType: string; price: number; basePrice: number; count: number; imageUrl: string | null }[];
@@ -52,7 +53,7 @@ function getColors(examType: string, index: number) {
 }
 
 export default function VendorPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, subdomain } = useParams<{ slug?: string; subdomain?: string }>();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<VendorInfo["prices"][0] | null>(null);
@@ -65,8 +66,14 @@ export default function VendorPage() {
 
   useEffect(() => {}, []);
 
+  const isSubdomain = !!subdomain && !slug;
+  const identifier = slug || subdomain || "";
+  const apiPath = isSubdomain
+    ? `/api/vendor-subdomain/${identifier}`
+    : `/api/vendor/${identifier}`;
+
   const { data: vendor, isLoading: vendorLoading, error } = useQuery<VendorInfo>({
-    queryKey: [`/api/vendor/${slug}`],
+    queryKey: [apiPath],
     retry: false,
   });
 
@@ -93,7 +100,7 @@ export default function VendorPage() {
       const res = await fetch("/api/purchase/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, email, examType: selected.examType, quantity, vendorSlug: slug }),
+        body: JSON.stringify({ phone, email, examType: selected.examType, quantity, vendorSlug: vendor?.slug }),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -36,9 +36,10 @@ export interface IStorage {
   getVouchersByPhoneAndDate(phone: string, date: string): Promise<{ serial: string; pin: string; examType: string }[]>;
   getAvailableCardTypes(): Promise<{ examType: string; count: number; price: number; imageUrl: string | null }[]>;
   // Vendor methods
-  createVendor(data: { phone: string; passwordHash: string; storeName?: string; momoNumber: string; momoName: string; contactNumber: string; slug: string }): Promise<Vendor>;
+  createVendor(data: { phone: string; passwordHash: string; storeName?: string; momoNumber: string; momoName: string; contactNumber: string; slug: string; subdomain?: string | null }): Promise<Vendor>;
   getVendorByPhone(phone: string): Promise<Vendor | undefined>;
   getVendorBySlug(slug: string): Promise<Vendor | undefined>;
+  getVendorBySubdomain(subdomain: string): Promise<Vendor | undefined>;
   getVendorById(id: string): Promise<Vendor | undefined>;
   getVendorByCustomDomain(domain: string): Promise<Vendor | undefined>;
   updateVendorPassword(vendorId: string, passwordHash: string): Promise<void>;
@@ -52,7 +53,7 @@ export interface IStorage {
   updateVendorTemplate(vendorId: string, template: string): Promise<void>;
   // Admin vendor methods
   adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]>;
-  adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string; customDomain?: string | null }): Promise<Vendor>;
+  adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string; customDomain?: string | null; subdomain?: string | null }): Promise<Vendor>;
   adminGetVendorPayouts(vendorId: string): Promise<Payout[]>;
   // Blog methods
   getBlogPosts(limit: number, offset: number): Promise<BlogPost[]>;
@@ -305,7 +306,7 @@ export class DbStorage implements IStorage {
 
   // ── Vendor ────────────────────────────────────────────────────────────────
 
-  async createVendor(data: { phone: string; passwordHash: string; storeName?: string; momoNumber: string; momoName: string; contactNumber: string; slug: string }): Promise<Vendor> {
+  async createVendor(data: { phone: string; passwordHash: string; storeName?: string; momoNumber: string; momoName: string; contactNumber: string; slug: string; subdomain?: string | null }): Promise<Vendor> {
     const [vendor] = await db.insert(vendors).values({
       phone: data.phone,
       passwordHash: data.passwordHash,
@@ -314,6 +315,7 @@ export class DbStorage implements IStorage {
       momoName: data.momoName,
       contactNumber: data.contactNumber,
       slug: data.slug,
+      ...(data.subdomain ? { subdomain: data.subdomain } : {}),
     }).returning();
     return vendor;
   }
@@ -342,6 +344,11 @@ export class DbStorage implements IStorage {
 
   async getVendorBySlug(slug: string): Promise<Vendor | undefined> {
     const [vendor] = await db.select().from(vendors).where(eq(vendors.slug, slug));
+    return vendor;
+  }
+
+  async getVendorBySubdomain(subdomain: string): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.subdomain, subdomain));
     return vendor;
   }
 
@@ -474,7 +481,7 @@ export class DbStorage implements IStorage {
     return row;
   }
 
-  async adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string; customDomain?: string | null }): Promise<Vendor> {
+  async adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string; customDomain?: string | null; subdomain?: string | null }): Promise<Vendor> {
     const updateData: Record<string, any> = {};
     if (data.storeName !== undefined) updateData.storeName = data.storeName || null;
     if (data.contactNumber !== undefined) updateData.contactNumber = data.contactNumber;
@@ -482,6 +489,7 @@ export class DbStorage implements IStorage {
     if (data.momoName !== undefined) updateData.momoName = data.momoName;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.customDomain !== undefined) updateData.customDomain = data.customDomain || null;
+    if (data.subdomain !== undefined) updateData.subdomain = data.subdomain || null;
     const [updated] = await db.update(vendors).set(updateData).where(eq(vendors.id, id)).returning();
     return updated;
   }

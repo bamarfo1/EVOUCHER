@@ -22,6 +22,7 @@ interface VendorMe {
   momoName: string;
   contactNumber: string;
   slug: string;
+  subdomain?: string | null;
   status: string;
   template?: string;
   customDomain?: string | null;
@@ -75,6 +76,8 @@ export default function VendorDashboard() {
   const [savedField, setSavedField] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [customDomainInput, setCustomDomainInput] = useState("");
+  const [subdomainInput, setSubdomainInput] = useState("");
+  const [editingSubdomain, setEditingSubdomain] = useState(false);
 
   const { data: vendor, isLoading: vendorLoading, error: vendorError } = useQuery<VendorMe>({
     queryKey: ["/api/vendor/me"],
@@ -212,6 +215,24 @@ export default function VendorDashboard() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const saveSubdomainMutation = useMutation({
+    mutationFn: async (subdomain: string) => {
+      const res = await fetch("/api/vendor/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subdomain: subdomain.trim() || null }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to save subdomain");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Subdomain saved!", description: "Your short URL is now live." });
+      setEditingSubdomain(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/vendor/me"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await fetch("/api/vendor/logout", { method: "POST" });
@@ -231,6 +252,7 @@ export default function VendorDashboard() {
 
   const vendorPageUrl = `https://tekse.online/v/${vendor.slug}`;
   const legacyPageUrl = `https://allteksevoucher.store/v/${vendor.slug}`;
+  const subdomainUrl = vendor.subdomain ? `https://tekse.online/${vendor.subdomain}` : null;
 
   const copyUrl = () => {
     navigator.clipboard.writeText(vendorPageUrl);
@@ -303,7 +325,42 @@ export default function VendorDashboard() {
                 Copy
               </Button>
             </div>
-            <p className="text-xs text-slate-500 mt-2">Both links work — share whichever your customers know.</p>
+            {/* Short Subdomain URL */}
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <div className="flex-1 bg-emerald-50/60 border border-emerald-200/80 rounded-lg px-4 py-2 min-w-0">
+                {editingSubdomain ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 font-medium">tekse.online/</span>
+                    <Input
+                      value={subdomainInput}
+                      onChange={e => setSubdomainInput(e.target.value)}
+                      className="h-6 text-xs w-40"
+                      placeholder="yourname"
+                      autoFocus
+                      data-testid="input-subdomain"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-emerald-700 font-medium truncate" data-testid="text-subdomain-url">{subdomainUrl || "No short URL set yet"}</p>
+                )}
+              </div>
+              {editingSubdomain ? (
+                <>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => saveSubdomainMutation.mutate(subdomainInput)} disabled={saveSubdomainMutation.isPending} data-testid="button-save-subdomain">
+                    {saveSubdomainMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingSubdomain(false)}>
+                    <X className="w-3.5 h-3.5 text-slate-400" />
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="ghost" className="text-slate-400 hover:text-emerald-600 h-7 text-xs" onClick={() => { setSubdomainInput(vendor.subdomain || ""); setEditingSubdomain(true); }} data-testid="button-edit-subdomain">
+                  <Pencil className="w-3 h-3 mr-1" />
+                  {vendor.subdomain ? "Change" : "Set Short URL"}
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-2">All links work — share whichever your customers know.</p>
           </CardContent>
         </Card>
 

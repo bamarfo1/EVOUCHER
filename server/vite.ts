@@ -9,13 +9,16 @@ import { nanoid } from "nanoid";
 export interface VendorMeta {
   storeName: string | null;
   slug: string;
+  subdomain?: string | null;
 }
 
 type GetVendorBySlug = (slug: string) => Promise<VendorMeta | undefined>;
+type GetVendorBySubdomain = (subdomain: string) => Promise<VendorMeta | undefined>;
 
-function injectVendorMeta(html: string, vendor: VendorMeta, baseUrl: string): string {
+function injectVendorMeta(html: string, vendor: VendorMeta, baseUrl: string, path?: string): string {
   const name = vendor.storeName || "Voucher Store";
-  const url = `${baseUrl}/v/${vendor.slug}`;
+  const urlPath = path || `/v/${vendor.slug}`;
+  const url = `${baseUrl}${urlPath}`;
   const description = `Buy WAEC result checker vouchers from ${name}. Instant delivery via SMS after payment.`;
 
   return html
@@ -55,7 +58,7 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-export async function setupVite(app: Express, server: Server, getVendorBySlug?: GetVendorBySlug) {
+export async function setupVite(app: Express, server: Server, getVendorBySlug?: GetVendorBySlug, getVendorBySubdomain?: GetVendorBySubdomain) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -95,12 +98,18 @@ export async function setupVite(app: Express, server: Server, getVendorBySlug?: 
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
 
-      // Inject vendor-specific meta tags for /v/:slug pages
+      // Inject vendor-specific meta tags for /v/:slug and /:subdomain pages
       const vendorSlugMatch = url.match(/^\/v\/([^/?#]+)/);
+      const vendorSubdomainMatch = !vendorSlugMatch && url.match(/^\/([^/?#v][^/?#]*)$/);
       if (vendorSlugMatch && getVendorBySlug) {
         try {
           const vendor = await getVendorBySlug(vendorSlugMatch[1]);
           if (vendor) template = injectVendorMeta(template, vendor, getBaseUrl(req));
+        } catch (_) { /* ignore lookup errors, serve default meta */ }
+      } else if (vendorSubdomainMatch && getVendorBySubdomain) {
+        try {
+          const vendor = await getVendorBySubdomain(vendorSubdomainMatch[1]);
+          if (vendor) template = injectVendorMeta(template, vendor, getBaseUrl(req), `/${vendor.subdomain}`);
         } catch (_) { /* ignore lookup errors, serve default meta */ }
       }
 
@@ -113,7 +122,7 @@ export async function setupVite(app: Express, server: Server, getVendorBySlug?: 
   });
 }
 
-export function serveStatic(app: Express, getVendorBySlug?: GetVendorBySlug) {
+export function serveStatic(app: Express, getVendorBySlug?: GetVendorBySlug, getVendorBySubdomain?: GetVendorBySubdomain) {
   const distPath = path.resolve(import.meta.dirname, "public");
 
   if (!fs.existsSync(distPath)) {
@@ -133,6 +142,21 @@ export function serveStatic(app: Express, getVendorBySlug?: GetVendorBySlug) {
         const indexPath = path.resolve(distPath, "index.html");
         let html = await fs.promises.readFile(indexPath, "utf-8");
         html = injectVendorMeta(html, vendor, getBaseUrl(req));
+        res.status(200).set({ "Content-Type": "text/html" }).end(html);
+      } catch (e) {
+        next(e);
+      }
+    });
+  }
+
+  if (getVendorBySubdomain) {
+    app.get("/:subdomain", async (req, res, next) => {
+      try {
+        const vendor = await getVendorBySubdomain(req.params.subdomain);
+        if (!vendor) return next();
+        const indexPath = path.resolve(distPath, "index.html");
+        let html = await fs.promises.readFile(indexPath, "utf-8");
+        html = injectVendorMeta(html, vendor, getBaseUrl(req), `/${vendor.subdomain}`);
         res.status(200).set({ "Content-Type": "text/html" }).end(html);
       } catch (e) {
         next(e);

@@ -73,9 +73,9 @@ app.use((req, res, next) => {
   });
 
   if (app.get("env") === "development") {
-    await setupVite(app, server, (slug) => storage.getVendorBySlug(slug));
+    await setupVite(app, server, (slug) => storage.getVendorBySlug(slug), (sub) => storage.getVendorBySubdomain(sub));
   } else {
-    serveStatic(app, (slug) => storage.getVendorBySlug(slug));
+    serveStatic(app, (slug) => storage.getVendorBySlug(slug), (sub) => storage.getVendorBySubdomain(sub));
   }
 
   const port = parseInt(process.env.PORT || '5000', 10);

@@ -703,36 +703,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // ─── Vendor Public Page ───────────────────────────────────────────────────
+  async function buildVendorPublicResponse(vendor: any) {
+    const [baseTypes, myPrices, vendorBasePriceList] = await Promise.all([
+      storage.getAvailableCardTypes(),
+      storage.getVendorPrices(vendor.id),
+      storage.getVendorBasePrices(),
+    ]);
+    const priceMap = Object.fromEntries(myPrices.map((p) => [p.examType, p.price]));
+    const vendorBasePriceMap = Object.fromEntries(vendorBasePriceList.map((p) => [p.examType, p.price]));
+    return {
+      name: vendor.storeName || vendor.momoName,
+      storeName: vendor.storeName || vendor.momoName,
+      contactNumber: vendor.contactNumber,
+      slug: vendor.slug,
+      subdomain: vendor.subdomain,
+      status: vendor.status,
+      template: vendor.template ?? "classic-purple",
+      prices: baseTypes.map((ct) => ({
+        examType: ct.examType,
+        price: priceMap[ct.examType] ?? ct.price,
+        basePrice: vendorBasePriceMap[ct.examType] ?? ct.price,
+        publicPrice: ct.price,
+        count: ct.count,
+        imageUrl: ct.imageUrl,
+      })),
+    };
+  }
+
   app.get("/api/vendor/:slug", async (req: Request, res: Response) => {
     try {
       const vendor = await storage.getVendorBySlug(req.params.slug);
       if (!vendor || vendor.status !== "active")
         return res.status(404).json({ error: "Vendor not found" });
+      res.json(await buildVendorPublicResponse(vendor));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
-      const [baseTypes, myPrices, vendorBasePriceList] = await Promise.all([
-        storage.getAvailableCardTypes(),
-        storage.getVendorPrices(vendor.id),
-        storage.getVendorBasePrices(),
-      ]);
-      const priceMap = Object.fromEntries(myPrices.map((p) => [p.examType, p.price]));
-      const vendorBasePriceMap = Object.fromEntries(vendorBasePriceList.map((p) => [p.examType, p.price]));
-
-      res.json({
-        name: vendor.storeName || vendor.momoName,
-        storeName: vendor.storeName || vendor.momoName,
-        contactNumber: vendor.contactNumber,
-        slug: vendor.slug,
-        status: vendor.status,
-        template: vendor.template ?? "classic-purple",
-        prices: baseTypes.map((ct) => ({
-          examType: ct.examType,
-          price: priceMap[ct.examType] ?? ct.price,
-          basePrice: vendorBasePriceMap[ct.examType] ?? ct.price,
-          publicPrice: ct.price,
-          count: ct.count,
-          imageUrl: ct.imageUrl,
-        })),
-      });
+  app.get("/api/vendor-subdomain/:subdomain", async (req: Request, res: Response) => {
+    try {
+      const vendor = await storage.getVendorBySubdomain(req.params.subdomain);
+      if (!vendor || vendor.status !== "active")
+        return res.status(404).json({ error: "Vendor not found" });
+      res.json(await buildVendorPublicResponse(vendor));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1290,12 +1304,13 @@ ${allUrls
     async (req: Request, res: Response) => {
       try {
         const vendorId = (req.session as any).vendorId;
-        const { storeName, template, customDomain } = req.body;
-        if (storeName === undefined && template === undefined && customDomain === undefined)
-          return res.status(400).json({ error: "storeName, template, or customDomain required" });
+        const { storeName, template, customDomain, subdomain } = req.body;
+        if (storeName === undefined && template === undefined && customDomain === undefined && subdomain === undefined)
+          return res.status(400).json({ error: "storeName, template, customDomain, or subdomain required" });
         if (storeName !== undefined) await storage.updateVendorStoreName(vendorId, storeName);
         if (template !== undefined) await storage.updateVendorTemplate(vendorId, template);
         if (customDomain !== undefined) await storage.adminUpdateVendor(vendorId, { customDomain: customDomain || null });
+        if (subdomain !== undefined) await storage.adminUpdateVendor(vendorId, { subdomain: subdomain || null });
         res.json({ success: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });

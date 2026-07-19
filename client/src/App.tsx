@@ -32,6 +32,7 @@ function Router() {
       <Route path="/vendor/dashboard" component={VendorDashboard} />
       <Route path="/v/:slug" component={VendorPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/:subdomain" component={VendorPage} />
       <Route component={NotFound} />
     </Switch>
   );
