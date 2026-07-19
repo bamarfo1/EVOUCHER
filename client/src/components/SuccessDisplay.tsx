@@ -1,8 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle, ShieldCheck, CreditCard, Download, Printer } from "lucide-react";
+import { CheckCircle2, Mail, MessageSquare, ExternalLink, Copy, MessageCircle, ShieldCheck, CreditCard, Download, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 
 export interface VoucherItem {
@@ -129,11 +129,36 @@ function printReceipt(voucherData: SuccessDisplayProps["voucherData"]) {
 
 export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDisplayProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [savingImage, setSavingImage] = useState(false);
+  const cardAreaRef = useRef<HTMLDivElement>(null);
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const saveAsImage = async () => {
+    if (!cardAreaRef.current) return;
+    setSavingImage(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(cardAreaRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 3,          // high-res — good for mobile screens
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      const examType = voucherData.vouchers[0]?.examType ?? "voucher";
+      link.download = `AllTekSE-${examType}-voucher.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (err) {
+      console.error("Image save failed", err);
+    } finally {
+      setSavingImage(false);
+    }
   };
 
   const vouchers = voucherData.vouchers ?? [];
@@ -179,7 +204,7 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
           </div>
 
           {/* Voucher cards */}
-          <div className="space-y-3">
+          <div className="space-y-3" ref={cardAreaRef}>
             {vouchers.map((v, i) => (
               <Card key={i} className="border-slate-200 shadow-lg overflow-hidden">
                 <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-500" />
@@ -289,6 +314,20 @@ export default function SuccessDisplay({ voucherData, onStartNew }: SuccessDispl
             >
               <Download className="w-4 h-4" />
               Download Receipt (PDF)
+            </Button>
+
+            {/* Save card as image */}
+            <Button
+              variant="outline"
+              className="w-full h-12 font-semibold border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-2"
+              onClick={saveAsImage}
+              disabled={savingImage}
+              data-testid="button-save-image"
+            >
+              {savingImage
+                ? <><span className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />Saving…</>
+                : <><ImageIcon className="w-4 h-4" />Save as Image (PNG)</>
+              }
             </Button>
 
             {onStartNew && (
