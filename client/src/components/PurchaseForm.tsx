@@ -6,27 +6,40 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap, MapPin, FileEdit, Search, CreditCard, Loader2, CheckCircle, ExternalLink, Star, Minus, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Shield, Mail, Phone, Lock, MessageCircle, Zap, GraduationCap,
+  MapPin, FileEdit, Search, CreditCard, Loader2, ExternalLink,
+  Star, Minus, Plus, CheckCircle,
+} from "lucide-react";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
 import mtnLogo from "@assets/republic-bank-mtn-momo_1763209941271.jpg";
 import telecelLogo from "@assets/images (1)_1763209941547.png";
 import airtelTigoLogo from "@assets/airteltigo_1763209941612.jpg";
 import visaLogo from "@assets/images (2)_1763209941664.png";
 import studentsBanner from "@assets/generated_images/Successful_African_students_celebrating_101e4f92.png";
-
 import beceCardImage from "@assets/IMG-20260503-WA0021_1777811282955.jpg";
 import wassceCardImage from "@assets/IMG-20260503-WA0022_1777811293981.jpg";
 
+// ── Brand palette ──────────────────────────────────────────────────────────
+const BRAND = {
+  purple:  "#7c3aed",
+  blue:    "#2563eb",
+  teal:    "#0d9488",
+  hero:    "linear-gradient(135deg, #4c1d95 0%, #1e3a8a 55%, #134e4a 100%)",
+  primary: "linear-gradient(135deg, #7c3aed, #2563eb)",
+  accent:  "linear-gradient(135deg, #2563eb, #0d9488)",
+  full:    "linear-gradient(135deg, #7c3aed 0%, #2563eb 50%, #0d9488 100%)",
+};
+
 const DEFAULT_CARD_IMAGES: Record<string, string> = {
-  "BECE": beceCardImage,
-  "WASSCE": wassceCardImage,
+  BECE:   beceCardImage,
+  WASSCE: wassceCardImage,
 };
 
 function getCardImage(examType: string, imageUrl: string | null): string | null {
-  if (DEFAULT_CARD_IMAGES[examType]) return DEFAULT_CARD_IMAGES[examType];
-  return imageUrl ?? null;
+  return DEFAULT_CARD_IMAGES[examType] ?? imageUrl ?? null;
 }
 
 interface PurchaseFormProps {
@@ -35,17 +48,17 @@ interface PurchaseFormProps {
 }
 
 const CARD_COLORS: Record<string, { gradient: string; borderColor: string; accentColor: string }> = {
-  "BECE": { gradient: "linear-gradient(135deg, #10b981, #0d9488)", borderColor: "#6ee7b7", accentColor: "#10b981" },
-  "WASSCE": { gradient: "linear-gradient(135deg, #3b82f6, #4f46e5)", borderColor: "#93c5fd", accentColor: "#3b82f6" },
+  BECE:   { gradient: "linear-gradient(135deg, #10b981, #0d9488)", borderColor: "#6ee7b7", accentColor: "#0d9488" },
+  WASSCE: { gradient: "linear-gradient(135deg, #7c3aed, #2563eb)", borderColor: "#c4b5fd", accentColor: "#7c3aed" },
 };
 
 const DEFAULT_COLORS = [
-  { gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", borderColor: "#d8b4fe", accentColor: "#a855f7" },
-  { gradient: "linear-gradient(135deg, #f43f5e, #ec4899)", borderColor: "#fda4af", accentColor: "#f43f5e" },
-  { gradient: "linear-gradient(135deg, #f59e0b, #ea580c)", borderColor: "#fcd34d", accentColor: "#f59e0b" },
-  { gradient: "linear-gradient(135deg, #06b6d4, #0284c7)", borderColor: "#67e8f9", accentColor: "#06b6d4" },
-  { gradient: "linear-gradient(135deg, #d946ef, #a855f7)", borderColor: "#f0abfc", accentColor: "#d946ef" },
-  { gradient: "linear-gradient(135deg, #84cc16, #16a34a)", borderColor: "#bef264", accentColor: "#84cc16" },
+  { gradient: BRAND.primary,  borderColor: "#c4b5fd", accentColor: BRAND.purple },
+  { gradient: BRAND.accent,   borderColor: "#99f6e4", accentColor: BRAND.teal   },
+  { gradient: "linear-gradient(135deg, #2563eb, #0d9488)", borderColor: "#93c5fd", accentColor: BRAND.blue },
+  { gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", borderColor: "#e9d5ff", accentColor: "#a855f7" },
+  { gradient: "linear-gradient(135deg, #0d9488, #059669)", borderColor: "#6ee7b7", accentColor: "#059669" },
+  { gradient: "linear-gradient(135deg, #4f46e5, #7c3aed)", borderColor: "#c7d2fe", accentColor: "#4f46e5" },
 ];
 
 function getCardColors(examType: string, index: number) {
@@ -60,23 +73,29 @@ interface CardType {
 }
 
 const UNIVERSITIES = [
-  { name: "University of Ghana", short: "UG", city: "Legon", url: "https://admissions.ug.edu.gh/", color: "#7c3aed" },
-  { name: "KNUST", short: "KN", city: "Kumasi", url: "https://apps.knust.edu.gh/admissions/apply/", color: "#2563eb" },
-  { name: "UCC", short: "UC", city: "Cape Coast", url: "http://admissionlist.ucc.edu.gh/", color: "#0d9488" },
-  { name: "UPSA", short: "UP", city: "Accra", url: "https://upsasip.com/adm-area", color: "#4f46e5" },
-  { name: "Central University", short: "CU", city: "Accra", url: "https://central.edu.gh/online", color: "#db2777" },
-  { name: "Ashesi University", short: "AU", city: "Berekuso", url: "https://expresspaygh.com/ashesi", color: "#d97706" },
+  { name: "University of Ghana",  short: "UG", city: "Legon",    url: "https://admissions.ug.edu.gh/",             color: BRAND.purple },
+  { name: "KNUST",                short: "KN", city: "Kumasi",   url: "https://apps.knust.edu.gh/admissions/apply/", color: BRAND.blue   },
+  { name: "UCC",                  short: "UC", city: "Cape Coast",url: "http://admissionlist.ucc.edu.gh/",           color: BRAND.teal   },
+  { name: "UPSA",                 short: "UP", city: "Accra",    url: "https://upsasip.com/adm-area",              color: "#4f46e5"    },
+  { name: "Central University",   short: "CU", city: "Accra",    url: "https://central.edu.gh/online",             color: "#db2777"    },
+  { name: "Ashesi University",    short: "AU", city: "Berekuso", url: "https://expresspaygh.com/ashesi",           color: "#d97706"    },
+];
+
+const TRUST_BADGES = [
+  { icon: Zap,    label: "Instant SMS Delivery" },
+  { icon: Shield, label: "100% Secure" },
+  { icon: Star,   label: "Trusted by Thousands" },
 ];
 
 export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFormProps) {
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [maxQty, setMaxQty] = useState(1);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [email, setEmail]               = useState("");
+  const [phone, setPhone]               = useState("");
+  const [quantity, setQuantity]         = useState(1);
+  const [maxQty, setMaxQty]             = useState(1);
+  const [dialogOpen, setDialogOpen]     = useState(false);
   const [selectedType, setSelectedType] = useState("");
-  const [selectedPrice, setSelectedPrice] = useState(20);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedPrice, setSelectedPrice]   = useState(20);
+  const [selectedImage, setSelectedImage]   = useState<string | null>(null);
   const [selectedColors, setSelectedColors] = useState<{ gradient: string; borderColor: string; accentColor: string } | null>(null);
 
   const { data: cardTypes, isLoading: cardTypesLoading } = useQuery<CardType[]>({
@@ -101,10 +120,10 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #f8f7ff 0%, #eff6ff 50%, #f0fdfa 100%)" }}>
+    <div className="min-h-screen flex flex-col bg-white">
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 border-b border-purple-100/80 bg-white/90 backdrop-blur-xl shadow-sm">
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <img
@@ -114,12 +133,17 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               data-testid="img-alltekse-logo"
             />
             <div>
-              <h1 className="text-base font-extrabold leading-tight bg-gradient-to-r from-purple-700 via-blue-600 to-teal-600 bg-clip-text text-transparent" data-testid="text-site-title">
+              <h1
+                className="text-base font-extrabold leading-tight bg-clip-text text-transparent"
+                style={{ backgroundImage: BRAND.full }}
+                data-testid="text-site-title"
+              >
                 AllTekSE e-Voucher
               </h1>
               <p className="text-[11px] text-slate-500 font-medium leading-tight">Your Trusted e-Voucher Store</p>
             </div>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/blog"
@@ -135,11 +159,12 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               data-testid="link-vendor-portal"
             >
               <FileEdit className="w-3.5 h-3.5" />
-              Start Selling Vouchers
+              Start Selling
             </Link>
             <Link
               href="/retrieve-voucher"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-full transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 rounded-full transition-opacity hover:opacity-90"
+              style={{ background: BRAND.primary }}
               data-testid="link-retrieve-voucher"
             >
               <Search className="w-3.5 h-3.5" />
@@ -150,31 +175,39 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative w-full h-56 md:h-80 overflow-hidden" data-testid="section-hero-banner">
+      <section className="relative w-full h-60 md:h-80 overflow-hidden" data-testid="section-hero-banner">
         <img
           src={studentsBanner}
           alt="Students Celebrating"
           className="w-full h-full object-cover object-center scale-105"
           data-testid="img-students-banner"
         />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(76,29,149,0.88) 0%, rgba(30,58,138,0.75) 50%, rgba(13,148,136,0.82) 100%)" }} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 gap-3 md:gap-5">
-          <div className="space-y-1 md:space-y-2">
-            <p className="text-xs md:text-sm font-semibold uppercase tracking-widest text-white/70">Ghana's #1 e-Voucher Platform</p>
-            <h2 className="text-3xl md:text-5xl font-black text-white drop-shadow-2xl leading-tight" data-testid="text-hero-title">
+        {/* Brand gradient overlay — heavier, solid feel */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(135deg, rgba(76,29,149,0.93) 0%, rgba(37,99,235,0.85) 52%, rgba(20,78,72,0.90) 100%)" }}
+        />
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 gap-4">
+          <div className="space-y-2">
+            <p className="text-xs md:text-sm font-bold uppercase tracking-[0.2em] text-white/60">Ghana's #1 e-Voucher Platform</p>
+            <h2
+              className="text-3xl md:text-5xl font-black text-white leading-tight drop-shadow-lg"
+              data-testid="text-hero-title"
+            >
               Your Success<br className="hidden md:block" /> Starts Here
             </h2>
-            <p className="text-sm md:text-lg text-white/90 font-medium drop-shadow-md max-w-md mx-auto">
-              Purchase WAEC & university vouchers instantly — delivered straight to your phone.
+            <p className="text-sm md:text-base text-white/80 font-medium max-w-sm mx-auto">
+              Purchase WAEC &amp; university vouchers instantly — delivered straight to your phone.
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
-            {[
-              { icon: Zap, label: "Instant SMS Delivery" },
-              { icon: Shield, label: "100% Secure" },
-              { icon: Star, label: "Trusted by Thousands" },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/25 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-md">
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {TRUST_BADGES.map(({ icon: Icon, label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full"
+              >
                 <Icon className="w-3.5 h-3.5" />
                 {label}
               </div>
@@ -184,32 +217,30 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       </section>
 
       {/* ── USSD BANNER ── */}
-      <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 py-3 px-4 shadow-sm">
+      <div style={{ background: BRAND.full }} className="py-3 px-4">
         <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-2 text-center">
-          <span className="text-amber-900 font-bold text-sm">No internet? No problem!</span>
-          <span className="bg-amber-900/15 text-amber-900 font-mono font-extrabold text-sm px-3 py-0.5 rounded-full border border-amber-700/30 tracking-wide">
+          <span className="text-white/80 font-semibold text-sm">No internet? No problem!</span>
+          <span className="bg-white/20 border border-white/30 text-white font-mono font-extrabold text-sm px-3 py-0.5 rounded-full tracking-wide">
             Dial *920*919#
           </span>
-          <span className="text-amber-900 font-semibold text-sm">to buy your voucher via USSD from any phone.</span>
+          <span className="text-white/80 font-semibold text-sm">to buy your voucher via USSD from any phone.</span>
         </div>
       </div>
 
       {/* ── VOUCHER CARDS ── */}
-      <main className="flex-1 px-4 py-8 md:py-12">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <main className="flex-1 px-4 py-10 md:py-14 bg-white">
+        <div className="max-w-3xl mx-auto space-y-7">
 
-          {/* Section heading */}
           <div className="text-center space-y-1">
-            <div className="inline-flex items-center gap-2 mb-1">
-              <div className="h-px w-8 bg-gradient-to-r from-transparent to-purple-400" />
-              <CreditCard className="w-4 h-4 text-purple-500" />
-              <div className="h-px w-8 bg-gradient-to-l from-transparent to-purple-400" />
+            <div className="inline-flex items-center gap-2 mb-2">
+              <div className="h-px w-8" style={{ background: BRAND.primary }} />
+              <CreditCard className="w-4 h-4" style={{ color: BRAND.purple }} />
+              <div className="h-px w-8" style={{ background: BRAND.accent }} />
             </div>
             <h2 className="text-xl md:text-2xl font-extrabold text-slate-800">Available Vouchers</h2>
             <p className="text-sm text-slate-500 font-medium">Tap a card below to purchase instantly</p>
           </div>
 
-          {/* Cards grid */}
           {cardTypesLoading ? (
             <div className="grid grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
@@ -233,38 +264,40 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                     type="button"
                     onClick={() => !soldOut && handleCardClick(card, colors)}
                     disabled={soldOut}
-                    className={`group relative text-left rounded-xl overflow-hidden border transition-all duration-200 ${
+                    className={`group relative text-left rounded-2xl overflow-hidden border transition-all duration-200 ${
                       soldOut
                         ? "opacity-50 cursor-not-allowed bg-slate-50 border-slate-200"
-                        : "bg-white border-slate-200 hover-elevate shadow-md hover:shadow-xl hover:-translate-y-0.5"
+                        : "bg-white border-slate-200 shadow-md hover:shadow-xl hover:-translate-y-1"
                     }`}
                     data-testid={`card-type-${card.examType.toLowerCase()}`}
                   >
-                    {/* Top accent bar */}
+                    {/* Top accent stripe */}
                     {!soldOut && (
-                      <div className="h-1 w-full" style={{ background: colors.gradient }} />
+                      <div className="h-1.5 w-full" style={{ background: colors.gradient }} />
                     )}
 
-                    {/* Image / placeholder */}
-                    {(() => { const img = getCardImage(card.examType, card.imageUrl); return img ? (
-                      <div className="w-full h-28 md:h-36 overflow-hidden bg-slate-100">
-                        <img
-                          src={img}
-                          alt={card.examType}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          data-testid={`img-card-${card.examType.toLowerCase()}`}
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className="w-full h-28 md:h-36 flex items-center justify-center"
-                        style={{ background: soldOut ? "#f1f5f9" : colors.gradient }}
-                      >
-                        <CreditCard className={`w-10 h-10 md:w-12 md:h-12 ${soldOut ? "text-slate-300" : "text-white/80"}`} />
-                      </div>
-                    ); })()}
+                    {/* Card image */}
+                    {(() => {
+                      const img = getCardImage(card.examType, card.imageUrl);
+                      return img ? (
+                        <div className="w-full h-28 md:h-36 overflow-hidden bg-slate-100">
+                          <img
+                            src={img}
+                            alt={card.examType}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            data-testid={`img-card-${card.examType.toLowerCase()}`}
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-full h-28 md:h-36 flex items-center justify-center"
+                          style={{ background: soldOut ? "#f1f5f9" : colors.gradient }}
+                        >
+                          <CreditCard className={`w-10 h-10 md:w-12 md:h-12 ${soldOut ? "text-slate-300" : "text-white/80"}`} />
+                        </div>
+                      );
+                    })()}
 
-                    {/* Card info */}
                     <div className="p-3 md:p-4 space-y-2">
                       <h3 className="text-sm md:text-base font-bold text-slate-800 leading-snug">{card.examType}</h3>
                       <div className="flex items-center justify-between gap-2">
@@ -274,9 +307,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                         >
                           GHC {card.price}
                         </span>
-                        {soldOut ? (
-                          <Badge variant="destructive" className="text-[10px] px-1.5">Sold Out</Badge>
-                        ) : null}
+                        {soldOut && <Badge variant="destructive" className="text-[10px] px-1.5">Sold Out</Badge>}
                       </div>
                     </div>
                   </button>
@@ -299,10 +330,9 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       {/* ── PURCHASE DIALOG ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md max-h-[92vh] overflow-y-auto p-0" data-testid="dialog-purchase-form">
-          {/* Dialog header with gradient */}
           <div
             className="p-6 text-white space-y-1"
-            style={{ background: selectedColors?.gradient || "linear-gradient(135deg, #7c3aed, #3b82f6)" }}
+            style={{ background: selectedColors?.gradient || BRAND.primary }}
           >
             {selectedImage ? (
               <div className="w-16 h-16 rounded-xl overflow-hidden shadow-lg mb-3 border-2 border-white/30">
@@ -328,7 +358,9 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="dialog-phone" className="text-sm font-semibold text-slate-700">Phone Number <span className="text-red-500">*</span></Label>
+              <Label htmlFor="dialog-phone" className="text-sm font-semibold text-slate-700">
+                Phone Number <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
@@ -337,7 +369,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   placeholder="+233 XX XXX XXXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="pl-10 h-11 border-slate-200 focus-visible:ring-purple-500"
+                  className="pl-10 h-11 border-slate-200 focus-visible:ring-violet-500"
                   required
                   data-testid="input-phone"
                 />
@@ -357,14 +389,13 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   placeholder="your.email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-11 border-slate-200 focus-visible:ring-purple-500"
+                  className="pl-10 h-11 border-slate-200 focus-visible:ring-violet-500"
                   data-testid="input-email"
                 />
               </div>
               <p className="text-xs text-slate-400">Leave blank for SMS-only delivery</p>
             </div>
 
-            {/* Quantity selector */}
             {maxQty > 1 && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-semibold text-slate-700">
@@ -373,7 +404,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                     disabled={quantity <= 1}
                     className="w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
                     data-testid="button-qty-minus"
@@ -382,13 +413,11 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   </button>
                   <div className="flex-1 text-center">
                     <span className="text-2xl font-black text-slate-800" data-testid="text-quantity">{quantity}</span>
-                    <p className="text-xs text-slate-400 font-medium">
-                      Total: GHC {selectedPrice * quantity}
-                    </p>
+                    <p className="text-xs text-slate-400 font-medium">Total: GHC {selectedPrice * quantity}</p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                    onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
                     disabled={quantity >= maxQty}
                     className="w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
                     data-testid="button-qty-plus"
@@ -404,7 +433,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 type="submit"
                 className="w-full h-12 text-base font-bold shadow-lg text-white border-0"
                 style={{
-                  background: selectedColors?.gradient || "linear-gradient(135deg, #7c3aed, #3b82f6)",
+                  background: selectedColors?.gradient || BRAND.primary,
                   opacity: (isLoading || !phone || !selectedType) ? 0.6 : 1,
                 }}
                 disabled={isLoading || !phone || !selectedType}
@@ -425,17 +454,17 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
                 <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Secured & processed by <span className="font-semibold text-slate-700">Paystack</span></span>
+                <span>Secured &amp; processed by <span className="font-semibold text-slate-700">Paystack</span></span>
               </div>
 
               <div className="pt-1 space-y-2">
                 <p className="text-xs font-semibold text-center text-slate-500 uppercase tracking-wide">Payment Methods</p>
                 <div className="grid grid-cols-4 gap-2">
                   {[
-                    { src: mtnLogo, alt: "MTN MoMo", testId: "payment-mtn" },
-                    { src: telecelLogo, alt: "Telecel Cash", testId: "payment-telecel" },
-                    { src: airtelTigoLogo, alt: "AirtelTigo", testId: "payment-airteltigo" },
-                    { src: visaLogo, alt: "Visa", testId: "payment-visa" },
+                    { src: mtnLogo,        alt: "MTN MoMo",    testId: "payment-mtn"        },
+                    { src: telecelLogo,    alt: "Telecel Cash", testId: "payment-telecel"    },
+                    { src: airtelTigoLogo, alt: "AirtelTigo",  testId: "payment-airteltigo" },
+                    { src: visaLogo,       alt: "Visa",         testId: "payment-visa"       },
                   ].map(({ src, alt, testId }) => (
                     <div key={testId} className="bg-white border border-slate-100 rounded-lg p-1.5 shadow-sm" data-testid={testId}>
                       <img src={src} alt={alt} className="w-full h-7 object-contain" />
@@ -449,13 +478,13 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       </Dialog>
 
       {/* ── UNIVERSITY PORTALS ── */}
-      <section className="px-4 py-10 md:py-14 bg-white border-t border-slate-100">
+      <section className="px-4 py-10 md:py-14 border-t border-slate-100 bg-slate-50">
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="text-center space-y-1">
-            <div className="inline-flex items-center gap-2 mb-1">
-              <div className="h-px w-8 bg-gradient-to-r from-transparent to-blue-400" />
-              <GraduationCap className="w-4 h-4 text-blue-500" />
-              <div className="h-px w-8 bg-gradient-to-l from-transparent to-blue-400" />
+            <div className="inline-flex items-center gap-2 mb-2">
+              <div className="h-px w-8" style={{ background: BRAND.accent }} />
+              <GraduationCap className="w-4 h-4" style={{ color: BRAND.blue }} />
+              <div className="h-px w-8" style={{ background: BRAND.accent }} />
             </div>
             <h2 className="text-xl md:text-2xl font-extrabold text-slate-800">University Portals</h2>
             <p className="text-sm text-slate-500 font-medium">Quick access to Ghana's top universities</p>
@@ -468,11 +497,11 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                 href={uni.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center gap-3 p-3 md:p-4 bg-white border border-slate-200 rounded-xl hover-elevate transition-all shadow-sm hover:shadow-md"
+                className="group flex items-center gap-3 p-3 md:p-4 bg-white border border-slate-200 rounded-2xl hover:-translate-y-0.5 transition-all shadow-sm hover:shadow-md"
                 data-testid={`link-university-${uni.short.toLowerCase()}`}
               >
                 <div
-                  className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm"
+                  className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-sm"
                   style={{ background: uni.color }}
                 >
                   {uni.short}
@@ -488,7 +517,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       </section>
 
       {/* ── SERVICES ── */}
-      <section className="px-4 py-10 md:py-14 border-t border-slate-100" style={{ background: "linear-gradient(160deg, #f8f7ff 0%, #eff6ff 100%)" }}>
+      <section className="px-4 py-10 md:py-14 border-t border-slate-100 bg-white">
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="text-center space-y-1">
             <h2 className="text-xl md:text-2xl font-extrabold text-slate-800">Need More Help?</h2>
@@ -496,10 +525,15 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <Card className="border-slate-200 shadow-sm">
+            {/* Form Filling */}
+            <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="h-1.5 w-full" style={{ background: BRAND.primary }} />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
+                    style={{ background: BRAND.primary }}
+                  >
                     <FileEdit className="w-5 h-5 text-white" />
                   </div>
                   <CardTitle className="text-base font-bold text-slate-800">Form Filling Services</CardTitle>
@@ -508,13 +542,22 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               <CardContent className="space-y-3 pt-0">
                 <p className="text-sm text-slate-500">Need help with your university application? Our team is ready to assist you.</p>
                 <div className="space-y-2">
-                  <a href="tel:+233593260440" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-purple-600 transition-colors" data-testid="link-form-services">
+                  <a
+                    href="tel:+233593260440"
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-purple-700 transition-colors"
+                    data-testid="link-form-services"
+                  >
                     <div className="w-7 h-7 bg-purple-50 rounded-lg flex items-center justify-center">
                       <Phone className="w-3.5 h-3.5 text-purple-600" />
                     </div>
                     0593260440
                   </a>
-                  <a href="https://wa.me/233593260440" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors">
+                  <a
+                    href="https://wa.me/233593260440"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors"
+                  >
                     <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center">
                       <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
@@ -524,10 +567,15 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            {/* Visit Shop */}
+            <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="h-1.5 w-full" style={{ background: BRAND.accent }} />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
+                    style={{ background: BRAND.accent }}
+                  >
                     <MapPin className="w-5 h-5 text-white" />
                   </div>
                   <CardTitle className="text-base font-bold text-slate-800">Visit Our Shop</CardTitle>
@@ -539,13 +587,21 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
                   <p className="text-sm text-slate-400">Kumasi, Ghana</p>
                 </div>
                 <div className="space-y-2">
-                  <a href="tel:+233593260440" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-teal-600 transition-colors">
+                  <a
+                    href="tel:+233593260440"
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-teal-600 transition-colors"
+                  >
                     <div className="w-7 h-7 bg-teal-50 rounded-lg flex items-center justify-center">
                       <Phone className="w-3.5 h-3.5 text-teal-600" />
                     </div>
                     0593260440
                   </a>
-                  <a href="https://wa.me/233593260440" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors">
+                  <a
+                    href="https://wa.me/233593260440"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors"
+                  >
                     <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center">
                       <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
@@ -561,20 +617,39 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
       {/* ── FOOTER ── */}
       <footer className="bg-slate-900 text-white px-4 py-8">
         <div className="max-w-3xl mx-auto space-y-6">
+          {/* Brand gradient top rule */}
+          <div className="h-0.5 w-full rounded-full" style={{ background: BRAND.full }} />
+
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img src={alltekseLogo} alt="AllTekSE Logo" className="h-8 w-auto object-contain rounded-md" />
               <div>
-                <p className="text-sm font-bold text-white">AllTekSE e-Voucher</p>
+                <p
+                  className="text-sm font-bold bg-clip-text text-transparent"
+                  style={{ backgroundImage: BRAND.full }}
+                >
+                  AllTekSE e-Voucher
+                </p>
                 <p className="text-xs text-slate-400">Your Trusted e-Voucher Store</p>
               </div>
             </div>
+
             <div className="flex items-center gap-4 text-sm">
-              <a href="mailto:support@alltekse.com" className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors" data-testid="link-email">
+              <a
+                href="mailto:support@alltekse.com"
+                className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+                data-testid="link-email"
+              >
                 <Mail className="w-3.5 h-3.5" />
                 support@alltekse.com
               </a>
-              <a href="https://wa.me/233593260440" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors" data-testid="link-whatsapp">
+              <a
+                href="https://wa.me/233593260440"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+                data-testid="link-whatsapp"
+              >
                 <MessageCircle className="w-3.5 h-3.5" />
                 WhatsApp
               </a>
@@ -582,7 +657,7 @@ export default function PurchaseForm({ onSubmit, isLoading = false }: PurchaseFo
           </div>
 
           <div className="border-t border-slate-800 pt-4 flex items-center justify-between text-xs text-slate-500">
-            <p data-testid="text-powered-by">© 2025 ALLTEK SOLUTIONS & ENGINEERING</p>
+            <p data-testid="text-powered-by">© 2025 ALLTEK SOLUTIONS &amp; ENGINEERING</p>
             <a href="/admin" className="hover:text-slate-300 transition-colors" data-testid="link-admin">Admin</a>
           </div>
         </div>
