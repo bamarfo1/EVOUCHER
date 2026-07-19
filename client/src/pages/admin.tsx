@@ -1093,16 +1093,34 @@ function VendorsTab() {
   );
 }
 
-// ─── Broadcast SMS Panel ──────────────────────────────────────────────────────
-function BroadcastSmsPanel() {
+// ─── Shared broadcast card ────────────────────────────────────────────────────
+function BroadcastCard({
+  title,
+  description,
+  placeholder,
+  buttonLabel,
+  accentClass,
+  endpoint,
+  contactCount,
+  successLabel,
+}: {
+  title: string;
+  description: string;
+  placeholder: string;
+  buttonLabel: string;
+  accentClass: string;
+  endpoint: string;
+  contactCount: number | undefined;
+  successLabel: (sent: number, total: number) => string;
+}) {
   const { toast } = useToast();
   const MAX = 500;
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<{ total: number; sent: number; failed: number; errors: string[] } | null>(null);
 
-  const broadcastMutation = useMutation({
+  const mutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/admin/broadcast-sms", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
@@ -1113,7 +1131,7 @@ function BroadcastSmsPanel() {
     },
     onSuccess: (data) => {
       setResult(data);
-      toast({ title: `SMS sent to ${data.sent} of ${data.total} vendors` });
+      toast({ title: successLabel(data.sent, data.total) });
     },
     onError: (err: any) => {
       toast({ title: "Broadcast failed", description: err.message, variant: "destructive" });
@@ -1126,11 +1144,19 @@ function BroadcastSmsPanel() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Send className="w-4 h-4 text-purple-600" />
-          <CardTitle className="text-base">Broadcast SMS to All Vendors</CardTitle>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Send className="w-4 h-4 text-purple-600" />
+            <CardTitle className="text-base">{title}</CardTitle>
+          </div>
+          {contactCount !== undefined && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
+              <Users className="w-3 h-3" />
+              {contactCount.toLocaleString()} contact{contactCount !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
-        <p className="text-xs text-slate-500 mt-0.5">Sends an SMS message to every registered vendor's phone number.</p>
+        <p className="text-xs text-slate-500 mt-0.5">{description}</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1.5">
@@ -1144,27 +1170,27 @@ function BroadcastSmsPanel() {
             className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
             rows={5}
             maxLength={MAX}
-            placeholder="Type your message to all vendors here…"
+            placeholder={placeholder}
             value={message}
             onChange={(e) => { setMessage(e.target.value); setResult(null); }}
           />
         </div>
 
         <Button
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 font-bold"
-          disabled={!message.trim() || isOverLimit || broadcastMutation.isPending}
-          onClick={() => broadcastMutation.mutate()}
+          className={`w-full text-white border-0 font-bold ${accentClass}`}
+          disabled={!message.trim() || isOverLimit || mutation.isPending}
+          onClick={() => mutation.mutate()}
         >
-          {broadcastMutation.isPending
+          {mutation.isPending
             ? <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" />Sending…</span>
-            : <span className="flex items-center gap-2"><Send className="w-4 h-4" />Send to All Vendors</span>}
+            : <span className="flex items-center gap-2"><Send className="w-4 h-4" />{buttonLabel}</span>}
         </Button>
 
         {result && (
           <div className={`rounded-lg px-4 py-3 text-sm space-y-1 ${result.failed === 0 ? "bg-green-50 border border-green-200 text-green-800" : "bg-amber-50 border border-amber-200 text-amber-800"}`}>
             <p className="font-semibold">
               {result.failed === 0
-                ? `✓ Delivered to all ${result.sent} vendor${result.sent !== 1 ? "s" : ""}`
+                ? `✓ ${successLabel(result.sent, result.total)}`
                 : `Sent ${result.sent} / ${result.total} — ${result.failed} failed`}
             </p>
             {result.errors.length > 0 && (
@@ -1176,6 +1202,47 @@ function BroadcastSmsPanel() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Broadcast SMS Panel ──────────────────────────────────────────────────────
+function BroadcastSmsPanel() {
+  const { data: vendorData } = useQuery<{ vendor: any }[]>({
+    queryKey: ["/api/admin/vendors"],
+  });
+  const { data: customerData } = useQuery<{ total: number }>({
+    queryKey: ["/api/admin/customer-contacts"],
+  });
+
+  const vendorCount = vendorData?.length;
+  const customerCount = customerData?.total;
+
+  return (
+    <div className="space-y-4">
+      {/* Customer broadcast */}
+      <BroadcastCard
+        title="Broadcast SMS to All Customers"
+        description="Sends an SMS to every unique phone number that has completed a purchase on the main store."
+        placeholder="Type your message to all customers here…"
+        buttonLabel="Send to All Customers"
+        accentClass="bg-gradient-to-r from-blue-600 to-teal-600"
+        endpoint="/api/admin/broadcast-customers"
+        contactCount={customerCount}
+        successLabel={(sent, total) => `Delivered to ${sent} of ${total} customer${total !== 1 ? "s" : ""}`}
+      />
+
+      {/* Vendor broadcast */}
+      <BroadcastCard
+        title="Broadcast SMS to All Vendors"
+        description="Sends an SMS message to every registered vendor's phone number."
+        placeholder="Type your message to all vendors here…"
+        buttonLabel="Send to All Vendors"
+        accentClass="bg-gradient-to-r from-purple-600 to-blue-600"
+        endpoint="/api/admin/broadcast-sms"
+        contactCount={vendorCount}
+        successLabel={(sent, total) => `Delivered to ${sent} of ${total} vendor${total !== 1 ? "s" : ""}`}
+      />
+    </div>
   );
 }
 

@@ -1242,6 +1242,53 @@ ${allUrls
 
   // ─── Admin Broadcast SMS ──────────────────────────────────────────────────
 
+  app.get(
+    "/api/admin/customer-contacts",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const phones = await storage.adminGetAllBuyerPhones();
+        res.json({ total: phones.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/broadcast-customers",
+    requireAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const { message } = req.body;
+        if (!message || typeof message !== "string" || message.trim().length === 0)
+          return res.status(400).json({ error: "Message is required" });
+        if (message.length > 500)
+          return res.status(400).json({ error: "Message must be 500 characters or fewer" });
+
+        const phones = await storage.adminGetAllBuyerPhones();
+        let sent = 0, failed = 0;
+        const errors: string[] = [];
+
+        for (const phone of phones) {
+          try {
+            await sendSmsBroadcast(phone, message.trim());
+            sent++;
+          } catch (err: any) {
+            failed++;
+            errors.push(`${phone}: ${err.message}`);
+            console.error(`[CUSTOMER-BROADCAST] Failed to send to ${phone}:`, err.message);
+          }
+        }
+
+        console.log(`[CUSTOMER-BROADCAST] SMS sent: ${sent}, failed: ${failed}, total: ${phones.length}`);
+        res.json({ success: true, total: phones.length, sent, failed, errors });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    },
+  );
+
   app.post(
     "/api/admin/broadcast-sms",
     requireAdmin,
