@@ -768,14 +768,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const baseUrl = process.env.BASE_URL || "https://allteksevoucher.store";
       const [posts] = await Promise.all([storage.getBlogPosts(200, 0)]);
+      const today = new Date().toISOString().split("T")[0];
       const staticUrls = [
-        { loc: baseUrl, priority: "1.0", changefreq: "daily" },
-        { loc: `${baseUrl}/blog`, priority: "0.9", changefreq: "daily" },
-        {
-          loc: `${baseUrl}/retrieve-voucher`,
-          priority: "0.7",
-          changefreq: "monthly",
-        },
+        { loc: baseUrl, priority: "1.0", changefreq: "daily", lastmod: today },
+        { loc: `${baseUrl}/blog`, priority: "0.9", changefreq: "daily", lastmod: today },
+        { loc: `${baseUrl}/retrieve-voucher`, priority: "0.7", changefreq: "monthly", lastmod: today },
       ];
       const postUrls = posts.map((p) => ({
         loc: `${baseUrl}/blog/${p.id}`,

@@ -80,11 +80,79 @@ export default function BlogPostPage() {
   });
 
   if (post) {
-    document.title = `${post.title} | AllTekSE Education Blog`;
-    const desc = document.querySelector('meta[name="description"]');
-    if (desc) desc.setAttribute("content", post.summary || post.title);
-    const og = document.querySelector('meta[property="og:title"]');
-    if (og) og.setAttribute("content", post.title);
+    const pageTitle = `${post.title} | AllTekSE Education Blog`;
+    const pageDesc = post.summary || post.title;
+    const pageUrl = `https://allteksevoucher.store/blog/${post.id}`;
+    const pageImage = post.imageUrl || "https://allteksevoucher.store/favicon.jpg";
+    const publishedDate = post.publishedAt || post.createdAt;
+
+    document.title = pageTitle;
+
+    // Helper to upsert a meta tag
+    const setMeta = (sel: string, attr: string, val: string) => {
+      let el = document.querySelector<HTMLMetaElement>(sel);
+      if (!el) {
+        el = document.createElement("meta");
+        const [attrName, attrVal] = attr.split("=");
+        el.setAttribute(attrName.trim(), attrVal.replace(/"/g, "").trim());
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", val);
+    };
+
+    // Canonical link
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = pageUrl;
+
+    setMeta('meta[name="description"]', 'name="description"', pageDesc);
+    setMeta('meta[property="og:title"]', 'property="og:title"', pageTitle);
+    setMeta('meta[property="og:description"]', 'property="og:description"', pageDesc);
+    setMeta('meta[property="og:url"]', 'property="og:url"', pageUrl);
+    setMeta('meta[property="og:type"]', 'property="og:type"', "article");
+    setMeta('meta[property="og:image"]', 'property="og:image"', pageImage);
+    setMeta('meta[name="twitter:title"]', 'name="twitter:title"', pageTitle);
+    setMeta('meta[name="twitter:description"]', 'name="twitter:description"', pageDesc);
+    setMeta('meta[name="twitter:image"]', 'name="twitter:image"', pageImage);
+
+    // Article JSON-LD — inject once, replace if already present
+    const SCRIPT_ID = "article-jsonld";
+    let script = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.id = SCRIPT_ID;
+      script.type = "application/ld+json";
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": post.title,
+      "description": pageDesc,
+      "image": pageImage,
+      "datePublished": publishedDate,
+      "dateModified": publishedDate,
+      "author": { "@type": "Organization", "name": post.source },
+      "publisher": {
+        "@type": "Organization",
+        "name": "AllTekSE e-Voucher",
+        "logo": { "@type": "ImageObject", "url": "https://allteksevoucher.store/favicon.jpg" }
+      },
+      "url": pageUrl,
+      "mainEntityOfPage": { "@type": "WebPage", "@id": pageUrl },
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://allteksevoucher.store" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://allteksevoucher.store/blog" },
+          { "@type": "ListItem", "position": 3, "name": post.title, "item": pageUrl }
+        ]
+      }
+    });
   }
 
   return (

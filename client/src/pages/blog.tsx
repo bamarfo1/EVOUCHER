@@ -35,9 +35,23 @@ function formatDate(dateStr: string | null): string {
 }
 
 function MetaTags() {
-  document.title = "Education News Blog | AllTekSE e-Voucher";
-  const existing = document.querySelector('meta[name="description"]');
-  if (existing) existing.setAttribute("content", "Stay updated with the latest Ghana education news — WAEC results, university admissions, scholarships, and academic updates from AllTekSE.");
+  document.title = "Ghana Education News | WAEC BECE & WASSCE Results Updates | AllTekSE Blog";
+  const setMeta = (sel: string, val: string) => {
+    const el = document.querySelector<HTMLMetaElement>(sel);
+    if (el) el.setAttribute("content", val);
+  };
+  const setLink = (rel: string, val: string) => {
+    let el = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+    if (!el) { el = document.createElement("link"); el.rel = rel; document.head.appendChild(el); }
+    el.href = val;
+  };
+  setMeta('meta[name="description"]', "Stay updated with the latest Ghana education news — WAEC BECE results, WASSCE results, university admissions, scholarships, and academic updates for Ghanaian students.");
+  setMeta('meta[property="og:title"]', "Ghana Education News | WAEC BECE & WASSCE Results Updates | AllTekSE");
+  setMeta('meta[property="og:description"]', "Latest Ghana education news, WAEC BECE results, WASSCE results, university admissions, and scholarship updates — brought to you by AllTekSE e-Voucher.");
+  setMeta('meta[property="og:url"]', "https://allteksevoucher.store/blog");
+  setMeta('meta[name="twitter:title"]', "Ghana Education News | BECE & WASSCE Results | AllTekSE Blog");
+  setMeta('meta[name="twitter:description"]', "Latest WAEC BECE results, WASSCE results, university admissions and scholarship updates for Ghana students.");
+  setLink("canonical", "https://allteksevoucher.store/blog");
   return null;
 }
 
