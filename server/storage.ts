@@ -45,6 +45,7 @@ export interface IStorage {
   getVendorPrices(vendorId: string): Promise<VendorPrice[]>;
   getVendorPrice(vendorId: string, examType: string): Promise<VendorPrice | undefined>;
   getVendorStats(vendorId: string): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }>;
+  getVendorSalesHistory(vendorId: string, limit?: number): Promise<{ id: string; phone: string; examType: string; amount: string; quantity: number; createdAt: Date | null }[]>;
   updateVendorStoreName(vendorId: string, storeName: string): Promise<void>;
   updateVendorTemplate(vendorId: string, template: string): Promise<void>;
   // Admin vendor methods
@@ -379,6 +380,22 @@ export class DbStorage implements IStorage {
       .from(vendorPrices)
       .where(and(eq(vendorPrices.vendorId, vendorId), eq(vendorPrices.examType, examType)));
     return price;
+  }
+
+  async getVendorSalesHistory(vendorId: string, limit = 50): Promise<{ id: string; phone: string; examType: string; amount: string; quantity: number; createdAt: Date | null }[]> {
+    return await db
+      .select({
+        id: transactions.id,
+        phone: transactions.phone,
+        examType: transactions.examType,
+        amount: transactions.amount,
+        quantity: transactions.quantity,
+        createdAt: transactions.createdAt,
+      })
+      .from(transactions)
+      .where(and(eq(transactions.vendorId, vendorId), eq(transactions.status, "completed")))
+      .orderBy(desc(transactions.createdAt))
+      .limit(limit);
   }
 
   async updateVendorStoreName(vendorId: string, storeName: string): Promise<void> {

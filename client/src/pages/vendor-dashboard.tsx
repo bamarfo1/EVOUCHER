@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Store, LogOut, Copy, ExternalLink, TrendingUp, Package,
-  DollarSign, Phone, CreditCard, Loader2, Check, Settings, Pencil, X, Wallet, Clock, ArrowDownToLine, AlertCircle, Palette,
+  DollarSign, Phone, CreditCard, Loader2, Check, Settings, Pencil, X, Wallet, Clock, ArrowDownToLine, AlertCircle, Palette, History,
 } from "lucide-react";
 import { TEMPLATE_GROUPS } from "@/lib/vendor-templates";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
@@ -38,6 +38,15 @@ interface CardTypeInfo {
   basePrice: number;
   vendorPrice: number | null;
   imageUrl: string | null;
+}
+
+interface SaleRecord {
+  id: string;
+  phone: string;
+  examType: string;
+  amount: string;
+  quantity: number;
+  createdAt: string | null;
 }
 
 interface WithdrawalRequestInfo {
@@ -87,6 +96,11 @@ export default function VendorDashboard() {
 
   const { data: withdrawals, refetch: refetchWithdrawals } = useQuery<WithdrawalRequestInfo[]>({
     queryKey: ["/api/vendor/me/withdrawals"],
+    enabled: !!vendor,
+  });
+
+  const { data: salesHistory } = useQuery<SaleRecord[]>({
+    queryKey: ["/api/vendor/me/sales"],
     enabled: !!vendor,
   });
 
@@ -581,6 +595,56 @@ export default function VendorDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Sales History */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <History className="w-4 h-4 text-indigo-600" />
+              <CardTitle className="text-base font-bold">Sales History</CardTitle>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Last 100 completed purchases through your store link.</p>
+          </CardHeader>
+          <CardContent>
+            {!salesHistory || salesHistory.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">No sales yet. Share your store link to start selling!</p>
+            ) : (
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-sm min-w-[480px]">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="text-left text-xs font-semibold text-slate-400 pb-2 px-2">Buyer Phone</th>
+                      <th className="text-left text-xs font-semibold text-slate-400 pb-2 px-2">Card Type</th>
+                      <th className="text-center text-xs font-semibold text-slate-400 pb-2 px-2">Qty</th>
+                      <th className="text-right text-xs font-semibold text-slate-400 pb-2 px-2">Amount</th>
+                      <th className="text-right text-xs font-semibold text-slate-400 pb-2 px-2">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesHistory.map((sale) => {
+                      const raw = sale.phone.replace(/\D/g, "");
+                      const masked = raw.length >= 7
+                        ? raw.slice(0, 3) + "****" + raw.slice(-4)
+                        : sale.phone;
+                      const date = sale.createdAt
+                        ? new Date(sale.createdAt).toLocaleDateString("en-GH", { day: "2-digit", month: "short", year: "numeric" })
+                        : "—";
+                      return (
+                        <tr key={sale.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+                          <td className="py-2 px-2 font-mono text-slate-700">{masked}</td>
+                          <td className="py-2 px-2 text-slate-600">{sale.examType}</td>
+                          <td className="py-2 px-2 text-center text-slate-600">{sale.quantity ?? 1}</td>
+                          <td className="py-2 px-2 text-right font-semibold text-emerald-600">GHC {Number(sale.amount).toFixed(2)}</td>
+                          <td className="py-2 px-2 text-right text-slate-400 text-xs">{date}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Page Theme Picker */}
         <Card className="border-slate-200 shadow-sm">

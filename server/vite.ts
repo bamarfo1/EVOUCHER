@@ -24,6 +24,9 @@ function injectVendorMeta(html: string, vendor: VendorMeta, baseUrl: string): st
     .replace(/<meta property="og:description"[^>]*\/?>/, `<meta property="og:description" content="${description}" />`)
     .replace(/<meta property="og:url"[^>]*\/?>/, `<meta property="og:url" content="${url}" />`)
     .replace(/<meta property="og:site_name"[^>]*\/?>/, `<meta property="og:site_name" content="${name}" />`)
+    // Remove the AllTekSE logo image from vendor link previews
+    .replace(/<meta property="og:image"[^>]*\/?>/, `<meta property="og:image" content="" />`)
+    .replace(/<meta name="twitter:card"[^>]*\/?>/, `<meta name="twitter:card" content="summary" />`)
     .replace(/<meta name="twitter:title"[^>]*\/?>/, `<meta name="twitter:title" content="${name}" />`)
     .replace(/<meta name="twitter:description"[^>]*\/?>/, `<meta name="twitter:description" content="${description}" />`)
     .replace(/<meta name="description"[^>]*\/?>/, `<meta name="description" content="${description}" />`)

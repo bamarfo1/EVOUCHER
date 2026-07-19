@@ -654,6 +654,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.get(
+    "/api/vendor/me/sales",
+    requireVendor,
+    async (req: Request, res: Response) => {
+      try {
+        const vendorId = (req.session as any).vendorId;
+        const sales = await storage.getVendorSalesHistory(vendorId, 100);
+        res.json(sales);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    },
+  );
+
   app.put(
     "/api/vendor/prices",
     requireVendor,
