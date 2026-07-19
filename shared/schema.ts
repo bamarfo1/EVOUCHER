@@ -37,6 +37,7 @@ export const vendors = pgTable("vendors", {
   slug: text("slug").unique().notNull(),
   status: text("status").notNull().default("active"),
   template: text("template").notNull().default("classic-purple"),
+  customDomain: text("custom_domain"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

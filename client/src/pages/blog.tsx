@@ -48,10 +48,10 @@ function MetaTags() {
   setMeta('meta[name="description"]', "Stay updated with the latest Ghana education news — WAEC BECE results, WASSCE results, university admissions, scholarships, and academic updates for Ghanaian students.");
   setMeta('meta[property="og:title"]', "Ghana Education News | WAEC BECE & WASSCE Results Updates | AllTekSE");
   setMeta('meta[property="og:description"]', "Latest Ghana education news, WAEC BECE results, WASSCE results, university admissions, and scholarship updates — brought to you by AllTekSE e-Voucher.");
-  setMeta('meta[property="og:url"]', "https://allteksevoucher.store/blog");
+  setMeta('meta[property="og:url"]', "https://tekse.online/blog");
   setMeta('meta[name="twitter:title"]', "Ghana Education News | BECE & WASSCE Results | AllTekSE Blog");
   setMeta('meta[name="twitter:description"]', "Latest WAEC BECE results, WASSCE results, university admissions and scholarship updates for Ghana students.");
-  setLink("canonical", "https://allteksevoucher.store/blog");
+  setLink("canonical", "https://tekse.online/blog");
   return null;
 }
 

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Store, LogOut, Copy, ExternalLink, TrendingUp, Package,
-  DollarSign, Phone, CreditCard, Loader2, Check, Settings, Pencil, X, Wallet, Clock, ArrowDownToLine, AlertCircle, Palette, History,
+  DollarSign, Phone, CreditCard, Loader2, Check, Settings, Pencil, X, Wallet, Clock, ArrowDownToLine, AlertCircle, Palette, History, Globe,
 } from "lucide-react";
 import { TEMPLATE_GROUPS } from "@/lib/vendor-templates";
 import alltekseLogo from "@assets/alltekse_1777780378035.png";
@@ -24,6 +24,7 @@ interface VendorMe {
   slug: string;
   status: string;
   template?: string;
+  customDomain?: string | null;
 }
 
 interface VendorStats {
@@ -73,6 +74,7 @@ export default function VendorDashboard() {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [savedField, setSavedField] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [customDomainInput, setCustomDomainInput] = useState("");
 
   const { data: vendor, isLoading: vendorLoading, error: vendorError } = useQuery<VendorMe>({
     queryKey: ["/api/vendor/me"],
@@ -192,6 +194,24 @@ export default function VendorDashboard() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const saveCustomDomainMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/vendor/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customDomain: customDomainInput.trim() || null }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to save");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Custom domain saved!", description: "Remember to set up URL forwarding on Namecheap." });
+      setCustomDomainInput("");
+      queryClient.invalidateQueries({ queryKey: ["/api/vendor/me"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await fetch("/api/vendor/logout", { method: "POST" });
@@ -209,7 +229,7 @@ export default function VendorDashboard() {
 
   if (!vendor) return null;
 
-  const vendorPageUrl = `${window.location.origin}/v/${vendor.slug}`;
+  const vendorPageUrl = `https://tekse.online/v/${vendor.slug}`;
 
   const copyUrl = () => {
     navigator.clipboard.writeText(vendorPageUrl);
@@ -268,6 +288,50 @@ export default function VendorDashboard() {
               </Button>
             </div>
             <p className="text-xs text-slate-500 mt-2">Share this link with your customers to sell vouchers.</p>
+          </CardContent>
+        </Card>
+
+        {/* Custom Domain */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-blue-600" />
+              <CardTitle className="text-base font-bold">Custom Domain</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Want your own domain? (e.g., <strong>brightshop.com</strong>) <br/>
+                Set up URL forwarding on Namecheap to redirect to your store link above.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">URL</span>
+                <Input
+                  type="text"
+                  placeholder="https://yourdomain.com"
+                  value={customDomainInput}
+                  onChange={(e) => setCustomDomainInput(e.target.value)}
+                  className="pl-12 text-sm"
+                  data-testid="input-custom-domain"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => saveCustomDomainMutation.mutate()}
+                disabled={saveCustomDomainMutation.isPending}
+                data-testid="button-save-custom-domain"
+              >
+                {saveCustomDomainMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+              </Button>
+            </div>
+            {vendor.customDomain && (
+              <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                <Check className="w-3 h-3" /> Custom domain saved: {vendor.customDomain}
+              </p>
+            )}
           </CardContent>
         </Card>
 

@@ -766,7 +766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Sitemap ───────────────────────────────────────────────────────────────
   app.get("/sitemap.xml", async (_req: Request, res: Response) => {
     try {
-      const baseUrl = process.env.BASE_URL || "https://allteksevoucher.store";
+      const baseUrl = process.env.BASE_URL || "https://tekse.online";
       const [posts] = await Promise.all([storage.getBlogPosts(200, 0)]);
       const today = new Date().toISOString().split("T")[0];
       const staticUrls = [
@@ -803,7 +803,7 @@ ${allUrls
   });
 
   app.get("/robots.txt", (_req: Request, res: Response) => {
-    const baseUrl = process.env.BASE_URL || "https://allteksevoucher.store";
+    const baseUrl = process.env.BASE_URL || "https://tekse.online";
     res.header("Content-Type", "text/plain");
     res.send(
       `User-agent: *\nAllow: /\nAllow: /blog\nAllow: /retrieve-voucher\nDisallow: /admin\nDisallow: /api/\nDisallow: /vendor/dashboard\n\nSitemap: ${baseUrl}/sitemap.xml\n`,
@@ -1076,32 +1076,7 @@ ${allUrls
     },
   );
 
-  app.post(
-    "/api/admin/vendors/:id/close-for-payout",
-    requireAdmin,
-    async (req: Request, res: Response) => {
-      try {
-        const payout = await storage.adminCloseVendorForPayout(req.params.id);
-        res.json({ success: true, payout });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    },
-  );
-
-  app.post(
-    "/api/admin/payouts/:id/mark-paid",
-    requireAdmin,
-    async (req: Request, res: Response) => {
-      try {
-        const payout = await storage.adminMarkPayoutPaid(req.params.id);
-        res.json({ success: true, payout });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    },
-  );
-
+  // ─── Admin payouts history (GET only — old POST routes removed) ────────────
   app.get(
     "/api/admin/vendors/:id/payouts",
     requireAdmin,
@@ -1109,22 +1084,6 @@ ${allUrls
       try {
         const history = await storage.adminGetVendorPayouts(req.params.id);
         res.json(history);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    },
-  );
-
-  app.post(
-    "/api/admin/close-vendors-for-payout",
-    requireAdmin,
-    async (_req: Request, res: Response) => {
-      try {
-        await storage.adminCloseAllVendorsForPayout();
-        res.json({
-          success: true,
-          message: "All active vendor accounts closed for payout",
-        });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
@@ -1331,11 +1290,12 @@ ${allUrls
     async (req: Request, res: Response) => {
       try {
         const vendorId = (req.session as any).vendorId;
-        const { storeName, template } = req.body;
-        if (storeName === undefined && template === undefined)
-          return res.status(400).json({ error: "storeName or template required" });
+        const { storeName, template, customDomain } = req.body;
+        if (storeName === undefined && template === undefined && customDomain === undefined)
+          return res.status(400).json({ error: "storeName, template, or customDomain required" });
         if (storeName !== undefined) await storage.updateVendorStoreName(vendorId, storeName);
         if (template !== undefined) await storage.updateVendorTemplate(vendorId, template);
+        if (customDomain !== undefined) await storage.adminUpdateVendor(vendorId, { customDomain: customDomain || null });
         res.json({ success: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -1346,7 +1306,7 @@ ${allUrls
   // ─── USSD Callback ─────────────────────────────────────────────────────────
   // Nalo Solutions — JSON in, JSON out
   // Shortcode: *920*919#  |  USERID: ALLTEKSE
-  // Endpoint: https://www.allteksevoucher.store/ussd/callback
+  // Endpoint: https://www.tekse.online/ussd/callback
   // express.raw catches bodies that arrive without Content-Type: application/json
   app.post(
     "/ussd/callback",

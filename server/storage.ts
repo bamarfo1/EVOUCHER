@@ -40,6 +40,7 @@ export interface IStorage {
   getVendorByPhone(phone: string): Promise<Vendor | undefined>;
   getVendorBySlug(slug: string): Promise<Vendor | undefined>;
   getVendorById(id: string): Promise<Vendor | undefined>;
+  getVendorByCustomDomain(domain: string): Promise<Vendor | undefined>;
   updateVendorPassword(vendorId: string, passwordHash: string): Promise<void>;
   upsertVendorPrice(vendorId: string, examType: string, price: number): Promise<void>;
   getVendorPrices(vendorId: string): Promise<VendorPrice[]>;
@@ -51,11 +52,8 @@ export interface IStorage {
   updateVendorTemplate(vendorId: string, template: string): Promise<void>;
   // Admin vendor methods
   adminGetAllVendors(): Promise<{ vendor: Vendor; totalSales: number; totalRevenue: number; pendingProfit: number; lastPayoutAt: Date | null }[]>;
-  adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string }): Promise<Vendor>;
-  adminCloseVendorForPayout(vendorId: string): Promise<Payout | null>;
-  adminMarkPayoutPaid(payoutId: string): Promise<Payout>;
+  adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string; customDomain?: string | null }): Promise<Vendor>;
   adminGetVendorPayouts(vendorId: string): Promise<Payout[]>;
-  adminCloseAllVendorsForPayout(): Promise<void>;
   // Blog methods
   getBlogPosts(limit: number, offset: number): Promise<BlogPost[]>;
   getBlogPost(id: string): Promise<BlogPost | undefined>;
@@ -471,63 +469,25 @@ export class DbStorage implements IStorage {
     return results;
   }
 
-  async adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string }): Promise<Vendor> {
+  async getVendorByCustomDomain(domain: string): Promise<Vendor | undefined> {
+    const [row] = await db.select().from(vendors).where(eq(vendors.customDomain, domain));
+    return row;
+  }
+
+  async adminUpdateVendor(id: string, data: { storeName?: string; contactNumber?: string; momoNumber?: string; momoName?: string; status?: string; customDomain?: string | null }): Promise<Vendor> {
     const updateData: Record<string, any> = {};
     if (data.storeName !== undefined) updateData.storeName = data.storeName || null;
     if (data.contactNumber !== undefined) updateData.contactNumber = data.contactNumber;
     if (data.momoNumber !== undefined) updateData.momoNumber = data.momoNumber;
     if (data.momoName !== undefined) updateData.momoName = data.momoName;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.customDomain !== undefined) updateData.customDomain = data.customDomain || null;
     const [updated] = await db.update(vendors).set(updateData).where(eq(vendors.id, id)).returning();
     return updated;
   }
 
-  async adminCloseVendorForPayout(vendorId: string): Promise<Payout | null> {
-    // Calculate pending profit since last paid payout
-    const [lastPaidPayout] = await db.select({ paidAt: payouts.paidAt })
-      .from(payouts)
-      .where(and(eq(payouts.vendorId, vendorId), eq(payouts.status, "paid")))
-      .orderBy(desc(payouts.paidAt))
-      .limit(1);
-
-    const pendingCondition = lastPaidPayout?.paidAt
-      ? and(eq(transactions.vendorId, vendorId), eq(transactions.status, "completed"), sql`${transactions.createdAt} > ${lastPaidPayout.paidAt}`)
-      : and(eq(transactions.vendorId, vendorId), eq(transactions.status, "completed"));
-
-    const [pending] = await db.select({
-      pendingProfit: sql<number>`coalesce(sum(${transactions.vendorProfit}::numeric), 0)::numeric`,
-    }).from(transactions).where(pendingCondition);
-
-    const amount = Number(pending?.pendingProfit ?? 0);
-
-    // Close vendor
-    await db.update(vendors).set({ status: "closed_for_payout" }).where(eq(vendors.id, vendorId));
-
-    // Auto-create unpaid payout record (only if there's something owed)
-    if (amount <= 0) return null;
-    const [payout] = await db.insert(payouts).values({ vendorId, amount, status: "unpaid" }).returning();
-    return payout;
-  }
-
-  async adminMarkPayoutPaid(payoutId: string): Promise<Payout> {
-    const now = new Date();
-    const [payout] = await db
-      .update(payouts)
-      .set({ status: "paid", paidAt: now })
-      .where(eq(payouts.id, payoutId))
-      .returning();
-    // Reopen the vendor
-    await db.update(vendors).set({ status: "active" }).where(eq(vendors.id, payout.vendorId));
-    return payout;
-  }
-
   async adminGetVendorPayouts(vendorId: string): Promise<Payout[]> {
     return await db.select().from(payouts).where(eq(payouts.vendorId, vendorId)).orderBy(desc(payouts.createdAt));
-  }
-
-  async adminCloseAllVendorsForPayout(): Promise<void> {
-    const activeVendors = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.status, "active"));
-    await Promise.all(activeVendors.map(v => this.adminCloseVendorForPayout(v.id)));
   }
 
   async getVendorStats(vendorId: string): Promise<{ totalSales: number; totalRevenue: number; byType: { examType: string; count: number; revenue: number }[] }> {

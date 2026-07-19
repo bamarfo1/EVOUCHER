@@ -223,7 +223,7 @@ export async function handleUssdRequest(
       );
     } else if (input === "2" || input === "3") {
       sessions.delete(msisdn);
-      return end("Coming soon.\nDial *920*919# to try again.\nWeb: allteksevoucher.store");
+      return end("Coming soon.\nDial *920*919# to try again.\nWeb: tekse.online");
     } else {
       return con("ALLTEKSE PORTAL\n1. Buy Voucher\n2. Buy Ticket\n3. Vote\n\nInvalid choice.");
     }

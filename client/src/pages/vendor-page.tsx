@@ -130,16 +130,7 @@ export default function VendorPage() {
     );
   }
 
-  const isClosed = vendor.status === "closed_for_payout";
   const waUrl = `https://wa.me/${vendor.contactNumber.replace(/[\s+\-()]/g, "").replace(/^0/, "233")}`;
-
-  const payoutBanner = isClosed ? (
-    <div style={{ background: "#fffbeb", borderBottom: "1px solid #fcd34d", padding: "10px 16px", textAlign: "center" }}>
-      <p style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }} data-testid="banner-closed-for-payout">
-        This store is temporarily closed for payout processing. Please check back shortly.
-      </p>
-    </div>
-  ) : null;
 
   const purchaseDialog = (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -242,7 +233,6 @@ export default function VendorPage() {
             </div>
           </div>
         </header>
-        {payoutBanner}
         <section style={{ background: T.heroGradient, padding: "48px 16px", textAlign: "center", color: T.heroText }}>
           <div style={{ maxWidth: 560, margin: "0 auto" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: T.badgeBg, border: "1px solid rgba(255,255,255,0.25)", color: "#fff", fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 999, marginBottom: 14 }}>
@@ -275,7 +265,7 @@ export default function VendorPage() {
                 {vendor.prices.map((card, index) => {
                   const colors = getColors(card.examType, index);
                   const img = getCardImage(card.examType, card.imageUrl);
-                  const disabled = card.count === 0 || isClosed;
+                  const disabled = card.count === 0;
                   return (
                     <button key={card.examType} onClick={() => !disabled && openCard(card, colors)} disabled={disabled}
                       style={{ background: disabled ? "#f8fafc" : T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 12, overflow: "hidden", textAlign: "left", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, transition: "transform 0.18s,box-shadow 0.18s", boxShadow: disabled ? "none" : "0 2px 8px rgba(0,0,0,0.07)" }}
@@ -341,7 +331,6 @@ export default function VendorPage() {
             </div>
           </div>
         </header>
-        {payoutBanner}
         <section style={{ background: T.pageBg, borderBottom: `1px solid ${T.cardBorder}`, padding: "40px 16px" }}>
           <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 200 }}>
@@ -371,7 +360,7 @@ export default function VendorPage() {
                 {vendor.prices.map((card, index) => {
                   const colors = getColors(card.examType, index);
                   const img = getCardImage(card.examType, card.imageUrl);
-                  const disabled = card.count === 0 || isClosed;
+                  const disabled = card.count === 0;
                   return (
                     <button key={card.examType} onClick={() => !disabled && openCard(card, colors)} disabled={disabled}
                       style={{ background: "#fff", border: `1px solid ${T.cardBorder}`, borderLeft: `4px solid ${disabled ? "#e2e8f0" : T.primary}`, borderRadius: "0 8px 8px 0", overflow: "hidden", textAlign: "left", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, transition: "background 0.15s,box-shadow 0.15s", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}
@@ -440,7 +429,6 @@ export default function VendorPage() {
             <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 15, fontWeight: 500 }}>Purchase exam vouchers · instant delivery via SMS</p>
           </div>
         </section>
-        {payoutBanner}
         <main style={{ flex: 1, padding: "32px 16px" }}>
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
             <p style={{ fontSize: 12, fontWeight: 800, color: T.primary, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>Choose a Voucher</p>
@@ -453,7 +441,7 @@ export default function VendorPage() {
                 {vendor.prices.map((card, index) => {
                   const colors = getColors(card.examType, index);
                   const img = getCardImage(card.examType, card.imageUrl);
-                  const disabled = card.count === 0 || isClosed;
+                  const disabled = card.count === 0;
                   return (
                     <button key={card.examType} onClick={() => !disabled && openCard(card, colors)} disabled={disabled}
                       style={{ background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderLeft: `5px solid ${disabled ? "#e2e8f0" : T.primary}`, borderRadius: "0 12px 12px 0", overflow: "hidden", textAlign: "left", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, transition: "transform 0.15s,box-shadow 0.15s", display: "flex", alignItems: "center", gap: 16, padding: 0 }}
@@ -521,7 +509,6 @@ export default function VendorPage() {
           </div>
         </div>
         <div style={{ height: 4, background: T.heroGradient }} />
-        {payoutBanner}
         <main style={{ flex: 1, padding: "24px 16px" }}>
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
             <div style={{ marginBottom: 20 }}>
@@ -537,7 +524,7 @@ export default function VendorPage() {
                 {vendor.prices.map((card, index) => {
                   const colors = getColors(card.examType, index);
                   const img = getCardImage(card.examType, card.imageUrl);
-                  const disabled = card.count === 0 || isClosed;
+                  const disabled = card.count === 0;
                   return (
                     <button key={card.examType} onClick={() => !disabled && openCard(card, colors)} disabled={disabled}
                       style={{ background: "#fff", border: `1px solid ${disabled ? "#f1f5f9" : T.cardBorder}`, borderRadius: 8, overflow: "hidden", textAlign: "left", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, transition: "box-shadow 0.15s" }}
@@ -602,7 +589,6 @@ export default function VendorPage() {
           </div>
         </div>
       </header>
-      {payoutBanner}
       <section style={{ background: T.heroGradient, padding: "52px 16px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 50% 50%, ${T.primary}30, transparent 65%)`, pointerEvents: "none" }} />
         <div style={{ position: "relative", maxWidth: 560, margin: "0 auto" }}>
@@ -632,7 +618,7 @@ export default function VendorPage() {
               {vendor.prices.map((card, index) => {
                 const colors = getColors(card.examType, index);
                 const img = getCardImage(card.examType, card.imageUrl);
-                const disabled = card.count === 0 || isClosed;
+                const disabled = card.count === 0;
                 return (
                   <button key={card.examType} onClick={() => !disabled && openCard(card, colors)} disabled={disabled}
                     style={{ background: T.cardBg, border: `1px solid ${disabled ? T.cardBorder + "60" : T.primary + "50"}`, borderRadius: 12, overflow: "hidden", textAlign: "left", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1, transition: "transform 0.18s,box-shadow 0.18s" }}

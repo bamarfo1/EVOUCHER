@@ -25,9 +25,10 @@ Payment provider and university portal cards utilize unique accent colors. The d
 - **Payment Flow**: Users select a card type, fill in their details, the system checks voucher availability, creates a transaction, initializes Paystack payment, verifies payment, assigns a matching voucher, and sends it via SMS and email.
 - **Security Features**: Includes Paystack webhook signature verification (HMAC-SHA512), payment amount validation (quantity × unit price), atomic status transitions, atomic multi-voucher assignment with row-level locking, error recovery with rollback handling, and concurrency protection to prevent double voucher distribution.
 - **Transaction Receipt**: After a successful purchase, users can click "Download Receipt (PDF)" on the success page to print/save a formatted receipt containing transaction ID, card type, quantity, amount, voucher serials/PINs, and delivery info.
-- **Vendor System**: Authorised resellers can sign up at `/vendor/signup` with phone, password, MoMo number/name, and contact number. After login, vendors access a dashboard at `/vendor/dashboard` to: view their unique store link (`/v/:slug`), set custom prices per card type (minimum = base price; profit = vendor price − base price), view their sales stats, and **edit their store name inline**. Their public page at `/v/:slug` shows their store name, a WhatsApp Support button, a Call button, and the purchase flow using their prices. The same voucher retrieve page is shared. If the vendor is `closed_for_payout`, a banner is shown and purchases are disabled.
-- **Admin Vendor Management**: Admin panel has a **Vendors tab** (`/admin` → Vendors) showing all vendors with total sales, total revenue, and pending profit due since last payout. Admin can: edit vendor store name inline, manually close/reopen individual vendors, record MoMo payouts (creates payout record, reopens account), view full payout history per vendor, and close all active vendors at once. Every Friday at 11:59 PM, a cron job automatically closes all active vendor accounts for payout processing.
-- **Payout Flow**: Admin pays vendor externally via MoMo → clicks "Mark as Paid" in admin Vendors tab → system records payout, resets pending profit clock, and reopens vendor account. Vendor profit per transaction = (vendor_price − base_price) × quantity, stored in `vendor_profit` column on transactions at payment completion.
+- **Vendor System**: Authorised resellers can sign up at `/vendor/signup` with phone, password, MoMo number/name, and contact number. After login, vendors access a dashboard at `/vendor/dashboard` to: view their unique store link (`/v/:slug`), set custom prices per card type (minimum = base price; profit = vendor price − base price), view their sales stats, edit their store name inline, and **request withdrawals** (see below). Their public page at `/v/:slug` shows their store name, a WhatsApp Support button, a Call button, and the purchase flow using their prices. The same voucher retrieve page is shared.
+- **Vendor Withdrawal Flow**: Vendors request a payout via the **Earnings & Withdrawals** card on their dashboard. The request captures their current pending profit and MoMo details. The admin reviews all pending requests in the admin **Vendors tab** and clicks **Approve** (records a paid payout, resets profit clock) or **Reject** (with optional note). Stores never close — vendors keep selling while requests are pending.
+- **Admin Vendor Management**: Admin panel has a **Vendors tab** (`/admin` → Vendors) showing all vendors with total sales, total revenue, and pending profit due since last payout. Admin can: edit vendor store name inline, approve/reject withdrawal requests, view full payout history per vendor, and broadcast SMS to all buyers.
+- **Payout Flow**: When a vendor requests a withdrawal, the system records the amount from their pending profit. Admin reviews the request, pays externally via MoMo, then clicks **Approve** in the admin panel. This records a `paid` payout with `paidAt = request.createdAt` so the profit clock resets to when the vendor submitted the request (not when admin approved). Vendor profit per transaction = (vendor_price − base_price) × quantity, stored in `vendor_profit` column on transactions at payment completion.
 - **Education News Blog**: Auto-fetches Ghanaian education news from RSS feeds daily at 6 AM (via node-cron), and runs once on startup. Posts are stored in `blog_posts` table, filtered by education keywords. Blog is accessible at `/blog` and individual posts at `/blog/:id`.
 - **SEO**: Comprehensive meta tags in `index.html` (Open Graph, Twitter Card, structured data / JSON-LD), dynamic sitemap at `/sitemap.xml` including all blog posts, and robots.txt at `/robots.txt`.
 
@@ -37,6 +38,11 @@ Payment provider and university portal cards utilize unique accent colors. The d
 - **Database Schema**:
     - `voucher_cards`: `id` (UUID), `serial` (unique text), `pin` (text), `used` (boolean), `purchaser_phone`, `purchaser_email`, `exam_type`, `price` (integer, default 20 GHC), `image_url` (text, nullable), `used_at` (timestamp). The `exam_type` field determines the card type and can be any string value. The `price` field sets the price per voucher in GHC. The `image_url` field is an optional URL to a product image displayed on the card.
     - `transactions`: `id` (UUID), `email` (nullable), `phone`, `exam_type`, `amount`, `paystack_reference` (unique), `status` (pending/completed/failed), `voucher_card_id`, `created_at`, `completed_at` (timestamps).
+    - `vendors`: `id` (UUID), `phone` (unique text), `password_hash` (text), `momo_number`, `momo_name`, `contact_number` (text), `store_name` (nullable), `slug` (unique text), `status` (default "active"), `template` (default "classic-purple"), `custom_domain` (nullable text), `created_at`.
+    - `vendor_prices`: `id` (UUID), `vendor_id` (FK), `exam_type` (text), `price` (integer).
+    - `vendor_base_prices`: `id` (UUID), `vendor_id` (FK), `exam_type` (text), `price` (integer) — per-vendor floor prices set by admin.
+    - `payouts`: `id` (UUID), `vendor_id` (FK), `amount` (integer), `status` ("unpaid" or "paid"), `paid_at` (nullable), `notes` (nullable), `created_at`.
+    - `withdrawal_requests`: `id` (UUID), `vendor_id` (FK), `amount` (integer), `momo_number`, `momo_name`, `status` ("pending"/"approved"/"rejected"), `note` (nullable), `created_at`, `resolved_at` (nullable).
     - `blog_posts`: `id` (UUID), `title`, `summary`, `content`, `source`, `source_url` (unique), `image_url`, `category`, `published_at`, `created_at`.
 - **API Endpoints**:
     - `GET /api/card-types` — Returns available card types with stock counts and prices
@@ -48,12 +54,18 @@ Payment provider and university portal cards utilize unique accent colors. The d
     - `GET /api/blog/posts/:id` — Single blog post
     - `GET /sitemap.xml` — XML sitemap
     - `GET /robots.txt` — Robots file
+    - Vendor: `/api/vendor/register`, `/api/vendor/login`, `/api/vendor/me`, `/api/vendor/me/card-types`, `/api/vendor/me/stats`, `/api/vendor/me/sales`, `/api/vendor/me/payouts`, `/api/vendor/me/withdrawals`, `/api/vendor/withdrawal/request`, `/api/vendor/prices`
+    - Admin: `/api/admin/vendors`, `/api/admin/withdrawal-requests`, `/api/admin/withdrawal-requests/:id/approve|reject`, `/api/admin/payouts`, `/api/admin/customer-contacts`, `/api/admin/sms/broadcast`
 - **Frontend Pages**:
     - `/` — Home with product cards and purchase flow
     - `/retrieve-voucher` — Voucher retrieval (returns all vouchers for a phone+date)
     - `/blog` — Education news blog with pagination
     - `/blog/:id` — Individual blog post
     - `/payment-callback` — Post-payment success/failure handling
+    - `/vendor/signup` — Vendor registration
+    - `/vendor/login` — Vendor login
+    - `/vendor/dashboard` — Vendor dashboard (auth-protected)
+    - `/v/:slug` — Public vendor store page
     - `/admin` — Admin dashboard (auth-protected)
 
 ### RSS News Sources
@@ -93,4 +105,4 @@ UPDATE voucher_cards SET image_url = 'https://your-image-url.com/image.png' WHER
 - **Email Service**: Namecheap/PrivateEmail SMTP (via Nodemailer)
 - **Database**: PostgreSQL
 - **RSS Parsing**: rss-parser package
-- **Cron Jobs**: node-cron (daily RSS fetch at 6 AM; Friday 11:59 PM auto-close all vendors for payout)
+- **Cron Jobs**: node-cron (daily RSS fetch at 6 AM)

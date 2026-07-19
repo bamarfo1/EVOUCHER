@@ -460,27 +460,13 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
   const [editStoreName, setEditStoreName] = useState(false);
   const [storeNameVal, setStoreNameVal] = useState(row.vendor.storeName || "");
 
-  const { data: payoutHistory, refetch: refetchHistory } = useQuery<Payout[]>({
+  const { data: payoutHistory } = useQuery<Payout[]>({
     queryKey: ["/api/admin/vendors", row.vendor.id, "payouts"],
     queryFn: async () => {
       const res = await fetch(`/api/admin/vendors/${row.vendor.id}/payouts`);
       return res.json();
     },
     enabled: expanded,
-  });
-
-  const markPaidMutation = useMutation({
-    mutationFn: async (payoutId: string) => {
-      const res = await fetch(`/api/admin/payouts/${payoutId}/mark-paid`, { method: "POST" });
-      if (!res.ok) throw new Error((await res.json()).error || "Failed");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Payout marked as paid" });
-      refetchHistory();
-      onRefresh();
-    },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateVendorMutation = useMutation({
@@ -500,8 +486,6 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
-
-  const unpaidPayouts = payoutHistory?.filter(p => p.status === "unpaid") ?? [];
 
   return (
     <Card className="border-slate-200">
@@ -619,24 +603,9 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
                           {p.notes && ` · ${p.notes}`}
                         </p>
                       </div>
-                      {p.status === "unpaid" && (
-                        <Button
-                          size="sm"
-                          onClick={() => markPaidMutation.mutate(p.id)}
-                          disabled={markPaidMutation.isPending}
-                          data-testid={`button-mark-paid-${p.id}`}
-                        >
-                          {markPaidMutation.isPending ? "..." : "Mark as Paid"}
-                        </Button>
-                      )}
                     </div>
                   ))}
                 </div>
-              )}
-              {unpaidPayouts.length > 0 && (
-                <p className="text-xs text-amber-600 font-medium">
-                  {unpaidPayouts.length} unpaid payout{unpaidPayouts.length > 1 ? "s" : ""} · Total: GHC {unpaidPayouts.reduce((s, p) => s + p.amount, 0)}
-                </p>
               )}
             </div>
           </div>

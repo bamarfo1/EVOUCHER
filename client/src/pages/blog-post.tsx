@@ -82,8 +82,8 @@ export default function BlogPostPage() {
   if (post) {
     const pageTitle = `${post.title} | AllTekSE Education Blog`;
     const pageDesc = post.summary || post.title;
-    const pageUrl = `https://allteksevoucher.store/blog/${post.id}`;
-    const pageImage = post.imageUrl || "https://allteksevoucher.store/favicon.jpg";
+    const pageUrl = `https://tekse.online/blog/${post.id}`;
+    const pageImage = post.imageUrl || "https://tekse.online/favicon.jpg";
     const publishedDate = post.publishedAt || post.createdAt;
 
     document.title = pageTitle;
@@ -140,15 +140,15 @@ export default function BlogPostPage() {
       "publisher": {
         "@type": "Organization",
         "name": "AllTekSE e-Voucher",
-        "logo": { "@type": "ImageObject", "url": "https://allteksevoucher.store/favicon.jpg" }
+        "logo": { "@type": "ImageObject", "url": "https://tekse.online/favicon.jpg" }
       },
       "url": pageUrl,
       "mainEntityOfPage": { "@type": "WebPage", "@id": pageUrl },
       "breadcrumb": {
         "@type": "BreadcrumbList",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://allteksevoucher.store" },
-          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://allteksevoucher.store/blog" },
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tekse.online" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tekse.online/blog" },
           { "@type": "ListItem", "position": 3, "name": post.title, "item": pageUrl }
         ]
       }
