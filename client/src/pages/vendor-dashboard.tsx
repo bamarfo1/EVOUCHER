@@ -264,6 +264,12 @@ export default function VendorDashboard() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  const copySubdomainUrl = () => {
+    if (!subdomainUrl) return;
+    navigator.clipboard.writeText(subdomainUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #f8f7ff 0%, #eff6ff 50%, #f0fdfa 100%)" }}>
@@ -354,10 +360,18 @@ export default function VendorDashboard() {
                   </Button>
                 </>
               ) : (
-                <Button size="sm" variant="ghost" className="text-slate-400 hover:text-emerald-600 h-7 text-xs" onClick={() => { setSubdomainInput(vendor.subdomain || ""); setEditingSubdomain(true); }} data-testid="button-edit-subdomain">
-                  <Pencil className="w-3 h-3 mr-1" />
-                  {vendor.subdomain ? "Change" : "Set Short URL"}
-                </Button>
+                <>
+                  {vendor.subdomain && (
+                    <Button size="sm" variant="ghost" className="text-slate-400 hover:text-emerald-600 h-7 text-xs" onClick={copySubdomainUrl} data-testid="button-copy-subdomain-url">
+                      <Copy className="w-3 h-3 mr-1" />
+                      {copied ? "Copied!" : "Copy"}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="text-slate-400 hover:text-emerald-600 h-7 text-xs" onClick={() => { setSubdomainInput(vendor.subdomain || ""); setEditingSubdomain(true); }} data-testid="button-edit-subdomain">
+                    <Pencil className="w-3 h-3 mr-1" />
+                    {vendor.subdomain ? "Change" : "Set Short URL"}
+                  </Button>
+                </>
               )}
             </div>
             <p className="text-xs text-slate-500 mt-2">All links work — share whichever your customers know.</p>
