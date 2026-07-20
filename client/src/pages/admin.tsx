@@ -27,7 +27,8 @@ interface VendorPrice { id: string; vendorId: string; examType: string; price: n
 interface VendorRow {
   vendor: {
     id: string; phone: string; storeName: string | null; momoName: string; momoNumber: string;
-    contactNumber: string; slug: string; status: string; createdAt: string;
+    contactNumber: string; slug: string; subdomain?: string | null; customDomain?: string | null;
+    status: string; createdAt: string;
   };
   prices: VendorPrice[];
   totalSales: number;
@@ -546,18 +547,32 @@ function VendorPayoutCard({ row, onRefresh }: { row: VendorRow; onRefresh: () =>
         {/* Expanded: details + payout history */}
         {expanded && (
           <div className="mt-4 border-t border-slate-100 pt-4 space-y-4">
-            {/* Store URL */}
+            {/* Store URLs */}
             <div>
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Store Link</p>
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Store Links</p>
               <a
                 href={`/v/${row.vendor.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline break-all"
+                className="text-xs text-blue-600 hover:underline break-all block"
                 data-testid={`link-vendor-store-${row.vendor.id}`}
               >
                 {`${window.location.origin}/v/${row.vendor.slug}`}
               </a>
+              {row.vendor.subdomain && (
+                <a
+                  href={`/${row.vendor.subdomain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-emerald-600 hover:underline break-all block mt-0.5"
+                  data-testid={`link-vendor-subdomain-${row.vendor.id}`}
+                >
+                  {`${window.location.origin}/${row.vendor.subdomain}`}
+                </a>
+              )}
+              {row.vendor.customDomain && (
+                <p className="text-xs text-slate-500 break-all mt-0.5">Custom domain: {row.vendor.customDomain}</p>
+              )}
             </div>
 
             {/* Current pricing */}

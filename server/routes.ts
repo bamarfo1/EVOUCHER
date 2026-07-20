@@ -1074,7 +1074,7 @@ ${allUrls
     requireAdmin,
     async (req: Request, res: Response) => {
       try {
-        const { storeName, contactNumber, momoNumber, momoName, status } =
+        const { storeName, contactNumber, momoNumber, momoName, status, customDomain, subdomain } =
           req.body;
         const vendor = await storage.adminUpdateVendor(req.params.id, {
           storeName,
@@ -1082,6 +1082,8 @@ ${allUrls
           momoNumber,
           momoName,
           status,
+          ...(customDomain !== undefined ? { customDomain: customDomain || null } : {}),
+          ...(subdomain !== undefined ? { subdomain: subdomain || null } : {}),
         });
         res.json(vendor);
       } catch (e: any) {
